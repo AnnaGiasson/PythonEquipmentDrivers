@@ -2,8 +2,14 @@ from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 from time import sleep as _sleep
 
 
-class Elgar(_Scpi_Instrument):
+class Elgar_1750(_Scpi_Instrument):
     """
+    Elgar_1750(address)
+
+    address : str, address of the connected power supply
+
+    object for accessing basic functionallity of the Elgar_1750 AC supply
+
     Programmers Manual:
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF
     """
@@ -178,3 +184,7 @@ class Elgar(_Scpi_Instrument):
             self.set_voltage_limit(255)
             self.set_current(13)
         return
+
+
+if __name__ == '__main__':
+    pass
