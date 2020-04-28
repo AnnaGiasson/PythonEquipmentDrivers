@@ -594,7 +594,7 @@ class Chroma_63600(_Scpi_Instrument):
 
     def set_channel_state(self, channel, state):
         """
-        set_card_state(channel, state)
+        set_channel_state(channel, state)
 
         channel: int, valid options are 1-5
         state = 0, 1
@@ -609,7 +609,7 @@ class Chroma_63600(_Scpi_Instrument):
 
     def get_channel_state(self, channel):
         """
-        get_card_state(channel)
+        get_channel_state(channel)
 
         channel: int, valid options are 1-5
 
@@ -727,6 +727,37 @@ class Chroma_63600(_Scpi_Instrument):
 
         self.instrument.write('LOAD:PROT:CLE')
         return
+
+    def get_errors(self, channel, decode=False):
+        """
+        get_errors(channel)
+
+        channel: int, valid options are 1-5
+        decode: bool, whether to decode the status register in a human-readable
+                form
+
+        Returns the status register of the respective load channel. If decode
+        is set to True the function returns a list of string descriptions of
+        the faults set (default is False). The status register contains 1 Byte
+        of possible faults, the bits in the register from bit 0 to 7 corespond
+        with the following: 'OTP', 'OVP', 'OCP', 'OPP', 'REV', 'SYNC',
+        'MAX_LIM', 'REMOTE_INHIBIT'
+        """
+
+        self.set_channel(channel)
+        resp = self.instrument.query(f'STAT:CHAN:COND?')
+        status = int(resp.strip())
+        status &= 255  # 2 Byte response only has 1 Byte of information
+        if not decode:
+            return status
+        else:
+            fault_labels = ['OTP', 'OVP', 'OCP', 'OPP',
+                            'REV', 'SYNC', 'MAX_LIM', 'REMOTE_INHIBIT']
+            errors = []
+            for n in range(0, 7):
+                if (status & 2**n) >> n:
+                    errors.append(fault_labels[n])
+            return errors
 
     def measure_voltage(self):
         """
