@@ -2,9 +2,9 @@ from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 from time import sleep as _sleep
 
 
-class Elgar_1750(_Scpi_Instrument):
+class Elgar_1750A(_Scpi_Instrument):
     """
-    Elgar_1750(address)
+    Elgar_1750A(address)
 
     address : str, address of the connected power supply
 
