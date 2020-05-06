@@ -20,7 +20,8 @@ class Chroma_63600(_Scpi_Instrument):
 
     def __init__(self, address):
         super().__init__(address)
-        self.valid_modes = ['CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM']
+        self.valid_modes = ['CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM'
+                            'SWD']
         return
 
     def _channel_index(self, channel, reverse=False):
@@ -707,6 +708,149 @@ class Chroma_63600(_Scpi_Instrument):
         resp = self.instrument.write(f'VOLT:STAT:ILIM?')
 
         return float(resp)
+
+    def set_dynamic_sine_frequency(self, freq):
+
+        """
+        set_dynamic_sine_frequency(freq)
+
+        Sets the frequency of the sine wave current used in the
+        'advanced sine-wave' mode of operation in Hz. Min/Max setting can be
+        determined using the get_dynamic_sine_frequency method with the min/max
+        flag.
+
+        Arguments:
+            freq {float} -- desired frequency in Hz
+        """
+
+        self.instrument.write(f'ADV:SINE:FREQ {freq}')
+        return
+
+    def get_dynamic_sine_frequency(self, flag=''):
+
+        """
+        get_dynamic_sine_frequency(flag='')
+
+        Returns the frequency of the sine wave current used in the
+        'advanced sine-wave' mode of operation in Hz. Can also return the
+        Min/Max possible setting with the min/max flag.
+
+        Keyword Arguments:
+            flag {str} -- flag used to determine the frequency limits of the
+            electronic loads sine-wave capabiity. Valid options are 'Min',
+            'Max', and '' for the minimum, maximum, and current settings
+            respectively (Not case-sensitive, default: {''}).
+
+        Raises:
+            ValueError: raised if an invalid flag is passed
+
+        Returns:
+            freq {float} -- current frequency setpoint (or limit) in Hz.
+        """
+
+        flag = flag.upper()
+        if flag not in ['MIN', 'MAX', '']:
+            raise ValueError(f'Invalid value {flag} for arg "value"')
+
+        resp = self.instrument.query(f'ADV:SINE:FREQ? {flag}')
+        freq = float(resp)
+        return freq
+
+    def set_dynamic_sine_amplitude_ac(self, amp):
+
+        """
+        set_dynamic_sine_amplitude_ac(amp)
+
+        Sets the amplitude of the sine wave current used in the
+        'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
+        determined using the get_dynamic_sine_amplitude_ac method with the
+        min/max flag.
+
+        Arguments:
+            freq {float} -- desired amplitude in A_DC
+        """
+
+        amp_peak2peak = amp*2  # convert Amplitude to peak-to-peak
+        self.instrument.write(f'ADV:SINE:IAC {amp_peak2peak}')
+        return
+
+    def get_dynamic_sine_amplitude_ac(self, flag=''):
+
+        """
+        get_dynamic_sine_amplitude_ac(flag='')
+
+        Returns the amplitude of the sine wave current used in the
+        'advanced sine-wave' mode of operation in A_DC. Can also return the
+        Min/Max possible setting with the min/max flag.
+
+        Keyword Arguments:
+            flag {str} -- flag used to determine the amplitude limits of the
+            electronic loads sine-wave capabiity. Valid options are 'Min',
+            'Max', and '' for the minimum, maximum, and current settings
+            respectively (Not case-sensitive, default: {''}).
+
+        Raises:
+            ValueError: raised if an invalid flag is passed
+
+        Returns:
+            freq {float} -- current amplitude setpoint (or limit) in A_DC.
+        """
+
+        flag = flag.upper()
+        if flag not in ['MIN', 'MAX', '']:
+            raise ValueError(f'Invalid value {flag} for arg "value"')
+
+        resp = self.instrument.query(f'ADV:SINE:IAC? {flag}')
+        amp_peak2peak = float(resp)
+        amp = amp_peak2peak/2  # convert peak-to-peak to Amplitude
+        return amp
+
+    def set_dynamic_sine_dc_level(self, amp):
+
+        """
+        set_dynamic_sine_dc_level(amp)
+
+        Sets the DC level of the sine wave current used in the
+        'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
+        determined using the get_dynamic_sine_dc_level method with the
+        min/max flag.
+
+        Arguments:
+            freq {float} -- desired DC level in A_DC
+        """
+
+        self.instrument.write(f'ADV:SINE:IDC {amp}')
+        return
+
+    def get_dynamic_sine_dc_level(self, flag=''):
+
+        """
+        get_dynamic_sine_dc_level(flag='')
+
+        Returns the DC level of the sine wave current used in the
+        'advanced sine-wave' mode of operation in A_DC. Can also return the
+        Min/Max possible setting with the min/max flag.
+
+        Keyword Arguments:
+            flag {str} -- flag used to determine the DC level limits of the
+            electronic loads sine-wave capabiity. Valid options are 'Min',
+            'Max', and '' for the minimum, maximum, and current settings
+            respectively (Not case-sensitive, default: {''}).
+
+        Raises:
+            ValueError: raised if an invalid flag is passed
+
+        Returns:
+            freq {float} -- current DC level setpoint (or limit) in A_DC.
+        """
+
+        flag = flag.upper()
+        if flag not in ['MIN', 'MAX', '']:
+            raise ValueError(f'Invalid value {flag} for arg "value"')
+
+        resp = self.instrument.query(f'ADV:SINE:IDC? {flag}')
+        amp = float(resp)
+        return amp
 
     def reset(self):
         """

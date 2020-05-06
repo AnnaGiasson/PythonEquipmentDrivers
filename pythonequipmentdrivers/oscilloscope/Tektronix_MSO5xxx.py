@@ -201,8 +201,8 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         returns a tuple (float, float) of the relative x,y positon of the
         channel label w.r.t. the numerical label in # of divisions
         """
-        x_coord = float(self.instrument.write(f'CH{channel}:LAB:XPOS?'))
-        y_coord = float(self.instrument.write(f'CH{channel}:LAB:YPOS?'))
+        x_coord = float(self.instrument.query(f'CH{channel}:LAB:XPOS?'))
+        y_coord = float(self.instrument.query(f'CH{channel}:LAB:YPOS?'))
         return x_coord, y_coord
 
     def set_channel_bandwidth(self, channel, bandwidth):
