@@ -106,6 +106,20 @@ class Scpi_Instrument():
         self.instrument.write(command_str)
         return
 
+    def query_raw_scpi(self, query_str):
+        """
+        query_raw_scpi(query)
+
+        query_str: string, scpi query to be passed through to the device.
+
+        Pass-through function which forwards the contents of 'query_str' to
+        the device, returning the response without any processing. This
+        function is intended to be used for API calls for functionally that is
+        not currently supported. Only to be used for queries.
+        """
+
+        return self.instrument.query(query_str)
+
 
 class EnvironmentSetup():
     """

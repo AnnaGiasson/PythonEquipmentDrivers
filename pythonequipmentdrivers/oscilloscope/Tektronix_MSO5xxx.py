@@ -538,7 +538,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
     def set_trigger_mode(self, mode):
         """
-        set_mode(mode)
+        set_trigger_mode(mode)
 
         mode: (str) trigger mode. Valid modes are "AUTO" and "NORM"
 
@@ -556,7 +556,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
     def get_trigger_mode(self):
         """
-        get_mode()
+        get_trigger_mode()
 
         returns:
         mode: (str) trigger mode. Valid modes are "AUTO" and "NORM"
@@ -572,7 +572,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
     def set_trigger_level(self, level):
         """
-        set_level(level)
+        set_trigger_level(level)
 
         level: (float) vertical position of the trigger, units depend on
                 the signal being triggered on.
@@ -586,7 +586,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
     def get_trigger_level(self):
         """
-        get_level()
+        get_trigger_level()
 
         returns
         level: (float) vertical position of the trigger, units depend on
