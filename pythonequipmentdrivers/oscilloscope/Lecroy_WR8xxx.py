@@ -24,6 +24,29 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         self.instrument.clear()
         return
 
+    def select_channel(self, channel, state):
+        """
+        select_channel(channel)
+
+        channel: int, channel number of channel
+                    valid options are 1,2,3, and 4
+
+        state: int, whether or not the respective channel is
+                selected/visable on the screen. Valid options are 0 or 1
+
+        Enables/disables the display of the specified channel.
+        """
+
+        cmd_str = f'C{channel}:TRACE '
+        if state == 1:
+            cmd_str += "ON"
+        elif state == 0:
+            cmd_str += "OFF"
+        else:
+            raise ValueError(f"Invalid arguement 'state': {state}")
+        self.instrument.write(cmd_str)
+        return
+
     def set_channel_scale(self, channel, scale):
         """
         set_channel_scale(channel, scale)
@@ -270,6 +293,86 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         slope = response.split()[-1]
 
         return slope
+
+    def get_image(self, image_title, **kwargs):
+        """
+        get_image(image_title)
+
+        Saves the screen image to the location specified by "image_title".
+        "image_title" can contain path information to the desired save
+        directory. Specifying an extension is not nessary, a file extension
+        will be automatically be added based on the image format used (default:
+        PNG)
+
+        Args: image_title (str): path to save the image to, you do not need to
+              include file extension it will be added automatically
+
+        Kwargs:
+            img_format (str): file extention to save the image with, valid
+                       options are 'png', and 'tiff'
+                       (default: 'png').
+
+            img_orient (str): orientation of the image, valid options are
+                       'portrait' and 'landscape' (default: 'landscape').
+
+            bg_color (str): grid background color to use for saving the image,
+                     valid options are 'black' and 'white' (default: 'black').
+
+            screen_area (str): area of the screen to capture as an image, valid
+                        options are 'dsowindow', 'gridareaonly', and
+                        'fullscreen' (default: 'dsowindow').
+
+            None of the keyword arguements are case-sensitive.
+
+        Returns: None
+        """
+
+        # setup hardcopy
+        write_cmd = "HARDCOPY_SETUP "
+
+        # get optional arguements
+        img_format = kwargs.get('img_format', 'PNG').upper()
+        if img_format not in ['BMP', 'JPEG', 'PNG', 'TIFF']:
+            raise ValueError('Invalid option for kwarg "img_format"')
+        else:
+            write_cmd += f'DEV, {img_format}, '
+
+        if img_format == 'JPEG':
+            img_format = 'jpg'  # lecroy was dumb in naming their option
+            # need to correct it here for the file extension
+
+        img_orient = kwargs.get('img_orient', 'LANDSCAPE').upper()
+        if img_orient not in ['PORTRAIT', 'LANDSCAPE']:
+            raise ValueError('Invalid option for kwarg "img_orient"')
+        else:
+            write_cmd += f'FORMAT, {img_orient}, '
+
+        bg_color = kwargs.get('bg_color', 'BLACK').upper()
+        if bg_color not in ['BLACK', 'WHITE']:
+            raise ValueError('Invalid option for kwarg "bg_color"')
+        else:
+            write_cmd += f'BCKG, {bg_color}, '
+
+        screen_area = kwargs.get('screen_area', 'DSOWINDOW').upper()
+        if screen_area not in ['DSOWINDOW', 'GRIDAREAONLY', 'FULLSCREEN']:
+            raise ValueError('Invalid option for kwarg "screen_area"')
+        else:
+            write_cmd += f'AREA, {screen_area}, '
+
+        write_cmd += 'PORT, NET'
+        self.instrument.write(write_cmd)
+
+        # initiate transfer
+        self.instrument.write('SCREEN_DUMP')
+
+        # read back raw image data
+        screen_data = self.instrument.read_raw()
+
+        # save to file
+        with open(f'{image_title}.{img_format.lower()}', 'wb+') as file:
+            file.write(screen_data)
+
+        return None
 
 
 if __name__ == '__main__':
