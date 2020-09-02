@@ -7,7 +7,7 @@ class BKPrecision_9132B(_Keithley_2231A):
 
     address : str, address of the connected power supply
 
-    object for accessing basic functionallity of the Keithley DC supply
+    object for accessing basic functionallity of the B&K Precision DC supply
     """
 
     pass
