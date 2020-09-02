@@ -95,7 +95,7 @@ class Keithley_2231A(_Scpi_Instrument):
 
         self.set_channel(channel)
         resp = self.instrument.query("CHAN:OUTP?").rstrip('\n')
-        if resp != "ON":
+        if resp not in ["ON", '1']:
             return 0
         return 1
 
@@ -150,7 +150,7 @@ class Keithley_2231A(_Scpi_Instrument):
             return self.get_state(channel)
         return
 
-    def set_voltage(self, voltage, channel):  # check
+    def set_voltage(self, voltage, channel):
         """
         set_voltage(voltage)
 
