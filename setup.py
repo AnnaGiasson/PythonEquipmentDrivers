@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='pythonequipmentdrivers',
-      version='1.1.8',
+      version='1.1.9',
       description="""
                   A library of software drivers to interface with various
                   pieces of test instrumentation
@@ -19,6 +19,6 @@ setup(name='pythonequipmentdrivers',
       install_requires=[
                         'pyvisa',
                         'numpy',
-                        'pywin32'
+                        'pypiwin32',
                         ],
       )
