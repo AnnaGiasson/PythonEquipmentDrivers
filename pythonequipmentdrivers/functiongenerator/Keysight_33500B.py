@@ -215,7 +215,7 @@ class Keysight_33500B(_Scpi_Instrument):
 
     def set_burst_phase(self, phase: float, source: int = 1):
         str_options = ['MIN', 'MAX']
-        if isinstance(phase, float):
+        if isinstance(phase, (float, int)):
             self.instrument.write(f'SOUR{source}:BURS:PHASE {phase}')
         elif isinstance(phase, str) and (phase.upper() in str_options):
             self.instrument.write(f'SOUR{source}:BURS:PHASE {phase.upper()}')
@@ -235,9 +235,84 @@ class Keysight_33500B(_Scpi_Instrument):
         response = self.instrument.query(f'SOUR{source}:BURS:STAT?')
         return int(response)
 
+    def trigger(self, source: int = 1):
+        self.instrument.write(f'TRIG{source}')
+        return None
+
+    def get_trigger_count(self, source: int = 1):
+        response = self.instrument.query(f'TRIG{source}:COUN?')
+        return int(float(response))
+
+    def set_trigger_delay(self, delay, source: int = 1):
+        str_options = ['MIN', 'MAX']
+        if isinstance(delay, (float, int)):
+            self.instrument.write(f'TRIG{source}:DEL {delay}')
+        elif isinstance(delay, str) and (delay.upper() in str_options):
+            self.instrument.write(f'TRIG{source}:DEL {delay.upper()}')
+        else:
+            raise ValueError('invalid entry for delay')
+        return None
+
+    def get_trigger_delay(self, source: int = 1):
+        response = self.instrument.query(f'TRIG{source}:DEL?')
+        return float(response)
+
+    def set_trigger_source(self, trig_source, source: int = 1):
+        trig_opts = ['IMM', 'IMMEDIATE', 'EXT', 'EXTERNAL',
+                     'TIM', 'TIMER', 'BUS']
+        trig_source = trig_source.upper()
+        if trig_source in trig_opts:
+            self.instrument.write(f'TRIG{source}:SOUR {trig_source}')
+        else:
+            raise ValueError(f'Invalid arg for trig_source ({trig_opts})')
+        return None
+
+    def get_trigger_source(self, source: int = 1):
+        response = self.instrument.query(f'TRIG{source}:SOUR?')
+        return response.strip().lower()
+
     @property
     def angle_unit(self):
         return self.instrument.query('UNIT:ANGL?').strip().lower()
+
+    def set_voltage_display_mode(self, mode: str):
+        mode = mode.upper()
+        if mode in ['AMPL', 'HIGH', 'AMPLITUDEOFF', 'HIGHLOW']:
+            self.instrument.write(f'DISP:UNIT:VOLT {mode}')
+        else:
+            raise ValueError('Invalid value for arg "mode"')
+        return None
+
+    @property
+    def voltage_display_mode(self):
+        response = self.instrument.query('DISP:UNIT:VOLT?')
+        return response.strip().lower()
+
+    def set_pulse_duration_display_mode(self, mode: str):
+        mode = mode.upper()
+        if mode in ['WIDT', 'WIDTH', 'DUTY']:
+            self.instrument.write(f'DISP:UNIT:PULS {mode}')
+        else:
+            raise ValueError('Invalid value for arg "mode"')
+        return None
+
+    @property
+    def pulse_duration_display_mode(self):
+        response = self.instrument.query('DISP:UNIT:PULS?')
+        return response.strip().lower()
+
+    def set_horizontal_display_mode(self, mode: str):
+        mode = mode.upper()
+        if mode in ['FREQ', 'FREQUENCY', 'PER', 'PERIOD']:
+            self.instrument.write(f'DISP:UNIT:RATE {mode}')
+        else:
+            raise ValueError('Invalid value for arg "mode"')
+        return None
+
+    @property
+    def horizontal_display_mode(self):
+        response = self.instrument.query('DISP:UNIT:RATE?')
+        return response.strip().lower()
 
     def set_output_state(self, state: int, source: int = 1):
         self.instrument.write(f"OUTP{source} {state}")
