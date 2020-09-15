@@ -12,7 +12,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
     Addtional information on the remote control capabilities of the scope can
     be accessed at:
-    http://cdn.teledynelecroy.com/files/manuals/maui-remote-control-and-automation-manual.pdf#page=223&zoom=100,72,65
+    http://cdn.teledynelecroy.com/files/manuals/maui-remote-control-and-automation-manual.pdf
     """
 
     valid_trigger_states = ['AUTO', 'NORM', 'SINGLE', 'STOP']
@@ -52,7 +52,6 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         set_channel_scale(channel, scale)
 
         channel: int, channel number of channel
-                    valid options are 1-8
 
         scale: int/float, scale of the channel amplitude across one
         vertical division on the display.
@@ -60,7 +59,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         sets the scale of vertical divisons for the specified channel
         """
 
-        self.instrument.write(f"C{channel}:VDIV {scale}\n")
+        self.instrument.write(f"C{channel}:VDIV {scale}")
         return
 
     def get_channel_scale(self, channel):
@@ -68,16 +67,161 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         get_channel_scale(channel)
 
         channel: int, channel number of channel
-                    valid options are 1-8
 
         retrives the scale for vertical divisons for the specified channel
 
         returns: float
         """
-        read_cmd = f"C{channel}:VDIV"
-        response = self.instrument.query(f"{read_cmd}?")
-        val = response.lstrip(read_cmd).split()[0]
+
+        response = self.instrument.query(f"C{channel}:VDIV?")
+        val = response.split()[1]
         return float(val)
+
+    def set_channel_offset(self, channel, offset, use_divisions=False):
+        """
+        set_channel_offset(channel, offset)
+
+        channel: int, channel number of channel
+
+        offset: int/float, offset added to the channels waveform on the
+                display.
+        use_divisions: bool, if true offset will be treated as a number of
+                       vertical divisions
+
+        sets the vertical offset for the display of the specified channel.
+        """
+        if use_divisions:
+            offset *= self.get_channel_scale(channel)
+        self.instrument.write(f"C{channel}:OFFSET {offset}")
+        return
+
+    def get_channel_offset(self, channel):
+        """
+        get_channel_offset(channel)
+
+        channel: int, channel number of channel
+
+        retrives the vertical offset for the display of the specified
+        channel.
+
+        returns: float
+        """
+
+        response = self.instrument.query(f"C{channel}:OFFSET?")
+        val = response.split()[1]
+        return float(val)
+
+    def set_channel_coupling(self, channel, coupling):
+        """
+        valid options are 'dc_1meg' == 'dc', 'dc_50', 'ac_1meg' == 'ac', 'gnd'
+        """
+        coupling_map = {'dc_1meg': 'D1M', "dc": 'D1M',
+                        'dc_50': 'D50',
+                        'ac_1meg': 'A1M', 'ac': 'A1M',
+                        'gnd': 'gnd'}
+        coupling = coupling_map[coupling.lower()]
+        self.instrument.write(f"C{channel}:COUPLING {coupling}")
+        return None
+
+    def get_channel_coupling(self, channel):
+        coupling_map = {'D1M': 'dc_1meg', 'D50': 'dc_50',
+                        'A1M': 'ac_1meg', 'gnd': 'gnd'}
+        response = self.instrument.query("C1:COUPLING?")
+        coupling = response.split()[-1]
+        return coupling_map[coupling]
+
+    def set_horizontal_scale(self, scale):
+        """
+        set_horizontal_scale(scale)
+
+        scale: int/float, time scale across one horizontal division on the
+               display in seconds.
+
+        sets the scale of horizontal divisons (for all channels) to the
+        specified value in seconds.
+        """
+
+        self.instrument.write(f"TIME_DIV {scale}")
+        return None
+
+    def get_horizontal_scale(self):
+        """
+        get_horizontal_scale()
+
+        retrieves the scale of horizontal divisons in seconds.
+
+        returns: float
+        """
+        response = self.instrument.query("TIME_DIV?")
+        val = response.split()[1]
+        return float(val)
+
+    def set_measure_config(self, channel, meas_type, meas_idx):
+        """
+        AMPL, AREA, BASE, DLY, DUTY, FALL, FALL82, FREQ, MAX, MEAN, MIN, NULL,
+        OVSN, OVSP, PKPK, PER, PHASE, RISE, RISE28, RMS, SDEV, TOP, WID, WIDN,
+        AVG, CYCL, DDLY, DTRIG, DUR, FRST, FWHM, HAMPL, HBASE, HMEAN, HMEDI,
+        HRMS, HTOP, LAST, LOW, MAXP, MEDI, MODE, NCYCLE, PKS, PNTS, RANGE,
+        SIGMA, TOTP, XMAX, XMIN, XAPK
+        """
+        self.instrument.write(f'PACU {meas_idx},{meas_type},C{channel}')
+        return None
+
+    def get_measure_config(self, meas_idx):
+        response = self.instrument.query(f'PACU? {meas_idx}')
+        info = response.split()[-1]
+        resp_fields = ['index', 'type', 'source', 'status']
+        return {k: v for k, v in zip(resp_fields, info.split(','))}
+
+    def get_measure_data(self, meas_idx):
+        query_str = f"VBS? 'return=app.Measure.P{meas_idx}.Out.Result.Value' "
+        response = self.instrument.query(query_str)
+        return float(response.split()[-1])
+
+    def get_measure_statistics(self, meas_idx, stat_filter=None):
+
+        stat_filter = stat_filter.upper() if stat_filter is not None else ""
+        query_str = f'PAST? CUST,{stat_filter},P{meas_idx}'
+
+        response = self.instrument.query(query_str)
+
+        data = response[response.index(',') + 1:].strip().split(',')
+        if stat_filter == '':
+            data = data[3:]
+
+        while 'UNDEF' in data:
+            data.remove('UNDEF')
+        keys = map(str.lower, data[::2])
+        vals = data[1::2]
+        stats = {k: float(v.split()[0]) for k, v in zip(keys, vals)}
+
+        if stat_filter != '':
+            return stats[stat_filter.lower()]
+        return stats
+
+    def enable_measure_statistics(self, histogram=False):
+        if histogram:
+            self.instrument.write('PARM CUST,BOTH')
+        else:
+            self.instrument.write('PARM CUST,STAT')
+        return None
+
+    def disable_measure_statistics(self):
+        self.instrument.write('PARM CUST,OFF')
+        return None
+
+    def reset_measure_statistics(self):
+        """
+        reset_measure_statistics()
+
+        resets the accumlated measurements used to calculate statistics
+        """
+        self.instrument.write("VBS 'app.ClearSweeps' ")
+        return
+
+    def clear_all_measure(self):
+        self.instrument.write('PACL')
+        return None
 
     def trigger_run(self):
         """
@@ -373,6 +517,32 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
             file.write(screen_data)
 
         return None
+
+    # def get_channel_data(self, channel):
+
+    #     # parameters required for reconstruction
+    #     v_div = self.get_channel_scale(channel)
+    #     v_off = self.get_channel_offset(channel)
+    #     t_div = self.get_horizontal_scale()
+
+    #     # get raw data
+    #     self.instrument.write(f"C{channel}:WF?")
+    #     response = self.instrument.read_raw()[15:]
+
+    #     # process data (re-write, based on example)
+    #     data = list(response)
+    #     data.pop()
+    #     data.pop()
+
+    #     voltage_counts = []
+    #     for d in data:
+    #         if d > 127:
+    #             d = d - 255
+    #         voltage_counts.append(d)
+
+    #     time = []
+    #     for i in range(0, len(voltage_counts)):
+    #         time.append(t_div)
 
 
 if __name__ == '__main__':
