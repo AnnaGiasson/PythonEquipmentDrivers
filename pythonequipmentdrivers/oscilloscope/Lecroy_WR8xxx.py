@@ -1,4 +1,5 @@
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+import numpy as np
 
 
 class Lecroy_WR8xxx(_Scpi_Instrument):
@@ -543,6 +544,33 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
     #     time = []
     #     for i in range(0, len(voltage_counts)):
     #         time.append(t_div)
+
+    # def get_channel_data(self, channel, sparsing=1):
+
+    #     # parameters required for reconstruction
+    #     v_div = self.get_channel_scale(channel)
+    #     v_off = self.get_channel_offset(channel)
+    #     t_div = self.get_horizontal_scale()
+
+    #     # setup transfer (sparsing, num_points, first_point, seg_num)
+    #     # for now only sparsing is supported (defaults to no sparsing)
+    #     self.instrument.write(f"WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0")
+
+    #     # TEMPLATE?, TMPL? (check it out)
+    #     # WF?ResponseComparedtotheTemplate
+    #     #    WAVEFORM?"WAVEDESC"
+
+    #     # get raw data
+    #     self.instrument.write(f"C{channel}:WF?")
+    #     response = self.instrument.read_raw()[15:-2]
+
+    #     # process data (re-write, based on example)
+    #     voltage_counts = np.frombuffer(response, np.byte, -1)
+
+    #     time = []
+    #     for i in range(0, len(voltage_counts)):
+    #         time.append(t_div)
+
 
 
 if __name__ == '__main__':
