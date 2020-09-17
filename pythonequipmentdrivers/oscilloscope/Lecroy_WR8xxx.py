@@ -163,7 +163,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         OVSN, OVSP, PKPK, PER, PHASE, RISE, RISE28, RMS, SDEV, TOP, WID, WIDN,
         AVG, CYCL, DDLY, DTRIG, DUR, FRST, FWHM, HAMPL, HBASE, HMEAN, HMEDI,
         HRMS, HTOP, LAST, LOW, MAXP, MEDI, MODE, NCYCLE, PKS, PNTS, RANGE,
-        SIGMA, TOTP, XMAX, XMIN, XAPK
+        SIGMA, TOTP, XMAX, XMIN, XAPK, TOP
         """
         self.instrument.write(f'PACU {meas_idx},{meas_type},C{channel}')
         return None
@@ -267,6 +267,22 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         self.instrument.write("ARM")
         self.instrument.write("FRTR")
         return
+
+    def trigger_auto(self):
+        """
+        trigger_auto()
+
+        sets the state of the oscilloscopes acquision mode to acquire new
+        data automatically.
+        """
+
+        self.instrument.write("ARM")
+        self.instrument.write("TRMD AUTO")
+        return
+
+    def get_trigger_mode(self):
+        response = self.instrument.query('TRMD?')
+        return response.split()[-1].lower()
 
     def set_trigger_source(self, channel):
         """
@@ -439,6 +455,16 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         return slope
 
+    def set_trigger_position(self, offset, use_divisions=False):
+        if use_divisions:
+            offset *= self.get_horizontal_scale()
+        self.instrument.write(f'TRDL {offset}')
+        return
+
+    def get_trigger_position(self):
+        response = self.instrument.query('TRDL?')
+        return float(response.split()[1].lower())
+
     def get_image(self, image_title, **kwargs):
         """
         get_image(image_title)
@@ -566,6 +592,17 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         if return_time:
             return t, *waves
         return waves
+
+    def set_channel_label(self, channel, label):
+        q_str = f"""vbs 'app.acquisition.C{channel}.LabelsText = "{label}" '"""
+        self.instrument.write(q_str)
+        return None
+
+    def set_channel_display(self, channel, mode):
+        # mode = "true" or "false"
+        q_str = f"""vbs 'app.acquisition.C{channel}.View = {mode} '"""
+        self.instrument.write(q_str)
+        return None
 
 
 if __name__ == '__main__':
