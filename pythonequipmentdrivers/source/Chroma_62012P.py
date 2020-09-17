@@ -157,7 +157,7 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query(f"SOUR:CURR:SLEW?")
+        response = self.instrument.query("SOUR:CURR:SLEW?")
         return float(response)
 
     def set_voltage_slew_rate(self, slew_rate):
@@ -183,7 +183,7 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query(f"SOUR:VOLT:SLEW?")
+        response = self.instrument.query("SOUR:VOLT:SLEW?")
         return float(response)
 
     def set_voltage_limit(self, v_limit):
@@ -210,7 +210,7 @@ class Chroma_62012P(_Scpi_Instrument):
         voltage in Vdc
         """
 
-        resp = self.instrument.query(f'SOUR:VOLT:LIM:HIGH?')
+        resp = self.instrument.query('SOUR:VOLT:LIM:HIGH?')
         return float(resp)
 
     def measure_voltage(self):

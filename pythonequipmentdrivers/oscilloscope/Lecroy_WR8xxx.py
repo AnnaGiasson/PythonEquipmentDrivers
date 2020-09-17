@@ -519,58 +519,53 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         return None
 
-    # def get_channel_data(self, channel):
+    def get_waveform_description(self, channel):
+        response = self.instrument.query(f'C{channel}:INSP? "WAVEDESC"')
+        description = {}
+        for item in response.splitlines()[2:-1]:
+            idx = item.index(':')
+            key = item[:idx].strip().lower()
+            value = item[idx+1:].strip().lower()
+            try:
+                value = float(value)
+                if value.is_integer():
+                    value = int(value)
+            except ValueError:  # wasn't numeric
+                pass
+            description[key] = value
+        return description
 
-    #     # parameters required for reconstruction
-    #     v_div = self.get_channel_scale(channel)
-    #     v_off = self.get_channel_offset(channel)
-    #     t_div = self.get_horizontal_scale()
+    def get_channel_data(self, *channels, sparsing=1, return_time=True):
 
-    #     # get raw data
-    #     self.instrument.write(f"C{channel}:WF?")
-    #     response = self.instrument.read_raw()[15:]
+        # setup transfer (sparsing, num_points, first_point, seg_num)
+        # for now only sparsing is supported (defaults to no sparsing)
+        self.instrument.write(f"WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0")
 
-    #     # process data (re-write, based on example)
-    #     data = list(response)
-    #     data.pop()
-    #     data.pop()
+        waves = []
+        for i, channel in enumerate(channels):
+            # parameters required for reconstruction
+            desc = self.get_waveform_description(channel)
+            v_div = desc['vertical_gain']
+            v_off = desc['vertical_offset']
 
-    #     voltage_counts = []
-    #     for d in data:
-    #         if d > 127:
-    #             d = d - 255
-    #         voltage_counts.append(d)
+            # get raw data
+            self.instrument.write(f"C{channel}:WF? DAT1")
+            response = self.instrument.read_raw()[22:-1]
+            # response = self.instrument.read_raw()
 
-    #     time = []
-    #     for i in range(0, len(voltage_counts)):
-    #         time.append(t_div)
+            # process data
+            adc_counts = np.frombuffer(response, np.byte, -1)
+            wave = adc_counts*v_div - v_off
+            waves.append(wave)
 
-    # def get_channel_data(self, channel, sparsing=1):
+            if (i == 0) and return_time:
+                t_div = desc['horiz_interval']
+                t_off = desc['horiz_offset']
+                t = np.arange(len(wave))*t_div*sparsing + t_off
 
-    #     # parameters required for reconstruction
-    #     v_div = self.get_channel_scale(channel)
-    #     v_off = self.get_channel_offset(channel)
-    #     t_div = self.get_horizontal_scale()
-
-    #     # setup transfer (sparsing, num_points, first_point, seg_num)
-    #     # for now only sparsing is supported (defaults to no sparsing)
-    #     self.instrument.write(f"WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0")
-
-    #     # TEMPLATE?, TMPL? (check it out)
-    #     # WF?ResponseComparedtotheTemplate
-    #     #    WAVEFORM?"WAVEDESC"
-
-    #     # get raw data
-    #     self.instrument.write(f"C{channel}:WF?")
-    #     response = self.instrument.read_raw()[15:-2]
-
-    #     # process data (re-write, based on example)
-    #     voltage_counts = np.frombuffer(response, np.byte, -1)
-
-    #     time = []
-    #     for i in range(0, len(voltage_counts)):
-    #         time.append(t_div)
-
+        if return_time:
+            return t, *waves
+        return waves
 
 
 if __name__ == '__main__':
