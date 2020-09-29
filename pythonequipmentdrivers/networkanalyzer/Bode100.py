@@ -16,6 +16,18 @@ class Bode100():
     documentation.omicron-lab.com/BodeAutomationInterface/3.23/index.html
     """
 
+    # return codes are ints, the indecies of this list represent the respective
+    # descriptions of each state
+    execution_state_names = ['Ok', 'Overload', 'Error', 'DeviceLost',
+                             'Cancelled', 'CalibrationMandatory']
+    execution_state_desc = ['Measurement successfully completed.',
+                            'Overload detected. Check OverloadLevel.',
+                            'Unknown error occurred during measurement.',
+                            'Device connection lost during measurement.',
+                            'Execution stopped by user.',
+                            'Calibration mandatory for this measurement mode.',
+                            ]
+
     def __init__(self, address=None):
 
         api_link = "OmicronLab.VectorNetworkAnalysis.AutomationInterface"
@@ -51,9 +63,14 @@ class Bode100():
     def __str__(self):
         return f"{self.idn}"
 
+    def __del__(self):
+        self.connection.ShutDown()
+        return None
+
     def run_frequency_sweep(self, f_start, f_end, n_points, return_db=True,
                             return_rad=False, logarithmic_sweep=True,
                             chan1_atten=-20, chan2_atten=-20,
+                            source_level=-30, source_level_unit=0,
                             receiver_bw=1e3, wrap_phase=True):
         """
         run_frequency_sweep(f_start, f_end, n_points, return_db=True,
@@ -77,6 +94,9 @@ class Bode100():
         chan1_atten/chan2_atten: (float) Optional; Attenuation of the channel
                                  1/2 to be used in the sweep in dB. Defaults to
                                  -20dB.
+        source_level: (float) Optional; fixed amplitude of the injected signal.
+        source_level_unit: (int) units of the source level to use for signal
+                           injection. 0 = dBm, 1 = Vpp, 2 = Vrms
         receiver_bw: (float) Optional; Bandwidth of the reciever used
                      in the frequecy sweep in Hz. Defaults to 1 kHz.
         wrap_phase: (bool) Optional; Determines whether or not returned phase
@@ -107,15 +127,23 @@ class Bode100():
 
         # custom bandwidths need to be in milliHertz according to API docs
         measurement.ReceiverBandwidth = int(receiver_bw*1000)
-
         measurement.Attenuation.Channel1 = chan1_atten
         measurement.Attenuation.Channel2 = chan2_atten
+
+        # reference for unit 'codes'
+        # https://documentation.omicron-lab.com/BodeAutomationInterface/3.23/api/OmicronLab.VectorNetworkAnalysis.AutomationInterface.Enumerations.LevelUnit.html?q=LevelUnit
+        measurement.SetSourceLevel(float(source_level), int(source_level_unit))
 
         measurement.ConfigureSweep(f_start, f_end, n_points,
                                    int(logarithmic_sweep))
 
         # execute measurement
-        state = measurement.ExecuteMeasurement()
+        try:
+            state = measurement.ExecuteMeasurement()
+        except _win32client.pywintypes.com_error as error:
+            self.connection.ShutDown()
+            raise Exception(error.excepinfo[2])
+
         if state == 0:
 
             freq = _np.array(measurement.Results.MeasurementFrequencies)
@@ -140,8 +168,20 @@ class Bode100():
             return freq, mag, phase
         else:
             self.connection.ShutDown()
-            raise IOError("An error happened!")
+            self.execution_state_names[state]
+            err_msg = "({}) {} - {}".format(self.execution_state_names[state],
+                                            state,
+                                            self.execution_state_desc[state])
+            raise IOError(err_msg)
 
 
 if __name__ == "__main__":
-    pass
+
+    config = {'chan1_atten': 0,
+              'chan2_atten': 0,
+              'source_level': 0.05,
+              'source_level_unit': 1,
+              }
+
+    bode = Bode100()
+    f, mag, phase = bode.run_frequency_sweep(1000, 1e6, 801, **config)
