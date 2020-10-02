@@ -64,7 +64,13 @@ class Bode100():
         return f"{self.idn}"
 
     def __del__(self):
-        self.connection.ShutDown()
+        try:
+            self.connection.ShutDown()
+
+        except AttributeError:
+            # if instrument is inaccessible __init__ will raise a Visa Error
+            # and instrument wont be initialized thus it can't be closed
+            pass
         return None
 
     def run_frequency_sweep(self, f_start, f_end, n_points, return_db=True,
