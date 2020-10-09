@@ -1,4 +1,5 @@
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+import numpy as np
 
 
 class Keysight_33500B(_Scpi_Instrument):
@@ -342,6 +343,25 @@ class Keysight_33500B(_Scpi_Instrument):
 
     def clear_display_text(self):
         return self.set_display_text("")
+
+    def store_arbitrary_waveform(self, data, arb_name):
+        if not (8 < len(data) < 65536):
+            raise ValueError('data must be between 8 and 65536 samples')
+
+        data = np.array(data)
+
+        data -= data.mean()  # symmetric
+        data /= data.max()  # spans +/- 1
+        data *= 32767  # spans +/- 32767
+        data = data.astype(int)
+
+        # send data
+        cmd_str = "SOUR:DATA:ARB1:DAC"
+        self.instrument.write('{} {},{}'.format(cmd_str,
+                                                arb_name,
+                                                ",".join(map(str, data))))
+
+        return None
 
 
 if __name__ == "__main__":
