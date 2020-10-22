@@ -157,7 +157,8 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         val = response.split()[1]
         return float(val)
 
-    def set_measure_config(self, channel, meas_type, meas_idx):
+    def set_measure_config(self, channel, meas_type, meas_idx,
+                           source_type='channel'):
         """
         AMPL, AREA, BASE, DLY, DUTY, FALL, FALL82, FREQ, MAX, MEAN, MIN, NULL,
         OVSN, OVSP, PKPK, PER, PHASE, RISE, RISE28, RMS, SDEV, TOP, WID, WIDN,
@@ -165,7 +166,14 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         HRMS, HTOP, LAST, LOW, MAXP, MEDI, MODE, NCYCLE, PKS, PNTS, RANGE,
         SIGMA, TOTP, XMAX, XMIN, XAPK, TOP
         """
-        self.instrument.write(f'PACU {meas_idx},{meas_type},C{channel}')
+
+        source_mapping = {'channel': 'C', 'math': 'F', 'zoom': 'Z'}
+        src_code = source_mapping[source_type.lower()]
+
+        self.instrument.write('PACU {},{},{}{}'.format(meas_idx,
+                                                       meas_type,
+                                                       src_code,
+                                                       channel))
         return None
 
     def get_measure_config(self, meas_idx):
@@ -582,15 +590,18 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
             # process data
             adc_counts = np.frombuffer(response, np.byte, -1)
             wave = adc_counts*v_div - v_off
-            waves.append(wave)
+            waves.append(wave.astype(np.float32))
 
             if (i == 0) and return_time:
                 t_div = desc['horiz_interval']
                 t_off = desc['horiz_offset']
                 t = np.arange(len(wave))*t_div*sparsing + t_off
+                t = t.astype(np.float32)
 
         if return_time:
             return t, *waves
+        if len(waves) == 1:
+            return waves[0]
         return waves
 
     def set_channel_label(self, channel, label):
