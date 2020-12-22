@@ -285,7 +285,7 @@ class Chroma_62012P(_Scpi_Instrument):
         or greater than the previous voltage setpoint
         """
 
-        start_level = self.get_current(1)
+        start_level = self.get_voltage()
         self.set_voltage(level)
         _sleep(duration)
         self.set_voltage(start_level)

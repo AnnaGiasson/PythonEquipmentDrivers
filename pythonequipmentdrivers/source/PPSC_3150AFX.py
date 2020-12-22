@@ -128,7 +128,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         returns: int, 0 for low range and 1 for high range
         """
 
-        response = self.instrument.query(f"RANG?")
+        response = self.instrument.query("RANG?")
         return int(response)
 
     def set_voltage(self, voltage, phase=''):
@@ -185,7 +185,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         returns : float
         """
 
-        data = self.instrument.query(f"SOUR:FREQ?")
+        data = self.instrument.query("SOUR:FREQ?")
         return float(data)
 
     def measure_voltage_rms(self, phase=''):
@@ -253,7 +253,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query(f'MEAS:FREQ?')
+        response = self.instrument.query('MEAS:FREQ?')
         return float(response)
 
     def measure_current_rms(self, phase=''):
@@ -400,7 +400,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query(f'MEAS:TEMP:AMB?')
+        response = self.instrument.query('MEAS:TEMP:AMB?')
         return float(response)
 
     def store_waveform(self, waveform_number, data):

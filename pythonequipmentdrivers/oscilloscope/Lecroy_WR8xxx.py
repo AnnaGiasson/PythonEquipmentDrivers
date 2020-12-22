@@ -615,6 +615,44 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         self.instrument.write(q_str)
         return None
 
+    def set_persistence_state(self, state):
+        if state:
+            self.instrument.write('PERSIST ON')
+        else:
+            self.instrument.write('PERSIST OFF')
+        return None
+
+    def get_persistence_state(self, state):
+
+        response = self.instrument.query('PERSIST?')
+        response = response.split()[1]
+
+        if response == 'ON':
+            return True
+        return False
+
+    def set_persistence_time(self, duration):
+        valid_durs = [0.5, 1, 2, 5, 1, 20, 'inf']
+
+        if isinstance(duration, str):
+            duration = duration.lower()
+
+        if duration in valid_durs:
+            self.instrument.write(f'PESU {duration},ALL')
+        else:
+            raise ValueError('Invalid duration, valid times (s): '
+                             ', '.join(map(str, valid_durs)))
+        return None
+
+    def get_persistence_time(self):
+
+        response = self.instrument.query('PESU?')
+        dur = response.split()[1].split(',')[0]
+
+        if response.isnumeric():
+            return float(dur)
+        return 'inf'
+
 
 if __name__ == '__main__':
     pass
