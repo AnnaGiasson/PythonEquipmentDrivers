@@ -187,25 +187,36 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         response = self.instrument.query(query_str)
         return float(response.split()[-1])
 
-    def get_measure_statistics(self, meas_idx, stat_filter=None):
+    def get_measure_statistics(self, meas_idx, stat_filter=''):
 
-        stat_filter = stat_filter.upper() if stat_filter is not None else ""
-        query_str = f'PAST? CUST,{stat_filter},P{meas_idx}'
+        query_str = f'PAST? CUST,,P{meas_idx}'
 
         response = self.instrument.query(query_str)
 
+        # strip out header info about measurement
         data = response[response.index(',') + 1:].strip().split(',')
-        if stat_filter == '':
-            data = data[3:]
+        data = data[3:]
 
-        while 'UNDEF' in data:
-            data.remove('UNDEF')
         keys = map(str.lower, data[::2])
         vals = data[1::2]
-        stats = {k: float(v.split()[0]) for k, v in zip(keys, vals)}
 
-        if stat_filter != '':
-            return stats[stat_filter.lower()]
+        rename_map = {'avg': 'mean', 'high': 'max', 'low': 'min',
+                      'last': 'last', 'sigma': 'stdev', 'sweeps': 'n'}
+        stats = {}
+        for k, v in zip(keys, vals):
+            if v != 'UNDEF':
+                value = float(v.split()[0])  # remove units
+            else:
+                value = None
+
+            stats[rename_map[k]] = value
+
+        if (stat_filter != ''):
+            if (stat_filter in stats.keys()):
+                return stats[stat_filter.lower()]
+            else:
+                raise ValueError(f'Invalid option stat_filter = {stat_filter},'
+                                 f' valid options are: {tuple(stats.keys())}')
         return stats
 
     def enable_measure_statistics(self, histogram=False):
