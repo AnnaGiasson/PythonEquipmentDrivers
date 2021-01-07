@@ -187,7 +187,10 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         for idx in meas_idx:
             q_str = f"VBS? 'return=app.Measure.P{idx}.Out.Result.Value' "
             response = self.instrument.query(q_str)
-            data.append(float(response.split()[-1]))
+            try:
+                data.append(float(response.split()[-1]))
+            except ValueError:
+                data.append(float('nan'))
         if len(data) == 1:
             return data[0]
         return data
