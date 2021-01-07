@@ -182,10 +182,15 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         resp_fields = ['index', 'type', 'source', 'status']
         return {k: v for k, v in zip(resp_fields, info.split(','))}
 
-    def get_measure_data(self, meas_idx):
-        query_str = f"VBS? 'return=app.Measure.P{meas_idx}.Out.Result.Value' "
-        response = self.instrument.query(query_str)
-        return float(response.split()[-1])
+    def get_measure_data(self, *meas_idx):
+        data = []
+        for idx in meas_idx:
+            q_str = f"VBS? 'return=app.Measure.P{idx}.Out.Result.Value' "
+            response = self.instrument.query(q_str)
+            data.append(float(response.split()[-1]))
+        if len(data) == 1:
+            return data[0]
+        return data
 
     def get_measure_statistics(self, meas_idx, stat_filter=''):
 
