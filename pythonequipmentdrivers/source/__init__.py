@@ -6,6 +6,7 @@ from .Elgar_1750A import Elgar_1750A
 from .Elgar_5250A import Elgar_5250A
 from .Intepro_PSI9000 import Intepro_PSI9000
 from .PPSC_3150AFX import PPSC_3150AFX
+from .HP_6632A import HP_6632A
 
 
 __all__ = ['BKPrecision_9132B',
@@ -16,4 +17,5 @@ __all__ = ['BKPrecision_9132B',
            'Elgar_5250A',
            'Intepro_PSI9000',
            'PPSC_3150AFX',
+           'HP_6632A',
            ]

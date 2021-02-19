@@ -3,13 +3,14 @@ from time import sleep as _sleep
 import numpy as _np
 
 
-class Chroma_62012P(_Scpi_Instrument):
+class HP_6632A(_Scpi_Instrument):
     """
-    Chroma_62012P(address)
+    HP_6632A(address)
 
     address : str, address of the connected power supply
 
-    object for accessing basic functionallity of the Chroma_62012P DC supply
+    object for accessing basic functionallity of the Hewlett Packard 6632A
+    DC supply
     """
 
     def __init__(self, address):
@@ -25,7 +26,7 @@ class Chroma_62012P(_Scpi_Instrument):
         enables/disables the state for the power supply's output
         """
 
-        self.instrument.write(f"CONF:OUTP {state}")
+        self.instrument.write(f"OUTP:STAT {state}")
         return
 
     def get_state(self):
@@ -38,10 +39,8 @@ class Chroma_62012P(_Scpi_Instrument):
         1: enabled, 0: disabled
         """
 
-        response = self.instrument.query("CONF:OUTP?").rstrip('\n')
-        if response != "ON":
-            return 0
-        return 1
+        response = self.instrument.query("OUTP:STAT?").rstrip('\n')
+        return int(response)
 
     def on(self):
         """
@@ -96,7 +95,7 @@ class Chroma_62012P(_Scpi_Instrument):
         set the output voltage setpoint specified by "voltage"
         """
 
-        self.instrument.write(f"SOUR:VOLT {voltage}")
+        self.instrument.write(f"SOUR:VOLT:LEV {voltage}")
         return
 
     def get_voltage(self):
@@ -108,7 +107,7 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:VOLT?")
+        response = self.instrument.query("SOUR:VOLT:LEV?")
         return float(response)
 
     def set_current(self, current):
@@ -119,7 +118,7 @@ class Chroma_62012P(_Scpi_Instrument):
 
         sets the current limit setting for the power supply in Adc
         """
-        self.instrument.write(f"SOUR:CURR {current}")
+        self.instrument.write(f"SOUR:CURR:LEV {current}")
         return
 
     def get_current(self):
@@ -131,87 +130,52 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:CURR?")
+        response = self.instrument.query("SOUR:CURR:LEV?")
         return float(response)
-
-    def set_current_slew_rate(self, slew_rate):
-        """
-        set_current_slew_rate(slew_rate)
-
-        slew_rate: float, current slew rate in A/ms
-
-        sets the current slew rate for the power supply's output current in
-        A/ms
-        """
-
-        self.instrument.write(f"SOUR:CURR:SLEW {slew_rate}")
-        return
-
-    def get_current_slew_rate(self):
-        """
-        get_current_slew_rate()
-
-        gets the current slew rate for the power supply's output current in
-        A/ms
-
-        returns: float
-        """
-
-        response = self.instrument.query("SOUR:CURR:SLEW?")
-        return float(response)
-
-    def set_voltage_slew_rate(self, slew_rate):
-        """
-        set_voltage_slew_rate(slew_rate)
-
-        slew_rate: float, voltage slew rate in V/ms
-
-        sets the voltage slew rate for the power supply's output voltage in
-        V/ms
-        """
-
-        self.instrument.write(f"SOUR:VOLT:SLEW {slew_rate}")
-        return
-
-    def get_voltage_slew_rate(self):
-        """
-        get_voltage_slew_rate()
-
-        gets the voltage slew rate for the power supply's output voltage in
-        V/ms
-
-        returns: float
-        """
-
-        response = self.instrument.query("SOUR:VOLT:SLEW?")
-        return float(response)
-
-    def set_voltage_limit(self, v_limit):
-        """
-        set_voltage_limit(v_limit)
-
-        v_limit: float, voltage limit in Vdc
-
-        sets the voltage setpoint limit for the power supply's output voltage
-        in Vdc
-        """
-
-        self.instrument.write(f'SOUR:VOLT:LIM:HIGH {v_limit}')
-        return
 
     def get_voltage_limit(self):
         """
         get_voltage_limit()
 
-        returns:
-        v_limit: float, voltage limit in Vdc
+        returns: v_limit: float, voltage limit in Vdc
 
         Returns the voltage setpoint limit for the power supply's output
-        voltage in Vdc
+        voltage in Vdc. This level can only be set manually through the
+        potentiometer on the front panel
         """
 
-        resp = self.instrument.query('SOUR:VOLT:LIM:HIGH?')
+        resp = self.instrument.query('SOUR:VOLT:PROT?')
         return float(resp)
+
+    def set_ocp_state(self, state):
+        """
+        set_ocp_state(state)
+
+        Enables or Disables the Over-Current Protection of the supply's output.
+        With OCP active the output will be shut off it the current level is
+        exceeded.
+
+        Args:
+            state (bool): Whether or not Over-Current Protection is active
+        """
+
+        state = 1 if bool(state) else 0
+        self.instrument.write(f'SOUR:CURR:PROT:STATE {state}')
+        return None
+
+    def get_ocp_state(self):
+        """
+        get_ocp_state()
+
+        Returns whether the Over-Current Protection of the supply is Enabled
+        or Disabled. With OCP active the output will be shut off it the current
+        level is exceeded.
+
+        Args:
+            state (bool): Whether or not Over-Current Protection is active
+        """
+        response = self.instrument.query('SOUR:CURR:PROT:STATE?')
+        return int(response)
 
     def measure_voltage(self):
         """
@@ -222,7 +186,7 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query("FETC:VOLT?")
+        response = self.instrument.query("MEAS:VOLT?")
         return float(response)
 
     def measure_current(self):
@@ -233,43 +197,8 @@ class Chroma_62012P(_Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query("FETC:CURR?")
+        response = self.instrument.query("MEAS:CURR?")
         return float(response)
-
-    def measure_power(self):
-        """
-        measure_power()
-
-        returns measurement of the power drawn from the power supply in W
-
-        returns: float
-        """
-
-        response = self.instrument.query("FETC:POW?")
-        return float(response)
-
-    def get_status(self):
-        """
-        returns the current status of the supplies fault register
-        returns: str, the error code.
-            valid codes are:
-                "NE" (no error)
-                "OVP" (over voltage protection fault)
-                "OCP" (over current protection fault)
-                "OPP" (over power protection fault)
-        """
-
-        status = self.instrument.query("FETC:STAT?").rstrip('\n')
-        status = [x.strip() for x in status.split(',')]
-        warning_meas = int(status[0])
-        if warning_meas == 0:
-            return "NE"
-        elif (warning_meas & 0x0001) == 0x0001:
-            return "OVP"
-        elif (warning_meas & 0x0002) == 0x0002:
-            return "OCP"
-        elif (warning_meas & 0x0008) == 0x0008:
-            return "OPP"
 
     def pulse(self, level, duration):
         """
