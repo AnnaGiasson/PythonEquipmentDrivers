@@ -86,22 +86,19 @@ class Bode100():
                          the connected Bode 100.
 
         Kwargs:
-            logarithmic_sweep (bool, optional): Determines the spacing between
-                the frequency points used in the sweep. If True 'n_points' are
-                spaced logarithmically from 'f_start' to 'f_end', otherwise
-                they are spaced linearly. Defaults to True.
 
-            gain_unit (str, optional): The unit of the returned gain vector.
-                Valid options are 'db' or 'linear'. Defaults to 'db'.
-            phase_unit (str, optional): The unit of the returned phase vector.
-                Valid options are 'radians' or 'degrees'. Defaults to 'degrees'
-            wrap_phase (bool, optional): Whether or not the returned phase data
-                is contained with +/- pi or 180 deg. Defaults to True.
-
-            chan1_atten (int, optional): Attenuation of the channel 1 to be
-                used in the sweep in dB. Defaults to -20 dB.
-            chan2_atten (int, optional): Attenuation of the channel 2 to be
-                used in the sweep in dB. Defaults to -20 dB.
+            chan1_probe_atten (int, optional): Attenuation of the external
+                probe connected to channel 1 as a ratio;
+                e.g 1 = 1:1, 10  = 10:1. Defaults to 1.
+            chan2_probe_atten (int, optional): Attenuation of the external
+                probe connected to channel 2 as a ratio;
+                e.g 1 = 1:1, 10  = 10:1. Defaults to 1.
+            chan1_atten (int, optional): Attenuation of the signal on channel 1
+                to be added by the Bode100 internally, used in the sweep (dB).
+                Defaults to -20 dB.
+            chan2_atten (int, optional): Attenuation of the signal on channel 2
+                to be added by the Bode100 internally, used in the sweep (dB).
+                Defaults to -20 dB.
 
             source_level (int or iterable, optional): if this is an int it
                 represents a fixed amplitude of the injected signal over
@@ -134,17 +131,19 @@ class Bode100():
                                        src_unit_lut.index(src_unit))
 
         elif isinstance(config.get('source_level', -30), (list, tuple)):
-
-            measurement.SourceShaping.IsEnabled = True
-            measurement.SourceShaping.LevelUnit = src_unit_lut.index(src_unit)
-            measurement.SourceShaping.Clear()
+            shaping_interface = measurement.Shaping.SourceShaping
+            shaping_interface.IsEnabled = True
+            shaping_interface.LevelUnit = src_unit_lut.index(src_unit)
+            shaping_interface.Clear()
 
             for freq, level in config.get('source_level'):
-                measurement.SourceShaping.Add(float(freq), float(level))
+                shaping_interface.Add(float(freq), float(level))
         else:
             raise ValueError('Invalid Type for option "source_level"')
 
         # probe configuration
+        measurement.ExternalProbeChannel1 = config.get('chan1_probe_atten', 1)
+        measurement.ExternalProbeChannel2 = config.get('chan2_probe_atten', 1)
         measurement.Attenuation.Channel1 = config.get('chan1_atten', -20)
         measurement.Attenuation.Channel2 = config.get('chan2_atten', -20)
 
@@ -152,6 +151,62 @@ class Bode100():
         measurement.ReceiverBandwidth = int(config.get('receiver_bw', 1e3)*1e3)
 
         return measurement
+
+    def process_gain_phase_results(self, results, **options):
+
+        """
+        process_gain_phase_results(results, **kwargs)
+
+        Extracts frequency response data for a results object of a gain/phase
+        measurement test. Returning the meausurment frequencies, gain,
+        and phase. This function is run automatically by the
+        gain_phase_measurement method.
+
+        Args:
+            results (GainMeasurement.Result Object): Results object returned
+                after performing a successful gain/phase measurment
+
+        Kwargs:
+            gain_unit (str, optional): The unit of the returned gain vector.
+                Valid options are 'db' or 'linear'. Defaults to 'db'.
+            phase_unit (str, optional): The unit of the returned phase vector.
+                Valid options are 'radians' or 'degrees'. Defaults to 'degrees'
+            wrap_phase (bool, optional): Whether or not the returned phase data
+                is contained with +/- pi or 180 deg. Defaults to True.
+
+        Raises:
+            ValueError: Raised if invalid options are passed for kwargs.
+
+        Returns:
+            tuple of np.array: The frequency, gain, and phase measurement
+                               vectors resulting from the frequency sweep.
+                               (frequency, magnitude, phase)
+        """
+
+        # extract & format data
+        freq = _np.array(results.MeasurementFrequencies)
+
+        # mag
+        gain_unit_lut = ('db', 'linear')
+        if options.get('gain_unit', 'db').lower() not in gain_unit_lut:
+            raise ValueError('Invalid option for argument "gain_unit"')
+
+        gain_unit = options.get('gain_unit', 'db').lower()
+        mag = _np.array(results.Magnitude(gain_unit_lut.index(gain_unit)))
+
+        # phase
+        phase_unit_lut = ('radians', 'degrees')
+        if options.get('phase_unit', 'degrees').lower() not in phase_unit_lut:
+            raise ValueError('Invalid option for argument "phase_unit"')
+
+        phase_unit = options.get('phase_unit', 'degrees').lower()
+        phase_idx = phase_unit_lut.index(phase_unit)
+        if options.get('wrap_phase', True):
+            phase = _np.array(results.Phase(phase_idx))
+        else:
+            phase = _np.array(results.UnwrappedPhase(phase_idx))
+
+        return freq, mag, phase
 
     def gain_phase_measurement(self, f_start, f_end, n_points, **kwargs):
 
@@ -167,9 +222,8 @@ class Bode100():
             freq, mag, phase = bode.gain_phase_measurement(1e3, 1e6, 200)
 
         Args:
-            f_start (float): The starting frequency of the frequency sweep in
-                             Hz
-            f_end (float): The final frequency of the frequency sweep in Hz
+            f_start (float): The starting frequency of the sweep in Hz
+            f_end (float): The final frequency of the sweep in Hz
             n_points (int): The number of points contained in frequency sweep
                             between the frequencies f_start and f_end.
 
@@ -186,10 +240,18 @@ class Bode100():
             wrap_phase (bool, optional): Whether or not the returned phase data
                 is contained with +/- pi or 180 deg. Defaults to True.
 
-            chan1_atten (int, optional): Attenuation of the channel 1 to be
-                used in the sweep in dB. Defaults to -20 dB.
-            chan2_atten (int, optional): Attenuation of the channel 2 to be
-                used in the sweep in dB. Defaults to -20 dB.
+            chan1_probe_atten (int, optional): Attenuation of the external
+                probe connected to channel 1 as a ratio;
+                e.g 1 = 1:1, 10  = 10:1. Defaults to 1.
+            chan2_probe_atten (int, optional): Attenuation of the external
+                probe connected to channel 2 as a ratio;
+                e.g 1 = 1:1, 10  = 10:1. Defaults to 1.
+            chan1_atten (int, optional): Attenuation of the signal on channel 1
+                to be added by the Bode100 internally, used in the sweep (dB).
+                Defaults to -20 dB.
+            chan2_atten (int, optional): Attenuation of the signal on channel 2
+                to be added by the Bode100 internally, used in the sweep (dB).
+                Defaults to -20 dB.
 
             source_level (int or iterable, optional): if this is an int it
                 represents a fixed amplitude of the injected signal over
@@ -234,28 +296,11 @@ class Bode100():
 
         if state == 0:  # success
             # get raw data
-            freq = _np.array(measurement.Results.MeasurementFrequencies)
             results = measurement.Results
-            complex_vals = results.ComplexValues()
             self.connection.ShutDown()
 
-            # format data
-            if kwargs.get('gain_unit', 'db').lower() == 'db':
-                mag = _np.array([datum.MagnitudeDB for datum in complex_vals])
-            elif kwargs.get('gain_unit', 'db').lower() == 'linear':
-                mag = _np.array([datum.Magnitude for datum in complex_vals])
-            else:
-                raise ValueError('Invalid option for argument "gain_unit"')
-
-            if kwargs.get('wrap_phase', True):
-                phase = _np.array([datum.Phase for datum in complex_vals])
-            else:
-                phase = _np.array(results.UnwrappedPhase(0))
-
-            if kwargs.get('phase_unit', 'degrees').lower() == 'degrees':
-                phase *= 180/_np.pi
-            elif kwargs.get('phase_unit', 'degrees').lower() != 'radians':
-                raise ValueError('Invalid option for argument "phase_unit"')
+            freq, mag, phase = self.process_gain_phase_results(results,
+                                                               **kwargs)
 
             return freq, mag, phase
 
@@ -270,11 +315,25 @@ class Bode100():
 
 if __name__ == "__main__":
 
-    config = {'chan1_atten': 0,
+    config = {'chan1_atten': -20,
               'chan2_atten': 0,
-              'source_level': 0,
+              # 'source_level': 0,  # fixed level
+              'source_level': ((1e3, 0),  # shaped level
+                               (1e6, -10)),
               'source_units': 'dbm',
+              'receiver_bw': 5e3,
+              'wrap_phase': False,
               }
 
     bode = Bode100()
-    f, mag, phase = bode.gain_phase_measurement(1000, 1e6, 801, **config)
+    f, mag, phase = bode.gain_phase_measurement(1000, 1e6, 2048, **config)
+
+    # import matplotlib.pyplot as plt
+    # fig, axes = plt.subplots(2, 1, sharex=True)
+    # axes[0].plot(f, mag, color='r', alpha=0.8, label='mag')
+    # axes[1].plot(f, phase, color='b', alpha=0.8, label='phase')
+    # axes[0].set(ylabel='magnitude (db)', xscale='log')
+    # axes[1].set(xlabel='frequency', ylabel='phase (deg)', xscale='log')
+    # axes[0].grid(True, which='both', axis='both')
+    # axes[1].grid(True, which='both', axis='both')
+    # plt.show()
