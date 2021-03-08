@@ -18,15 +18,15 @@ class Bode100():
 
     # return codes are ints, the indecies of this list represent the respective
     # descriptions of each state
-    execution_state_names = ['Ok', 'Overload', 'Error', 'DeviceLost',
-                             'Cancelled', 'CalibrationMandatory']
-    execution_state_desc = ['Measurement successfully completed.',
+    execution_state_names = ('Ok', 'Overload', 'Error', 'DeviceLost',
+                             'Cancelled', 'CalibrationMandatory',)
+    execution_state_desc = ('Measurement successfully completed.',
                             'Overload detected. Check OverloadLevel.',
                             'Unknown error occurred during measurement.',
                             'Device connection lost during measurement.',
                             'Execution stopped by user.',
                             'Calibration mandatory for this measurement mode.',
-                            ]
+                            )
 
     def __init__(self, address=None):
 
@@ -73,75 +73,157 @@ class Bode100():
             pass
         return None
 
-    def run_frequency_sweep(self, f_start, f_end, n_points, return_db=True,
-                            return_rad=False, logarithmic_sweep=True,
-                            chan1_atten=-20, chan2_atten=-20,
-                            source_level=-30, source_level_unit=0,
-                            receiver_bw=1e3, wrap_phase=True):
+    def configure_gain_phase_setup(self, measurement, **config):
+
         """
-        run_frequency_sweep(f_start, f_end, n_points, return_db=True,
-                            return_rad=False, logarithmic_sweep=True)
+        configure_gain_phase_setup(measurement, **config)
 
-        f_start: (float) The starting frequency of the frequency sweep in Hz
-        f_end: (float) The final frequency of the frequency sweep in Hz
-        n_points: (int) The number of points contained in frequency sweep
-                  between the frequencies f_start and f_end.
+        configurations a gain phase measurement on of the Bode 100. This
+        function is run automatically by the gain_phase_measurement method.
 
-        return_db: (bool) Optional; sets the format of the returned magnitude
-                   response. If true decibels are used otherwise output/input
-                   ratios are used. Default is True.
-        return_rad: (bool) Optional; sets the format of the returned phase
-                    response. If true radians are used otherwise degrees are
-                    used. Default is False.
-        logarithmic_sweep: (bool) Optional; Determines the spacing between the
-                           the frequency points used in the sweep. If true
-                           'n_points' are spaced logarithmically from 'f_start'
-                           to 'f_end', otherwise they are spaced linearly.
-        chan1_atten/chan2_atten: (float) Optional; Attenuation of the channel
-                                 1/2 to be used in the sweep in dB. Defaults to
-                                 -20dB.
-        source_level: (float) Optional; fixed amplitude of the injected signal.
-        source_level_unit: (int) units of the source level to use for signal
-                           injection. 0 = dBm, 1 = Vpp, 2 = Vrms
-        receiver_bw: (float) Optional; Bandwidth of the reciever used
-                     in the frequecy sweep in Hz. Defaults to 1 kHz.
-        wrap_phase: (bool) Optional; Determines whether or not returned phase
-                    data is contained with +/- pi or 180deg, default is True.
+        Args:
+            measurement: gain phase measurement instance to be configured on
+                         the connected Bode 100.
 
-        returns:
-        freq: (float array) The disturbence frequencies used in the sweep in Hz
-        mag: (float array) the magnitude response over frequency, units depend
-             on the setting of 'return_dB', either dB or ratio.
-        phase: (float array) the phase response over frequency, units depend on
-               the setting of 'return_rad', either radians or degrees.
+        Kwargs:
+            logarithmic_sweep (bool, optional): Determines the spacing between
+                the frequency points used in the sweep. If True 'n_points' are
+                spaced logarithmically from 'f_start' to 'f_end', otherwise
+                they are spaced linearly. Defaults to True.
+
+            gain_unit (str, optional): The unit of the returned gain vector.
+                Valid options are 'db' or 'linear'. Defaults to 'db'.
+            phase_unit (str, optional): The unit of the returned phase vector.
+                Valid options are 'radians' or 'degrees'. Defaults to 'degrees'
+            wrap_phase (bool, optional): Whether or not the returned phase data
+                is contained with +/- pi or 180 deg. Defaults to True.
+
+            chan1_atten (int, optional): Attenuation of the channel 1 to be
+                used in the sweep in dB. Defaults to -20 dB.
+            chan2_atten (int, optional): Attenuation of the channel 2 to be
+                used in the sweep in dB. Defaults to -20 dB.
+
+            source_level (int or iterable, optional): if this is an int it
+                represents a fixed amplitude of the injected signal over
+                frequency. If the type is an iterable then it is a lists of
+                freq/level pairs to construct a shaped level,
+                    ex. [(1e3, 0), (100e3, 0), (1e6, -20)]
+                Defaults to -30.
+            source_units (str, optional): units of 'source_level'; Valid
+                options are dbm, vpp, and vrms. Defaults to 'dbm'.
+
+            receiver_bw (float, optional): Bandwidth of the reciever used
+                in the frequecy sweep in Hz. Defaults to 1 kHz.
+
+        Raises:
+            ValueError: Raised if invalid options are passed for kwargs
+
+        Returns:
+            gain_measurement instance: measurement instance to the configured
+                measurement on the connected Bode 100.
+        """
+
+        # source configuration
+        src_unit_lut = ('dbm', 'vpp', 'vrms')
+        src_unit = config.get('source_units', 'dbm')
+        if src_unit not in src_unit_lut:
+            raise ValueError('Invalid option for argument "source_units"')
+
+        if isinstance(config.get('source_level', -30), int):
+            measurement.SetSourceLevel(float(config.get('source_level', -30)),
+                                       src_unit_lut.index(src_unit))
+
+        elif isinstance(config.get('source_level', -30), (list, tuple)):
+
+            measurement.SourceShaping.IsEnabled = True
+            measurement.SourceShaping.LevelUnit = src_unit_lut.index(src_unit)
+            measurement.SourceShaping.Clear()
+
+            for freq, level in config.get('source_level'):
+                measurement.SourceShaping.Add(float(freq), float(level))
+        else:
+            raise ValueError('Invalid Type for option "source_level"')
+
+        # probe configuration
+        measurement.Attenuation.Channel1 = config.get('chan1_atten', -20)
+        measurement.Attenuation.Channel2 = config.get('chan2_atten', -20)
+
+        # custom bandwidths need to be in milliHertz according to API docs
+        measurement.ReceiverBandwidth = int(config.get('receiver_bw', 1e3)*1e3)
+
+        return measurement
+
+    def gain_phase_measurement(self, f_start, f_end, n_points, **kwargs):
+
+        """
+        gain_phase_measurement(f_start, f_end, n_points, **kwargs)
 
         Configures and runs a measurement gain and phase of the connected
-        network over frequency. Returns the data (frequency, gain, phase) as
-        three float arrays.
+        network over frequency. Returning the meausurment frequencies, gain,
+        and phase.
 
         Ex.
             bode = Bode100()
-            freq, mag, phase = bode.run_frequency_sweep(1e3, 1e6, 200)
+            freq, mag, phase = bode.gain_phase_measurement(1e3, 1e6, 200)
+
+        Args:
+            f_start (float): The starting frequency of the frequency sweep in
+                             Hz
+            f_end (float): The final frequency of the frequency sweep in Hz
+            n_points (int): The number of points contained in frequency sweep
+                            between the frequencies f_start and f_end.
+
+        Kwargs:
+            logarithmic_sweep (bool, optional): Determines the spacing between
+                the frequency points used in the sweep. If True 'n_points' are
+                spaced logarithmically from 'f_start' to 'f_end', otherwise
+                they are spaced linearly. Defaults to True.
+
+            gain_unit (str, optional): The unit of the returned gain vector.
+                Valid options are 'db' or 'linear'. Defaults to 'db'.
+            phase_unit (str, optional): The unit of the returned phase vector.
+                Valid options are 'radians' or 'degrees'. Defaults to 'degrees'
+            wrap_phase (bool, optional): Whether or not the returned phase data
+                is contained with +/- pi or 180 deg. Defaults to True.
+
+            chan1_atten (int, optional): Attenuation of the channel 1 to be
+                used in the sweep in dB. Defaults to -20 dB.
+            chan2_atten (int, optional): Attenuation of the channel 2 to be
+                used in the sweep in dB. Defaults to -20 dB.
+
+            source_level (int or iterable, optional): if this is an int it
+                represents a fixed amplitude of the injected signal over
+                frequency. If the type is an iterable then it is a lists of
+                freq/level pairs to construct a shaped level,
+                    ex. [(1e3, 0), (100e3, 0), (1e6, -20)]
+                Defaults to -30.
+            source_units (str, optional): units of 'source_level'; Valid
+                options are dbm, vpp, and vrms. Defaults to 'dbm'.
+
+            receiver_bw (float, optional): Bandwidth of the reciever used
+                in the frequecy sweep in Hz. Defaults to 1 kHz.
+        Raises:
+            Exception: If the C dll for the Bode 100 raises an error it will be
+                       raised as in exception in Python.
+            IOError: raised if a configuraion within the Bode 100 caused it to
+                     produce a measurement error, e.g. overload, device lost,
+                     calibration needed.
+            ValueError: Raised if invalid options are passed for kwargs.
+
+        Returns:
+            tuple of np.array: The frequency, gain, and phase measurement
+                               vectors resulting from the frequency sweep.
+                               (frequency, magnitude, phase)
         """
 
         # connect to instrument
         self.connection = self.instrument.ConnectWithSerialNumber(self.idn)
 
         # configure measurement
-
         measurement = self.connection.Transmission.CreateGainMeasurement()
-
-        # custom bandwidths need to be in milliHertz according to API docs
-        measurement.ReceiverBandwidth = int(receiver_bw*1000)
-        measurement.Attenuation.Channel1 = chan1_atten
-        measurement.Attenuation.Channel2 = chan2_atten
-
-        # reference for unit 'codes'
-        # https://documentation.omicron-lab.com/BodeAutomationInterface/3.23/api/OmicronLab.VectorNetworkAnalysis.AutomationInterface.Enumerations.LevelUnit.html?q=LevelUnit
-        measurement.SetSourceLevel(float(source_level), int(source_level_unit))
-
+        measurement = self.configure_gain_phase_setup(measurement, **kwargs)
         measurement.ConfigureSweep(f_start, f_end, n_points,
-                                   int(logarithmic_sweep))
+                                   int(kwargs.get('logarithmic_sweep', True)))
 
         # execute measurement
         try:
@@ -150,29 +232,34 @@ class Bode100():
             self.connection.ShutDown()
             raise Exception(error.excepinfo[2])
 
-        if state == 0:
-
+        if state == 0:  # success
+            # get raw data
             freq = _np.array(measurement.Results.MeasurementFrequencies)
             results = measurement.Results
             complex_vals = results.ComplexValues()
             self.connection.ShutDown()
 
             # format data
-            if return_db:
+            if kwargs.get('gain_unit', 'db').lower() == 'db':
                 mag = _np.array([datum.MagnitudeDB for datum in complex_vals])
-            else:
+            elif kwargs.get('gain_unit', 'db').lower() == 'linear':
                 mag = _np.array([datum.Magnitude for datum in complex_vals])
+            else:
+                raise ValueError('Invalid option for argument "gain_unit"')
 
-            if wrap_phase:
+            if kwargs.get('wrap_phase', True):
                 phase = _np.array([datum.Phase for datum in complex_vals])
             else:
                 phase = _np.array(results.UnwrappedPhase(0))
 
-            if not return_rad:
+            if kwargs.get('phase_unit', 'degrees').lower() == 'degrees':
                 phase *= 180/_np.pi
+            elif kwargs.get('phase_unit', 'degrees').lower() != 'radians':
+                raise ValueError('Invalid option for argument "phase_unit"')
 
             return freq, mag, phase
-        else:
+
+        else:  # something unexpected occured
             self.connection.ShutDown()
             self.execution_state_names[state]
             err_msg = "({}) {} - {}".format(self.execution_state_names[state],
@@ -185,9 +272,9 @@ if __name__ == "__main__":
 
     config = {'chan1_atten': 0,
               'chan2_atten': 0,
-              'source_level': 0.05,
-              'source_level_unit': 1,
+              'source_level': 0,
+              'source_units': 'dbm',
               }
 
     bode = Bode100()
-    f, mag, phase = bode.run_frequency_sweep(1000, 1e6, 801, **config)
+    f, mag, phase = bode.gain_phase_measurement(1000, 1e6, 801, **config)
