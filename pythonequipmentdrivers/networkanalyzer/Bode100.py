@@ -28,7 +28,7 @@ class Bode100():
                             'Calibration mandatory for this measurement mode.',
                             )
 
-    def __init__(self, address=None):
+    def __init__(self, address=None, **kwargs):
 
         api_link = "OmicronLab.VectorNetworkAnalysis.AutomationInterface"
 
@@ -53,7 +53,8 @@ class Bode100():
 
         # connect & disconnect to assure the device is availible
         self.connection = self.instrument.ConnectWithSerialNumber(self.idn)
-        self.connection.ShutDown()
+        if kwargs.get('init_closed', True):
+            self.connection.ShutDown()
 
         return
 
@@ -315,18 +316,26 @@ class Bode100():
 
 if __name__ == "__main__":
 
-    config = {'chan1_atten': -20,
+    config = {
+              'f_start': 10.0,
+              'f_end': 1e6,
+              'n_points': 2048,
+              'logarithmic_sweep': True,
+              'chan1_atten': -20,
               'chan2_atten': 0,
-              # 'source_level': 0,  # fixed level
-              'source_level': ((1e3, 0),  # shaped level
-                               (1e6, -10)),
-              'source_units': 'dbm',
+              'chan1_probe_atten': 1,
+              'chan2_probe_atten': 1,
               'receiver_bw': 5e3,
               'wrap_phase': False,
+              # 'source_level': 0,  # fixed level
+              'source_level': ((1, -10),  # shaped level
+                               (100e3, -10),
+                               (1e6, -20),),
+              'source_unit': 'dbm'
               }
 
     bode = Bode100()
-    f, mag, phase = bode.gain_phase_measurement(1000, 1e6, 2048, **config)
+    f, mag, phase = bode.gain_phase_measurement(**config)
 
     # import matplotlib.pyplot as plt
     # fig, axes = plt.subplots(2, 1, sharex=True)
