@@ -659,7 +659,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         if duration in valid_durs:
             self.instrument.write(f'PESU {duration},ALL')
         else:
-            raise ValueError('Invalid duration, valid times (s): '
+            raise ValueError('Invalid duration, valid times (s): ' +
                              ', '.join(map(str, valid_durs)))
         return None
 

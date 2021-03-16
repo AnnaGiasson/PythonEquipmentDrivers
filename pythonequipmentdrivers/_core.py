@@ -67,13 +67,11 @@ class Scpi_Instrument():
 
     def __del__(self):
         try:
-            self.instrument.close()
-
-        except AttributeError:
-            # if instrument is inaccessible __init__ will raise a Visa Error
-            # and instrument wont be initialized thus it can't be closed
-            pass
-        return
+            if hasattr(self, 'instrument'):
+                self.instrument.close()
+        except VisaIOError:
+            return None
+        return None
 
     def __repr__(self):
 
@@ -104,7 +102,7 @@ class Scpi_Instrument():
         """
 
         self.instrument.write(command_str)
-        return
+        return None
 
     def query_raw_scpi(self, query_str):
         """
@@ -225,7 +223,7 @@ class EnvironmentSetup():
                 raise IOError("Required Equipment Missing")
 
         self._make_connections(init_devices=init_devices)
-        return
+        return None
 
     def _make_connections(self, init_devices=False):
         """
@@ -304,10 +302,10 @@ def initiaize_device(inst, initialization_sequence):
                              "inst" with a dict of arguements to pass as kwargs
 
                              Will run in the order given
-    ex: seq = [
-               ["set_voltage", {"voltage": 0}],
-               ["off", {}],
-               ]
+    ex: sequence = [
+                    ["set_voltage", {"voltage": 0}],
+                    ["off", {}],
+                   ]
 
     Here "inst" has the two methods "set_voltage", and "off". The first of
     which requires the arguement voltage and the second of which has no args.
@@ -325,7 +323,7 @@ def initiaize_device(inst, initialization_sequence):
             except TypeError as error:  # invalid kwargs
                 print(f"\tError with initialization command\t{error}")
 
-    return
+    return None
 
 
 # Testing Errors
