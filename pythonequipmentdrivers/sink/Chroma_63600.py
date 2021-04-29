@@ -147,10 +147,8 @@ class Chroma_63600(_Scpi_Instrument):
 
         if level == 0:
             currents = []
-            response = self.instrument.query('CURR:STAT:L1?')
-            currents.append(float(response))
-            response = self.instrument.query('CURR:STAT:L2?')
-            currents.append(float(response))
+            currents = (float(self.instrument.query('CURR:STAT:L1?')),
+                        float(self.instrument.query('CURR:STAT:L2?')))
             return currents
         else:
             response = self.instrument.query(f'CURR:STAT:L{int(level)}?')
@@ -249,11 +247,8 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         if level == 0:
-            currents = []
-            response = self.instrument.query('CURR:DYN:L1?')
-            currents.append(float(response))
-            response = self.instrument.query('CURR:DYN:L2?')
-            currents.append(float(response))
+            currents = (float(self.instrument.query('CURR:DYN:L1?')),
+                        float(self.instrument.query('CURR:DYN:L2?')))
             return currents
         else:
             response = self.instrument.query(f'CURR:DYN:L{int(level)}?')
@@ -355,11 +350,8 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         if level == 0:
-            times = []
-            response = self.instrument.query('CURR:DYN:T1?')
-            times.append(float(response))
-            response = self.instrument.query('CURR:DYN:T2?')
-            times.append(float(response))
+            times = (float(self.instrument.query('CURR:DYN:T1?')),
+                     float(self.instrument.query('CURR:DYN:T2?')))
             return times
         else:
             response = self.instrument.query(f'CURR:DYN:T{int(level)}?')
@@ -427,11 +419,8 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         if level == 0:
-            resistances = []
-            response = self.instrument.query(f'RES:STAT:L1?')
-            resistances.append(float(response))
-            response = self.instrument.query(f'RES:STAT:L2?')
-            resistances.append(float(response))
+            resistances = (float(self.instrument.query('RES:STAT:L1?')),
+                           float(self.instrument.query('RES:STAT:L2?')))
             return resistances
         else:
             response = self.instrument.query(f'RES:STAT:L{int(level)}?')
@@ -619,7 +608,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query(f'CHAN:ACT?')
+        resp = self.instrument.query('CHAN:ACT?')
         resp = resp.strip()
         if resp == "ON":
             return True
@@ -671,11 +660,8 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         if level == 0:
-            voltages = []
-            response = self.instrument.query('VOLT:STAT:L1?')
-            voltages.append(float(response))
-            response = self.instrument.query('VOLT:STAT:L2?')
-            voltages.append(float(response))
+            voltages = (float(self.instrument.query('VOLT:STAT:L1?')),
+                        float(self.instrument.query('VOLT:STAT:L2?')))
             return voltages
         else:
             response = self.instrument.query(f'VOLT:STAT:L{int(level)}?')
@@ -705,7 +691,7 @@ class Chroma_63600(_Scpi_Instrument):
         mode.
         """
 
-        resp = self.instrument.write(f'VOLT:STAT:ILIM?')
+        resp = self.instrument.query('VOLT:STAT:ILIM?')
 
         return float(resp)
 
@@ -889,7 +875,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query(f'STAT:CHAN:COND?')
+        resp = self.instrument.query('STAT:CHAN:COND?')
         status = int(resp.strip())
         status &= 255  # 2 Byte response only has 1 Byte of information
         if not decode:
