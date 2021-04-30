@@ -23,7 +23,8 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
     def __init__(self, address):
         super().__init__(address)
         self.instrument.clear()
-        return
+        self.set_comm_header('short')
+        return None
 
     def select_channel(self, channel, state):
         """
@@ -671,6 +672,70 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         if response.isnumeric():
             return float(dur)
         return 'inf'
+
+    def set_comm_header(self, header):
+        """
+        set_comm_header(header)
+
+        Sets the header type used in the response of query commands. Valid
+        options are 'long', 'short', and 'off'. An example of each is noted
+        below.
+
+            Query : C1:OFFSET?  # returns the vertical offset used by channel 1
+
+            response with 'long': 'C1:OFFSET -50 V\n'
+            response with 'short': 'C1:OFST -50 V\n'
+            response with 'off': '-50\n'
+
+
+        This class was written assuming that the short or long formats
+        are in use. Therefore by default it is set to short. Changes to this
+        format may result in issues with other commands.
+
+
+        Args: header (str): query header format name. valid values are 'long',
+            'short', and 'off'
+
+        Returns: None
+        """
+
+        header = header.upper()
+
+        if header not in ('OFF', 'SHORT', 'LONG'):
+            raise ValueError('Invalid option for arg "header"')
+
+        self.instrument.write(f'CHDR {header}')
+
+        return None
+
+    def get_comm_header(self):
+        """
+        get_comm_header()
+
+        Rreturns the header type used in the response of query commands.
+        Response is either 'long', 'short', and 'off'. An example of each is
+        noted below.
+
+            Query : C1:OFFSET?  # returns the vertical offset used by channel 1
+
+            response with 'long': 'C1:OFFSET -50 V\n'
+            response with 'short': 'C1:OFST -50 V\n'
+            response with 'off': '-50\n'
+
+        Returns:
+            header (str): query header format name. valid values are 'long',
+            'short', and 'off'
+        """
+
+        response = self.instrument.query('CHDR?')
+        if ' ' in response:
+            header = response.split()[-1]
+        else:
+            header = response
+
+        header = header.strip().lower()
+
+        return header
 
 
 if __name__ == '__main__':
