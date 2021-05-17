@@ -7,9 +7,9 @@ class Yokogawa_760401(_Scpi_Instrument):  # single phase
     https://www.yokogawa.com/pdf/provide/E/GW/IM/0000027039/0/IMWT310-17EN.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def get_measurement_type(self, item_number):
         response = self.instrument.query("NUM?")

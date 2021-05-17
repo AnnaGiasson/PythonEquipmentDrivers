@@ -13,9 +13,9 @@ class PPSC_3150AFX(_Scpi_Instrument):
     https://www.caltest.de/produkte/assets/afx_series_power_source_operation_manual-pn150185-10_x11_caltest.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -27,7 +27,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.instrument.write(f"OUTP:STAT {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -51,7 +51,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -62,7 +62,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -84,7 +84,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def sleep(self):
         """
@@ -103,7 +103,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
 
         self.instrument.write("OUTPUT:ALL OFF")
 
-        return
+        return None
 
     def set_range(self, voltage_range):
         """
@@ -117,7 +117,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.instrument.write(f"RANG {voltage_range}")
-        return
+        return None
 
     def get_range(self):
         """
@@ -144,7 +144,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:VOLT{phase} {voltage}")
-        return
+        return None
 
     def get_voltage(self, phase=''):
         """
@@ -174,7 +174,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:FREQ {frequency}")
-        return
+        return None
 
     def get_frequency(self):
         """
@@ -417,7 +417,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         wvfm_str = ','.join([str(x) for x in data])
         command_str = f"WAVEFORM:DEF {waveform_number},{wvfm_str}"
         self.instrument.write(command_str)
-        return
+        return None
 
     def run_sequence(self):
         """
@@ -427,7 +427,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         """
 
         self.instrument.write('PROG:TRAN RUN')
-        return
+        return None
 
     def build_sequence(self, sequence_list, sequence_num=1,
                        v_steady_state=None, f=50, voltage_range=1):
@@ -506,7 +506,7 @@ class PPSC_3150AFX(_Scpi_Instrument):
         command_str = f"PROG:DEF {int(sequence_num)},INTERNAL,{sequence_str}"
         self.instrument.write(command_str)
         self.instrument.write(f'PROG:EXEC {int(sequence_num)}')
-        return
+        return None
 
 
 if __name__ == '__main__':

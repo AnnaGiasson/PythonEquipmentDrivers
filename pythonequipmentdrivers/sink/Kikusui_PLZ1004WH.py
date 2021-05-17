@@ -13,9 +13,9 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         documenation
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -27,7 +27,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"OUTP {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -52,7 +52,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -63,7 +63,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -85,7 +85,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_mode(self, mode, cv=False):
         """
@@ -109,7 +109,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         else:
             raise ValueError("Invalid mode option")
 
-        return
+        return None
 
     def get_mode(self):
         """
@@ -131,7 +131,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         """
@@ -160,7 +160,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
             self.instrument.write(f"CURR:RANG {cc_range}")
         else:
             raise ValueError("Invalid range option")
-        return
+        return None
 
     def get_cc_range(self):
         """
@@ -190,7 +190,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         else:
             raise ValueError("Invalid range option")
 
-        return
+        return None
 
     def get_cr_range(self):
         """
@@ -221,7 +221,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         else:
             raise ValueError("Invalid option")
 
-        return
+        return None
 
     def get_slew(self):
         """
@@ -243,7 +243,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"CURR {current}")
-        return
+        return None
 
     def get_current(self):
         """
@@ -265,7 +265,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"COND {conductance}")
-        return
+        return None
 
     def get_conductance(self):
         """
@@ -289,7 +289,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         enable/disable the switching function on the load
         """
         self.instrument.write(f"SOUR:PULS:STAT {state}")
-        return
+        return None
 
     def get_switching_state(self):
         """
@@ -314,7 +314,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"SOUR:PULS:DCYC {duty_cycle}")
-        return
+        return None
 
     def get_duty_cycle(self):
         """
@@ -340,7 +340,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.instrument.write(f"SOUR:PULS:FREQ {frequency}")
-        return
+        return None
 
     def get_frequency(self):
         """
@@ -403,7 +403,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         self.set_current(level)
         _sleep(duration)
         self.set_current(start_level)
-        return
+        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
@@ -427,7 +427,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         for i in _np.linspace(start, stop, int(n)):
             self.set_current(i)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
         """
@@ -454,4 +454,4 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         self.ramp(start, stop, n=int(n), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
-        return
+        return None

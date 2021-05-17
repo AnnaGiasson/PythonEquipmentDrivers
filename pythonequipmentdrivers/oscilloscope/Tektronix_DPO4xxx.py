@@ -20,9 +20,9 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
     #   look into different encoding schemes to speed up
     #   self.channel.get_data() method
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def select_channel(self, channel, state):
         """
@@ -48,7 +48,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         else:
             raise ValueError(f"Invalid arguement 'state': {state}")
         self.instrument.write(cmd_str)
-        return
+        return None
 
     # investigate using faster data encoding scheme
     def get_channel_data(self, channel, start_percent=None, stop_percent=None):
@@ -155,7 +155,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         else:
             raise ValueError("Channel should be int or list of ints, label"
                              + " should be string or list of strings")
-        return
+        return None
 
     def get_channel_label(self, channel):
         """
@@ -190,7 +190,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:BAN {bandwidth}")
-        return
+        return None
 
     def get_channel_bandwidth(self, channel):
         """
@@ -222,7 +222,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:SCA {scale}")
-        return
+        return None
 
     def get_channel_scale(self, channel):
         """
@@ -253,7 +253,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:OFFS {offset}")
-        return
+        return None
 
     def get_channel_offset(self, channel):
         """
@@ -287,7 +287,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:POS {position}")
-        return
+        return None
 
     def get_channel_position(self, channel):
         """
@@ -308,19 +308,19 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
 
     def trigger_run_stop(self):
         self.instrument.write("FPANEL:PRESS RUnstop")
-        return
+        return None
 
     def trigger_force(self):
         self.instrument.write("TRIG FORC")
-        return
+        return None
 
     def trigger_single(self):
         self.instrument.write("FPANEL:PRESS SING")
-        return
+        return None
 
     def set_trigger_position(self, percent):
         self.instrument.write(f"HOR:POS {percent}")
-        return
+        return None
 
     def get_trigger_position(self):  # returns percent of record len
         return float(self.instrument.query(f"HOR:POS?"))
@@ -330,7 +330,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         if not(mode in ["AUTO", "NORM"]):
             self.instrument.write("TRIG:A:MOD NORM")
         self.instrument.write(f"TRIG:A:MOD {mode}")
-        return
+        return None
 
     def get_trigger_mode(self):
         response = self.instrument.query("TRIG:A:MOD?")
@@ -338,7 +338,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
 
     def set_trigger_level(self, level):
         self.instrument.write(f"TRIG:A:LEV {level}")
-        return
+        return None
 
     def get_trigger_level(self):
         return float(self.instrument.query("TRIG:A:LEV?"))
@@ -348,7 +348,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
             self.instrument.write("ZOO:MODE ON")
         else:
             self.instrument.write("ZOO:MODE OFF")
-        return
+        return None
 
     def get_zoom_mode(self):
         response = self.instrument.query("ZOO:MODE?")
@@ -357,7 +357,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
     def set_zoom_position(self, position):
         # position is a % of the record length
         self.instrument.write(f"ZOO:ZOOM:POS {position}")
-        return
+        return None
 
     def get_zoom_position(self):
         response = self.instrument.query("ZOO:ZOOM:POS?")
@@ -365,7 +365,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
 
     def set_zoom_scale(self, scale):  # scale is the time/div
         self.instrument.write(f"ZOO:ZOOM:SCA {scale}")
-        return
+        return None
 
     def get_zoom_scale(self):
         response = self.instrument.query("ZOO:ZOOM:SCA?")
@@ -400,7 +400,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         fid = open(f"{image_title}.png", 'wb')
         fid.write(raw_data)
         fid.close()
-        return
+        return None
 
     def set_record_length(self, length):
         """
@@ -416,7 +416,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"HOR:RECO {length}")
-        return
+        return None
 
     def get_record_length(self):
         """
@@ -456,7 +456,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
 
         else:
             raise ValueError('invalid presistence option')
-        return
+        return None
 
     def get_persistence(self):
         """
@@ -480,7 +480,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         # """
 
         self.instrument.write(f"CURS:HBA:POSITION{cursor} {position}")
-        return
+        return None
 
     def set_horizontal_scale(self, scale):
         """
@@ -494,7 +494,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"HOR:SCA {scale}")
-        return
+        return None
 
     def get_horizontal_scale(self):
         """

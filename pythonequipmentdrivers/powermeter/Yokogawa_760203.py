@@ -13,8 +13,8 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
     https://cdn.tmi.yokogawa.com/IM760201-17E.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
 
         self.set_numeric_data_format('ascii')
         self.set_numeric_data_pattern(1)
@@ -40,7 +40,7 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
                                         'power': 3,
                                         }
         self._list_data_separation_index = 3
-        return
+        return None
 
     def set_numeric_data_format(self, option):
         """
@@ -58,7 +58,7 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
             self.instrument.write('NUM:FORM FLO')
         else:
             raise AttributeError
-        return
+        return None
 
     def get_numeric_data_format(self):
         """
@@ -86,14 +86,14 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
         self.instrument.write(f'NUM:NORM:PRES {pattern_number}')
-        return
+        return None
 
     def set_numeric_list_data_pattern(self, pattern_number):
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
         self.instrument.write(f'NUM:LIST:PRES {pattern_number}')
-        return
+        return None
 
     def set_harmonic_pll_source(self, channel, source_type):
         source_codes = {'voltage': 'U',
@@ -101,7 +101,7 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
 
         command_str = f"HARM:PLLS {source_codes[source_type]}{channel}"
         self.instrument.write(command_str)
-        return
+        return None
 
     def get_channel_data(self, channel, measurment_type):
         if channel == 'sigma':
@@ -119,7 +119,7 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
 
     def set_harmonic_order(self, order_min, order_max):
         self.instrument.write(f"HARM:ORD {order_min},{order_max}")
-        return
+        return None
 
     def get_harmonic_order(self):
         response = self.instrument.query("HARM:ORD?")
@@ -168,7 +168,7 @@ class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
         """
 
         self.instrument.write(f'CURR:RANG:ALL {int(current)}')
-        return
+        return None
 
     def get_current_range(self):
         """

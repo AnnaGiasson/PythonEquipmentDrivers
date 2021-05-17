@@ -13,8 +13,8 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
     Family of Oscilloscopes
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
 
         # get image formatting
         self.instrument.write('EXP:FORM PNG')  # image is a .png file
@@ -22,7 +22,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         self.instrument.write('HARDC:PALE COLOR')  # color image (alt INKS)
         self.instrument.write('HARDC:LAY LAN')  # landscape image
         self.instrument.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
-        return
+        return None
 
     def select_channel(self, channel, state):
         """
@@ -48,7 +48,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         else:
             raise ValueError(f"Invalid arguement 'state': {state}")
         self.instrument.write(cmd_str)
-        return
+        return None
 
     # investigate using faster data encoding scheme     # check
     def get_channel_data(self, channel, start_percent=0, stop_percent=100):
@@ -160,7 +160,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         else:
             raise ValueError("Channel should be int or list of ints, label"
                              + " should be string or list of strings")
-        return
+        return None
 
     def get_channel_label(self, channel):
         """
@@ -189,7 +189,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         x_coord, y_coord = rel_coords
         self.instrument.write(f'CH{channel}:LAB:XPOS {x_coord}')
         self.instrument.write(f'CH{channel}:LAB:YPOS {y_coord}')
-        return
+        return None
 
     def get_channel_label_position(self, channel):
         """
@@ -227,7 +227,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
                 self.instrument.write(f"CH{channel}:BAN FULL")
         else:
             self.instrument.write(f"CH{channel}:BAN {bandwidth}")
-        return
+        return None
 
     def get_channel_bandwidth(self, channel):
         """
@@ -259,7 +259,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:SCA {scale}")
-        return
+        return None
 
     def get_channel_scale(self, channel):
         """
@@ -290,7 +290,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:OFFS {offset}")
-        return
+        return None
 
     def get_channel_offset(self, channel):
         """
@@ -324,7 +324,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CH{channel}:POS {position}")
-        return
+        return None
 
     def get_channel_position(self, channel):
         """
@@ -359,7 +359,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         if coupling not in ["DC", "AC", "GND", "DCREJ"]:
             raise ValueError(f"Invalid Coupling option: {coupling}")
         self.instrument.write(f"CH{channel}:COUP {coupling}")
-        return
+        return None
 
     def get_channel_coupling(self, channel):
         """
@@ -390,7 +390,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"ACQ:STATE {state}")
-        return
+        return None
 
     def get_trigger_acquire_state(self):
         """
@@ -416,7 +416,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.set_trigger_acquire_state(1)
-        return
+        return None
 
     def trigger_stop(self):
         """
@@ -426,7 +426,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         acquiring new data. equivalent to set_trigger_acquire_state(0).
         """
         self.set_trigger_acquire_state(0)
-        return
+        return None
 
     def trigger_force(self):
         """
@@ -436,7 +436,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write("TRIG FORC")
-        return
+        return None
 
     def trigger_single(self):
         """
@@ -447,7 +447,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
         self.set_trigger_acquire_state(1)
         self.instrument.write("ACQ:STOPA SEQ")
-        return
+        return None
 
     def set_trigger_source(self, channel):
         """
@@ -460,7 +460,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{channel}')
-        return
+        return None
 
     def get_trigger_source(self):
         """
@@ -490,7 +490,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"HOR:POS {percent}")
-        return
+        return None
 
     def get_trigger_position(self):
         """
@@ -518,7 +518,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
         slope = slope.upper()
         self.instrument.write(f'TRIGger:A:EDGE:SLOpe {slope}')
-        return
+        return None
 
     def get_trigger_slope(self):
         """
@@ -552,7 +552,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         if mode not in ["AUTO", "NORM", "NORMAL"]:
             raise ValueError(f"Invalid mode: {mode}")
         self.instrument.write(f"TRIG:A:MOD {mode}")
-        return
+        return None
 
     def get_trigger_mode(self):
         """
@@ -582,7 +582,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"TRIG:A:LEV {level}")
-        return
+        return None
 
     def get_trigger_level(self):
         """
@@ -613,7 +613,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
             self.instrument.write(f'MEASU:METH {method}')
         else:
             raise ValueError("Invalid Method")
-        return
+        return None
 
     def get_measure_method(self):
         """
@@ -644,7 +644,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
             self.instrument.write(f'MEASU:REFL:METH {method}')
         else:
             raise ValueError("Invalid Method")
-        return
+        return None
 
     def get_measure_reference_method(self):
         """
@@ -686,7 +686,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
 
         self.instrument.write(f'MEASU:REFL:{method}:{level} {threshold}')
 
-        return
+        return None
 
     def get_measure_ref_level(self, method, level):
         """
@@ -763,7 +763,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         self.instrument.write(f'MEASU:MEAS{meas_idx}:SOU CH{channel}')
         self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP {meas_type}')
         self.instrument.write(f'MEASU:MEAS{meas_idx}:STATE ON')
-        return
+        return None
 
     def get_measure_config(self, meas_idx):
         """
@@ -804,7 +804,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
         self.instrument.write(f'MEASU:MEAS{meas_idx}:STATE OFF')
         self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
-        return
+        return None
 
     def get_measure_data(self, meas_idx):
         """
@@ -860,7 +860,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         resets the accumlated measurements used to calculate statistics
         """
         self.instrument.write('MEASU:STATI:COUN RESET')
-        return
+        return None
 
     def enable_measure_statistics(self):
         """
@@ -870,7 +870,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write('MEASU:STATI:MODE ALL')
-        return
+        return None
 
     def disable_measure_statistics(self):
         """
@@ -880,7 +880,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write('MEASU:STATI:MODE OFF')
-        return
+        return None
 
     def get_image(self, image_title):
         """
@@ -914,7 +914,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         fid.close()
 
         self.instrument.write(f'FILESystem:DELEte "{image_buffer_path}"')
-        return
+        return None
 
     def set_record_length(self, length):
         """
@@ -930,7 +930,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"HOR:RECO {length}")
-        return
+        return None
 
     def get_record_length(self):
         """
@@ -955,7 +955,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"HOR:SCA {scale}")
-        return
+        return None
 
     def get_horizontal_scale(self):
         """
@@ -990,7 +990,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         else:
             raise ValueError(f"invalid value {mode} for arg 'mode'")
 
-        return
+        return None
 
     def get_horizontal_roll_mode(self):
         """
@@ -1019,7 +1019,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CURS:STATE {state}')
-        return
+        return None
 
     def get_cursor_state(self):
         """
@@ -1047,7 +1047,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CURS:SOU CH{channel}')
-        return
+        return None
 
     def get_cursor_source(self):
         """
@@ -1087,7 +1087,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         else:
             raise ValueError(f"invalid value {function} for arg 'function'")
 
-        return
+        return None
 
     def get_cursor_function(self):
         """
@@ -1125,7 +1125,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CURS:SCREEN:XPOSITION{cursor_num} {position}')
-        return
+        return None
 
     def get_cursor_x_position(self, cursor_num):
         """
@@ -1157,7 +1157,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CURS:SCREEN:YPOSITION{cursor_num} {position}')
-        return
+        return None
 
     def get_cursor_y_position(self, cursor_num):
         """

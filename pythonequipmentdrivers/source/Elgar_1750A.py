@@ -14,9 +14,9 @@ class Elgar_1750A(_Scpi_Instrument):
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -28,7 +28,7 @@ class Elgar_1750A(_Scpi_Instrument):
         """
 
         self.instrument.write(f"OUTP:STAT {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -53,7 +53,7 @@ class Elgar_1750A(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -64,7 +64,7 @@ class Elgar_1750A(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -86,18 +86,18 @@ class Elgar_1750A(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_current(self, current):
         self.instrument.write("SOUR:CURR {}".format(current))
-        return
+        return None
 
     def get_current(self):
         return float(self.instrument.query("SOUR:CURR?"))
 
     def set_frequency(self, frequency):
         self.instrument.write("SOUR:FREQ {}".format(frequency))
-        return
+        return None
 
     def get_frequency(self):
         return float(self.instrument.query("SOUR:FREQ?"))
@@ -108,27 +108,27 @@ class Elgar_1750A(_Scpi_Instrument):
     def set_phase(self, phase):  # phase in deg
         # wraps phase around 0 to 360 deg
         self.instrument.write(f"SOUR:PHAS {phase % 360}")
-        return
+        return None
 
     def set_voltage(self, voltage, change_range=False):
         if change_range:
             self.auto_range(voltage)
         self.instrument.write(f"SOUR:VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         return float(self.instrument.query("SOUR:VOLT?"))
 
     def set_voltage_limit(self, voltage_limit):
         self.instrument.write(f"SOUR:VOLT:PROT {voltage_limit}")
-        return
+        return None
 
     def get_voltage_limit(self):
         return float(self.instrument.query("SOUR:VOLT:PROT?"))
 
     def set_voltage_range(self, voltage_range):
         self.instrument.write(f"SOUR:VOLT:RANG {voltage_range}")
-        return
+        return None
 
     def get_voltage_range(self):
         return float(self.instrument.query("SOUR:VOLT:RANG?"))
@@ -183,7 +183,7 @@ class Elgar_1750A(_Scpi_Instrument):
             self.set_voltage_range(0)
             self.set_voltage_limit(255)
             self.set_current(13)
-        return
+        return None
 
 
 if __name__ == '__main__':

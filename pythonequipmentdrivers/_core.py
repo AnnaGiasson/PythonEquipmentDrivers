@@ -1,11 +1,11 @@
-import visa
-from visa import VisaIOError
+import pyvisa
+from pyvisa import VisaIOError
 from importlib import import_module as _import_module
 import json
 
 
 # Globals
-rm = visa.ResourceManager()
+rm = pyvisa.ResourceManager()
 
 
 # Utility Functions
@@ -47,7 +47,7 @@ def identify_devices(omit_print=False):
                 print(f"\taddress: {address}")
                 print(f"\tresponse: {response}\n")
 
-        except visa.Error:
+        except pyvisa.Error:
             if not omit_print:
                 print(f"Invalid IDN query reponse from address {address}\n")
             device.close()
@@ -57,13 +57,24 @@ def identify_devices(omit_print=False):
 
 
 class Scpi_Instrument():
-    def __init__(self, address, timeout=1000):
+    def __init__(self, address, **kwargs):
         self.address = address
-        self.instrument = rm.open_resource(address)
-        self.timeout = timeout
-        self.instrument.timeout = self.timeout
+        self.instrument = rm.open_resource(self.address)
+        self.timeout = kwargs.get('timeout', 1000)
+        return None
 
-        self.idn = self.instrument.query('*IDN?')
+    @property
+    def idn(self):
+        return self.instrument.query('*IDN?')
+
+    @property
+    def timeout(self):
+        return self.instrument.timeout
+
+    @timeout.setter
+    def timeout(self, timeout):
+        self.instrument.timeout = timeout
+        return None
 
     def __del__(self):
         try:
@@ -279,6 +290,7 @@ class EnvironmentSetup():
                     # equipment stop instantations
                     print(error)
                     raise ConnectionError(f"Failed connection: {device_name}")
+        return None
 
 
 def get_callable_instance_methods(instance):
@@ -328,13 +340,13 @@ def initiaize_device(inst, initialization_sequence):
 
 # Testing Errors
 class LowVinError(Exception):
-    def __init__(self, message="vin measured below lower threshold"):
+    def __init__(self, message="Vin measured below lower threshold"):
         # Call the base class constructor with the parameters it needs
         super().__init__(message)
 
 
 class LowVoutError(Exception):
-    def __init__(self, message="vout measured below lower threshold"):
+    def __init__(self, message="Vout measured below lower threshold"):
         # Call the base class constructor with the parameters it needs
         super().__init__(message)
 

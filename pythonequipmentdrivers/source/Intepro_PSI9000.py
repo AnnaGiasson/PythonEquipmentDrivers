@@ -9,18 +9,18 @@ class Intepro_PSI9000(_Scpi_Instrument):
     https://www.inteproate.com/wp-content/uploads/2016/11/Intepro-ModBus-SCPI-User-Manual-A4-new-edits-6_2017.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def __del__(self):
         self.set_lock(0)
         self.instrument.close()
-        return
+        return None
 
     def set_lock(self, state):
         self.instrument.write(f"SYST:LOCK {state}")
-        return
+        return None
 
     def get_lock(self):
         query = self.instrument.query("SYST:LOCK:OWN?")
@@ -30,7 +30,7 @@ class Intepro_PSI9000(_Scpi_Instrument):
 
     def set_state(self, state):
         self.instrument.write(f"OUTP {state}")
-        return
+        return None
 
     def get_state(self):
         query = self.instrument.query("OUTP?")
@@ -40,11 +40,11 @@ class Intepro_PSI9000(_Scpi_Instrument):
 
     def on(self):
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         if not self.get_state():  # logic inverted so the default state is off
@@ -54,25 +54,25 @@ class Intepro_PSI9000(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_voltage(self, voltage):
         self.instrument.write(f"VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         return float(self.instrument.query("VOLT?").strip("V\n"))
 
     def set_current(self, current):
         self.instrument.write(f"CURR {current}")
-        return
+        return None
 
     def get_current(self):
         return float(self.instrument.query("CURR?").strip("A\n"))
 
     def set_power(self, power):
         self.instrument.write(f"POW {power}")
-        return
+        return None
 
     def get_power(self):
         return float(self.instrument.query("POW?").strip("W\n"))
@@ -98,21 +98,21 @@ class Intepro_PSI9000(_Scpi_Instrument):
 
     def set_ovp(self, voltage):
         self.instrument.write(f"SOUR:VOLT:PROT {voltage}")
-        return
+        return None
 
     def get_ovp(self):
         return float(self.instrument.query("SOUR:VOLT:PROT?").strip("V\n"))
 
     def set_ocp(self, current):
         self.instrument.write(f"SOUR:CURR:PROT {current}")
-        return
+        return None
 
     def get_ocp(self):
         return float(self.instrument.query("SOUR:CURR:PROT?").strip("A\n"))
 
     def set_opp(self, power):
         self.instrument.write(f"SOUR:POW:PROT {power}")
-        return
+        return None
 
     def get_opp(self):
         return float(self.instrument.query("SOUR:POW:PROT?").strip("W\n"))

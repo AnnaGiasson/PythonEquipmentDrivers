@@ -12,9 +12,9 @@ class Chroma_62012P(_Scpi_Instrument):
     object for accessing basic functionallity of the Chroma_62012P DC supply
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -26,7 +26,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.instrument.write(f"CONF:OUTP {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -52,7 +52,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -63,7 +63,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -85,7 +85,7 @@ class Chroma_62012P(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_voltage(self, voltage):
         """
@@ -97,7 +97,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         """
@@ -120,7 +120,7 @@ class Chroma_62012P(_Scpi_Instrument):
         sets the current limit setting for the power supply in Adc
         """
         self.instrument.write(f"SOUR:CURR {current}")
-        return
+        return None
 
     def get_current(self):
         """
@@ -145,7 +145,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:CURR:SLEW {slew_rate}")
-        return
+        return None
 
     def get_current_slew_rate(self):
         """
@@ -171,7 +171,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:VOLT:SLEW {slew_rate}")
-        return
+        return None
 
     def get_voltage_slew_rate(self):
         """
@@ -197,7 +197,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.instrument.write(f'SOUR:VOLT:LIM:HIGH {v_limit}')
-        return
+        return None
 
     def get_voltage_limit(self):
         """
@@ -289,7 +289,7 @@ class Chroma_62012P(_Scpi_Instrument):
         self.set_voltage(level)
         _sleep(duration)
         self.set_voltage(start_level)
-        return
+        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
@@ -313,7 +313,7 @@ class Chroma_62012P(_Scpi_Instrument):
         for i in _np.linspace(start, stop, int(n)):
             self.set_voltage(i)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
         """
@@ -341,7 +341,7 @@ class Chroma_62012P(_Scpi_Instrument):
         self.ramp(start, stop, n=int(n/2), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, n=int(n/2), dt=dt)
-        return
+        return None
 
 
 if __name__ == '__main__':

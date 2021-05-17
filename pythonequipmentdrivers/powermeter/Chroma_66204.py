@@ -10,9 +10,9 @@ class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
     object for accessing basic functionallity of the Chroma_66204 power meter
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def format_data(self, data):
         """
@@ -191,7 +191,7 @@ class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
 
         command_str = 'CONF:INP:SHUN {},{},{},{}'.format(*configuration)
         self.instrument.write(command_str)
-        return
+        return None
 
     def get_input_shunt_configuration(self):
         resp = self.instrument.query('CONF:INP:SHUN?')
@@ -219,4 +219,4 @@ class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
 
         command_str = 'CONF:INP:SHUN:RESIS {},{},{},{}'.format(*resistance)
         self.instrument.write(command_str)
-        return
+        return None

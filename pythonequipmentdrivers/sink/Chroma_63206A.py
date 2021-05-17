@@ -12,10 +12,10 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
     object for accessing basic functionallity of the Chroma_63206A DC load
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
         self.supported_modes = ("CC", "CR", "CP", "CCD")
-        return
+        return None
 
     def set_state(self, state):
         """
@@ -27,7 +27,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.instrument.write(f"LOAD {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -52,7 +52,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -63,7 +63,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -84,7 +84,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_short_state(self, state):
         """
@@ -96,7 +96,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.instrument.write(f"LOAD:SHOR {int(state)}")
-        return
+        return None
 
     def get_short_state(self):
         """
@@ -128,7 +128,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
             range_string = ["L", "M", "H"][range_setting]
 
         self.instrument.write(f"MODE {mode}{range_string}")
-        return
+        return None
 
     def get_mode(self):
         """
@@ -159,7 +159,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         else:
             command_str = f'CURR:STAT:L{int(channel)} {float(current)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_current(self, channel):
         """
@@ -193,7 +193,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
             self.instrument.write(f'CURR:DYN:L2 {float(current)}')
         else:
             self.instrument.write(f'CURR:DYN:L{int(channel)} {float(current)}')
-        return
+        return None
 
     def get_dynamic_current(self, channel):
         """
@@ -226,7 +226,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
             self.instrument.write(f'CURR:DYN:T2 {float(t)}')
         else:
             self.instrument.write(f'CURR:DYN:T{int(channel)} {float(t)}')
-        return
+        return None
 
     def get_dynamic_current_time(self, channel):
         """
@@ -257,7 +257,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.instrument.write(f"CURR:DYN:REP {int(n)}")
-        return
+        return None
 
     def get_dynamic_current_repeat(self):
         """
@@ -284,7 +284,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         setpoint in dynamic current mode.
         """
         self.instrument.write(f"CURR:DYN:RISE {float(slew_rate)}")
-        return
+        return None
 
     def get_dynamic_current_rise_rate(self):
         """
@@ -308,7 +308,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         dynamic current mode.
         """
         self.instrument.write(f"CURR:DYN:FALL {float(slew_rate)}")
-        return
+        return None
 
     def get_dynamic_current_fall_rate(self):
         """
@@ -339,7 +339,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         else:
             command_str = f"RES:STAT:L{int(channel)} {float(resistance)}"
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_resistance(self, channel):
         """
@@ -373,7 +373,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         else:
             command_str = f"VOLT:STAT:L{int(channel)} {float(voltage)}"
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_voltage(self, channel):
         """
@@ -399,7 +399,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.instrument.write(f"VOLT:STAT:ILIM {float(current)}")
-        return
+        return None
 
     def get_cv_current(self):
         """
@@ -429,7 +429,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
             self.instrument.write(f'POW:STAT:L2 {float(power)}')
         else:
             self.instrument.write(f'POW:STAT:L{int(channel)} {power}')
-        return
+        return None
 
     def get_power(self, channel):
         """
@@ -496,7 +496,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         self.set_current(level)
         _sleep(duration)
         self.set_current(start_level)
-        return
+        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
@@ -520,7 +520,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         for i in _np.linspace(start, stop, int(n)):
             self.set_current(i)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
         """
@@ -547,4 +547,4 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         self.ramp(start, stop, n=int(n), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
-        return
+        return None

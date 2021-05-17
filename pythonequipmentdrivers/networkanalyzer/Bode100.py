@@ -56,7 +56,7 @@ class Bode100():
         if kwargs.get('init_closed', True):
             self.connection.ShutDown()
 
-        return
+        return None
 
     def __repr__(self):
         return f"{self.idn}"

@@ -14,12 +14,12 @@ class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
     https://cdn.tmi.yokogawa.com/IMWT1801E-17EN.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
         self.three_phase_channel_names = {'sigma_a': 7,
                                           'sigma_b': 8,
                                           'sigma_c': 9}
-        return
+        return None
 
     def get_channel_data(self, channel, measurment_type):
         if channel in self.three_phase_channel_names.keys():
@@ -33,7 +33,7 @@ class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
 
     def set_harmonic_order(self, order_min, order_max):
         self.instrument.write(f"HARM1:ORD {order_min},{order_max}")
-        return
+        return None
 
     def get_harmonic_order(self):
         response = self.instrument.query("HARM1:ORD?")

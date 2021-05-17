@@ -19,9 +19,9 @@ class HP_34401A(_Scpi_Instrument):
     http://ecee.colorado.edu/~mathys/ecen1400/pdf/references/HP34401A_BenchtopMultimeter.pdf
     """
 
-    def __init__(self, address, factor=1):
-        super().__init__(address)
-        self.factor = factor
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        self.factor = kwargs.get('factor', 1.0)
         self.valid_modes = {'VDC': "VOLT:DC",
                             'VAC': "VOLT:AC",
                             'ADC': "CURR:DC",
@@ -31,6 +31,7 @@ class HP_34401A(_Scpi_Instrument):
                             'DIOD': "DIOD",
                             'CONT': "CONT",
                             'PER': "PER"}
+        return None
 
     def set_mode(self, mode):
         """
@@ -51,7 +52,7 @@ class HP_34401A(_Scpi_Instrument):
             self.instrument.write(f"CONF:{self.valid_modes[mode]}")
         else:
             raise ValueError("Invalid mode option")
-        return
+        return None
 
     def get_mode(self):
         """

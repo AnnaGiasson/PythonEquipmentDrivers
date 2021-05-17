@@ -12,10 +12,10 @@ class Keithley_2231A(_Scpi_Instrument):
     object for accessing basic functionallity of the Keithley DC supply
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
         self.set_access_remote('remote')
-        return
+        return None
 
     def __del__(self):
         self.set_access_remote('local')
@@ -35,7 +35,7 @@ class Keithley_2231A(_Scpi_Instrument):
         elif mode.lower() == 'local':
             self.instrument.write('SYSTem:LOCal')
 
-        return
+        return None
 
     def set_channel(self, channel):  # check
         """
@@ -49,7 +49,7 @@ class Keithley_2231A(_Scpi_Instrument):
         """
 
         self.instrument.write(f'INST:NSEL {channel}')
-        return
+        return None
 
     def get_channel(self):  # check
         """
@@ -78,7 +78,7 @@ class Keithley_2231A(_Scpi_Instrument):
 
         self.set_channel(channel)
         self.instrument.write(f"CHAN:OUTP {state}")
-        return
+        return None
 
     def get_state(self, channel):  # check
         """
@@ -111,7 +111,7 @@ class Keithley_2231A(_Scpi_Instrument):
         """
 
         self.set_state(1, channel)
-        return
+        return None
 
     def off(self, channel):
         """
@@ -125,7 +125,7 @@ class Keithley_2231A(_Scpi_Instrument):
         """
 
         self.set_state(0, channel)
-        return
+        return None
 
     def toggle(self, channel, return_state=False):
         """
@@ -148,7 +148,7 @@ class Keithley_2231A(_Scpi_Instrument):
 
         if return_state:
             return self.get_state(channel)
-        return
+        return None
 
     def set_voltage(self, voltage, channel):
         """
@@ -164,7 +164,7 @@ class Keithley_2231A(_Scpi_Instrument):
 
         self.set_channel(channel)
         self.instrument.write(f"SOUR:VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self, channel):  # check
         """
@@ -194,7 +194,7 @@ class Keithley_2231A(_Scpi_Instrument):
 
         self.set_channel(channel)
         self.instrument.write(f"SOUR:CURR {current}")
-        return
+        return None
 
     def get_current(self, channel):  # check
         """
@@ -257,7 +257,7 @@ class Keithley_2231A(_Scpi_Instrument):
         self.set_voltage(level, channel)
         _sleep(duration)
         self.set_voltage(start_level, channel)
-        return
+        return None
 
     def ramp(self, start, stop, channel, n=100, dt=0.01):
         """
@@ -282,7 +282,7 @@ class Keithley_2231A(_Scpi_Instrument):
         for v in _np.linspace(start, stop, int(n)):
             self.set_voltage(v, channel)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, channel, n=100, dt=0.01, dwell=0):
         """
@@ -311,7 +311,7 @@ class Keithley_2231A(_Scpi_Instrument):
         self.ramp(start, stop, channel, n=int(n/2), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, channel, n=int(n/2), dt=dt)
-        return
+        return None
 
 
 if __name__ == '__main__':

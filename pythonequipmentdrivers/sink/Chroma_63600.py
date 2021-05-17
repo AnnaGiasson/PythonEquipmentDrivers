@@ -18,11 +18,11 @@ class Chroma_63600(_Scpi_Instrument):
     was adapted from code written by Peter Makrum
     """
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
         self.valid_modes = ['CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM'
                             'SWD']
-        return
+        return None
 
     def _channel_index(self, channel, reverse=False):
         """
@@ -53,7 +53,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f"LOAD {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -78,7 +78,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -89,7 +89,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -110,7 +110,7 @@ class Chroma_63600(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_current(self, current, level=0):
         """
@@ -131,7 +131,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             command_str = f'CURR:STAT:L{int(level)} {float(current)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_current(self, level):
         """
@@ -176,7 +176,7 @@ class Chroma_63600(_Scpi_Instrument):
             self.instrument.write(f'CURR:STAT:FALL {slew}')
         else:
             raise IOError('Invalid option for arg "edge_polarity"')
-        return
+        return None
 
     def get_current_slew(self, edge_polarity):
         """
@@ -232,7 +232,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             command_str = f'CURR:DYN:L{int(level)} {float(current)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_dynamic_current(self, level):
         """
@@ -276,7 +276,7 @@ class Chroma_63600(_Scpi_Instrument):
             self.instrument.write(f'CURR:DYN:FALL {slew}')
         else:
             raise IOError('Invalid option for arg "edge_polarity"')
-        return
+        return None
 
     def get_dynamic_current_slew(self, edge_polarity):
         """
@@ -333,7 +333,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             command_str = f'CURR:DYN:T{int(level)} {float(on_time)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_dynamic_current_time(self, level):
         """
@@ -368,7 +368,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CURR:DYN:REP {count}')
-        return
+        return None
 
     def get_dynamic_current_repeat(self):
         """
@@ -404,7 +404,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             command_str = f'RES:STAT:L{int(level)} {float(resistance)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_resistance(self, level):
         """
@@ -438,7 +438,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
         idx = self._channel_index(channel)
         self.instrument.write(f'CHAN {idx}')
-        return
+        return None
 
     def get_channel(self):
         """
@@ -477,7 +477,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             err_str = f"Invalid mode/range combo: ({mode}, {range_setting})"
             raise ValueError(err_str)
-        return
+        return None
 
     def get_mode(self, channel):
         """
@@ -520,7 +520,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f'CONF:PARA:INIT {state}')
-        return
+        return None
 
     def get_parallel_state(self):
         """
@@ -553,7 +553,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
         self.set_channel(channel)
         self.instrument.write(f'CONF:PARA:MODE {mode}')
-        return
+        return None
 
     def get_parallel_mode(self, channel):
         """
@@ -595,7 +595,7 @@ class Chroma_63600(_Scpi_Instrument):
 
         self.set_channel(channel)
         self.instrument.write(f'CHAN:ACT {state}')
-        return
+        return None
 
     def get_channel_state(self, channel):
         """
@@ -623,8 +623,8 @@ class Chroma_63600(_Scpi_Instrument):
     #     Set sync mode for each channel
     #     """
     #     self.set_channel(channel)
-    #     self.visa.write(f'CONF:SYNC:MODE {state}')
-    #     return
+    #     self.instrument.write(f'CONF:SYNC:MODE {state}')
+    #     return None
 
     def set_voltage(self, voltage, level=0):
         """
@@ -645,7 +645,7 @@ class Chroma_63600(_Scpi_Instrument):
         else:
             command_str = f'VOLT:STAT:L{int(level)} {float(voltage)}'
             self.instrument.write(command_str)
-        return
+        return None
 
     def get_voltage(self, level):
         """
@@ -678,7 +678,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f'VOLT:STAT:ILIM {current}')
-        return
+        return None
 
     def get_cv_current_limit(self):
         """
@@ -710,7 +710,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f'ADV:SINE:FREQ {freq}')
-        return
+        return None
 
     def get_dynamic_sine_frequency(self, flag=''):
 
@@ -758,7 +758,7 @@ class Chroma_63600(_Scpi_Instrument):
 
         amp_peak2peak = amp*2  # convert Amplitude to peak-to-peak
         self.instrument.write(f'ADV:SINE:IAC {amp_peak2peak}')
-        return
+        return None
 
     def get_dynamic_sine_amplitude_ac(self, flag=''):
 
@@ -806,7 +806,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write(f'ADV:SINE:IDC {amp}')
-        return
+        return None
 
     def get_dynamic_sine_dc_level(self, flag=''):
 
@@ -846,7 +846,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write('*RST')
-        return
+        return None
 
     def clear_errors(self):
         """
@@ -856,7 +856,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.instrument.write('LOAD:PROT:CLE')
-        return
+        return None
 
     def get_errors(self, channel, decode=False):
         """
@@ -1000,7 +1000,7 @@ class Chroma_63600(_Scpi_Instrument):
         self.set_current(level)
         _sleep(duration)
         self.set_current(start_level)
-        return
+        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
@@ -1024,7 +1024,7 @@ class Chroma_63600(_Scpi_Instrument):
         for i in _np.linspace(start, stop, int(n)):
             self.set_current(i)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
         """
@@ -1051,7 +1051,7 @@ class Chroma_63600(_Scpi_Instrument):
         self.ramp(start, stop, n=int(n), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
-        return
+        return None
 
     # def config_1Master_xSlave (self, CHROMALOAD_NUMCHUSED, CHROMALOAD_MODE):
     #     """
@@ -1069,7 +1069,7 @@ class Chroma_63600(_Scpi_Instrument):
     #     self.set_sync_mode( 1 , 'MASTER')
     #     self.set_channel(1)
     #     self.set_parallel_state('ON')
-    #     return
+    #     return None
 
 
 if __name__ == '__main__':

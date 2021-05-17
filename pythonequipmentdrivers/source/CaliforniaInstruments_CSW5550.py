@@ -7,9 +7,9 @@ class CaliforniaInstruments_CSW5550(_Scpi_Instrument):
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -17,18 +17,18 @@ class CaliforniaInstruments_CSW5550(_Scpi_Instrument):
         any program command is sent
         """
         self.instrument.write(f"OUTP {state}")
-        return
+        return None
 
     def get_state(self):
         return int(self.instrument.query("OUTP?"))
 
     def on(self):
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         if not(self.get_state()):
@@ -38,42 +38,42 @@ class CaliforniaInstruments_CSW5550(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_voltage_range(self, voltage_range):
         if voltage_range > 156:
             self.instrument.write("VOLT:RANG 312")
         else:
             self.instrument.write("VOLT:RANG 156")
-        return
+        return None
 
     def get_voltage_range(self):
         return float(self.instrument.query("VOLT:RANG?"))
 
     def set_voltage(self, voltage):
         self.instrument.write(f"VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         return float(self.instrument.query("VOLT?"))
 
     def set_current(self, current):
         self.instrument.write(f"CURR {current}")
-        return
+        return None
 
     def get_current(self):
         return float(self.instrument.query("CURR?"))
 
     def set_frequency(self, frequency):
         self.instrument.write(f"FREQ {frequency}")
-        return
+        return None
 
     def get_frequency(self):
         return float(self.instrument.query("FREQ?"))
 
     def set_phase(self, phase):
         self.instrument.write(f"PHAS {phase}")
-        return
+        return None
 
     def get_phase(self):
         return float(self.instrument.query("PHAS?"))

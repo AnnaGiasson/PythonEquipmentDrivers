@@ -13,9 +13,9 @@ class HP_6632A(_Scpi_Instrument):
     DC supply
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -27,7 +27,7 @@ class HP_6632A(_Scpi_Instrument):
         """
 
         self.instrument.write(f"OUTP:STAT {state}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -51,7 +51,7 @@ class HP_6632A(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -62,7 +62,7 @@ class HP_6632A(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -84,7 +84,7 @@ class HP_6632A(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_voltage(self, voltage):
         """
@@ -96,7 +96,7 @@ class HP_6632A(_Scpi_Instrument):
         """
 
         self.instrument.write(f"SOUR:VOLT:LEV {voltage}")
-        return
+        return None
 
     def get_voltage(self):
         """
@@ -119,7 +119,7 @@ class HP_6632A(_Scpi_Instrument):
         sets the current limit setting for the power supply in Adc
         """
         self.instrument.write(f"SOUR:CURR:LEV {current}")
-        return
+        return None
 
     def get_current(self):
         """
@@ -218,7 +218,7 @@ class HP_6632A(_Scpi_Instrument):
         self.set_voltage(level)
         _sleep(duration)
         self.set_voltage(start_level)
-        return
+        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
@@ -242,7 +242,7 @@ class HP_6632A(_Scpi_Instrument):
         for i in _np.linspace(start, stop, int(n)):
             self.set_voltage(i)
             _sleep(dt)
-        return
+        return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
         """
@@ -270,7 +270,7 @@ class HP_6632A(_Scpi_Instrument):
         self.ramp(start, stop, n=int(n/2), dt=dt)
         _sleep(dwell)
         self.ramp(stop, start, n=int(n/2), dt=dt)
-        return
+        return None
 
 
 if __name__ == '__main__':

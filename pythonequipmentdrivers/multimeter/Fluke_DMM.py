@@ -16,11 +16,13 @@ class Fluke_DMM(_Scpi_Instrument):
     shunt. This factor defaults to 1 (no effect on measurement).
     """
 
-    def __init__(self, address, factor=1):
-        super().__init__(address)
-        self.factor = float(factor)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        self.factor = kwargs.get('factor', 1.0)
         self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC',
                             'OHMS', 'FREQ', 'CONT')
+
+        return None
 
     def _measure_signal(self):
         """
@@ -60,7 +62,7 @@ class Fluke_DMM(_Scpi_Instrument):
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-        return
+        return None
 
     def get_range(self):
         """
@@ -92,7 +94,7 @@ class Fluke_DMM(_Scpi_Instrument):
             self.instrument.write(f"RATE {rate}")
         else:
             raise ValueError("Invalid rate option, should be 'S', 'M', or 'F'")
-        return
+        return None
 
     def get_rate(self):
         """
@@ -124,7 +126,7 @@ class Fluke_DMM(_Scpi_Instrument):
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
-        return
+        return None
 
     def get_mode(self):
         """

@@ -8,9 +8,9 @@ class Elgar_5250A(_Scpi_Instrument):
         http://elgar.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03_RevE.pdf
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
     def set_state(self, state):
         """
@@ -22,7 +22,7 @@ class Elgar_5250A(_Scpi_Instrument):
         """
 
         self.instrument.write(f"OUTP:STAT {int(state)}")
-        return
+        return None
 
     def get_state(self):
         """
@@ -46,7 +46,7 @@ class Elgar_5250A(_Scpi_Instrument):
         """
 
         self.set_state(1)
-        return
+        return None
 
     def off(self):
         """
@@ -57,7 +57,7 @@ class Elgar_5250A(_Scpi_Instrument):
         """
 
         self.set_state(0)
-        return
+        return None
 
     def toggle(self, return_state=False):
         """
@@ -79,11 +79,11 @@ class Elgar_5250A(_Scpi_Instrument):
 
         if return_state:
             return self.get_state()
-        return
+        return None
 
     def set_current(self, current, phase=0):
         self.instrument.write(f"SOUR{phase}:CURR {current}")
-        return
+        return None
 
     def get_current(self, phase=1):
         response = self.instrument.query(f"SOUR{phase}:CURR?")
@@ -91,7 +91,7 @@ class Elgar_5250A(_Scpi_Instrument):
 
     def set_frequency(self, frequency):
         self.instrument.write(f"SOUR:FREQ {frequency}")
-        return
+        return None
 
     def get_frequency(self):
         response = self.instrument.query("SOUR:FREQ?")
@@ -99,7 +99,7 @@ class Elgar_5250A(_Scpi_Instrument):
 
     def set_voltage(self, voltage, phase=0):
         self.instrument.write(f"SOUR{phase}:VOLT {voltage}")
-        return
+        return None
 
     def get_voltage(self, phase=1):
         response = self.instrument.query(f"SOUR{phase}:VOLT?")
@@ -107,7 +107,7 @@ class Elgar_5250A(_Scpi_Instrument):
 
     def set_voltage_limit(self, voltage_limit):
         self.instrument.write(f"SOUR:VOLT:PROT {voltage_limit}")
-        return
+        return None
 
     def get_voltage_limit(self):
         response = self.instrument.query("SOUR:VOLT:PROT?")
@@ -115,7 +115,7 @@ class Elgar_5250A(_Scpi_Instrument):
 
     def set_voltage_range(self, voltage_range):
         self.instrument.write(f"SOUR:VOLT:RANG {voltage_range}")
-        return
+        return None
 
     def get_voltage_range(self):
         response = self.instrument.query("SOUR:VOLT:RANG?")

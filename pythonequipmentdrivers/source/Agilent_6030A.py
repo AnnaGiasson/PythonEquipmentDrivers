@@ -10,9 +10,9 @@ class Agilent_6030A(_HP_6632A):
     object for accessing basic functionallity of the Agilent 6030A DC supply
     """
 
-    def __init__(self, address):
-        super().__init__(address)
-        return
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
+        return None
 
 
 if __name__ == '__main__':

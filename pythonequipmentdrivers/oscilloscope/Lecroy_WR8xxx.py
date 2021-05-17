@@ -20,8 +20,8 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
     valid_trigger_slopes = {'POS': 'POS', 'RISE': 'POS',
                             'NEG': 'NEG', 'FALL': 'NEG'}
 
-    def __init__(self, address):
-        super().__init__(address)
+    def __init__(self, address, **kwargs):
+        super().__init__(address, **kwargs)
         self.instrument.clear()
         self.set_comm_header('short')
         return None
@@ -47,7 +47,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         else:
             raise ValueError(f"Invalid arguement 'state': {state}")
         self.instrument.write(cmd_str)
-        return
+        return None
 
     def set_channel_scale(self, channel, scale):
         """
@@ -62,7 +62,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         """
 
         self.instrument.write(f"C{channel}:VDIV {scale}")
-        return
+        return None
 
     def get_channel_scale(self, channel):
         """
@@ -95,7 +95,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         if use_divisions:
             offset *= self.get_channel_scale(channel)
         self.instrument.write(f"C{channel}:OFFSET {offset}")
-        return
+        return None
 
     def get_channel_offset(self, channel):
         """
@@ -246,7 +246,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         resets the accumlated measurements used to calculate statistics
         """
         self.instrument.write("VBS 'app.ClearSweeps' ")
-        return
+        return None
 
     def clear_all_measure(self):
         self.instrument.write('PACL')
@@ -262,7 +262,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD NORM")
-        return
+        return None
 
     def trigger_single(self):
         """
@@ -273,7 +273,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD SINGLE")
-        return
+        return None
 
     def trigger_stop(self):
         """
@@ -283,7 +283,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         acquiring new data. equivalent to set_trigger_acquire_state(0).
         """
         self.instrument.write('STOP')
-        return
+        return None
 
     def trigger_force(self):
         """
@@ -294,7 +294,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("FRTR")
-        return
+        return None
 
     def trigger_auto(self):
         """
@@ -306,7 +306,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD AUTO")
-        return
+        return None
 
     def get_trigger_mode(self):
         response = self.instrument.query('TRMD?')
@@ -331,7 +331,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         # replace source with new source, send to device
         write_cmd = f'{response[:i_start]}C{channel}{response[i_end:]}'
         self.instrument.write(write_cmd)
-        return
+        return None
 
     def get_trigger_source(self):
         """
@@ -409,7 +409,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
             source = self.get_trigger_source()
 
         self.instrument.write(f'C{source}:TRLV {float(level)}\n')
-        return
+        return None
 
     def get_trigger_level(self, source=None):
         """
@@ -458,7 +458,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
             self.instrument.write(f'C{source}:TRSL {slope}')
         else:
             raise ValueError("invalid option for arg 'slope'")
-        return
+        return None
 
     def get_trigger_slope(self, source=None):
         """
@@ -487,7 +487,7 @@ class Lecroy_WR8xxx(_Scpi_Instrument):
         if use_divisions:
             offset *= self.get_horizontal_scale()
         self.instrument.write(f'TRDL {offset}')
-        return
+        return None
 
     def get_trigger_position(self):
         response = self.instrument.query('TRDL?')
