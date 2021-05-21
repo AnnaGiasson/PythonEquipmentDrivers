@@ -16,11 +16,11 @@ def get_devices_addresses():
     return rm.list_resources()
 
 
-def identify_devices(omit_print=False):
+def identify_devices(verbose=False):
     """
-    identify_connections(omit_print=False)
+    identify_connections(verbose=False)
 
-    omit_print (optional): bool, if true address and identicaion information is
+    verbose (optional): bool, if True address and identicaion information is
     printed to the screen in addition to return the data in a structure,
     default behavior is to print the information.
 
@@ -42,13 +42,13 @@ def identify_devices(omit_print=False):
             scpi_devices.append((address, response))
             device.close()
 
-            if not omit_print:
+            if verbose:
                 print(f"{len(scpi_devices)-1}:")
                 print(f"\taddress: {address}")
                 print(f"\tresponse: {response}\n")
 
         except pyvisa.Error:
-            if not omit_print:
+            if verbose:
                 print(f"Invalid IDN query reponse from address {address}\n")
             device.close()
             continue
@@ -65,10 +65,59 @@ class Scpi_Instrument():
 
     @property
     def idn(self):
+        """
+        idn
+
+        Identify Query
+
+        Returns a string that uniquely identifies the instrument. The IDN query
+        sent to the instrument is one of the IEEE 488.2 Common Commands and
+        should be supported by all SCPI compatible instruments.
+
+        Returns:
+            str: uniquely identifies the instrument
+        """
         return self.instrument.query('*IDN?')
+
+    def cls(self):
+        """
+        cls()
+
+        Clear Status Command
+
+        Clears the instrument status byte by emptying the error queue and
+        clearing all event registers. Also cancels any preceding *OPC command
+        or query. The CLS command sent to the instrument is one of the
+        IEEE 488.2 Common Commands and should be supported by all SCPI
+        compatible instruments.
+
+        Returns:
+            None
+        """
+
+        self.instrument.write('*CLS')
+        return None
+
+    def rst(self):
+        """
+        rst()
+
+        Reset Command
+
+        Executes a device reset and cancels any pending *OPC command or query.
+        The RST command sent to the instrument is one of the IEEE 488.2 Common
+        Commands and should be supported by all SCPI compatible instruments.
+
+        Returns:
+            None
+        """
+
+        self.instrument.write('*RST')
+        return None
 
     @property
     def timeout(self):
+
         return self.instrument.timeout
 
     @timeout.setter
@@ -78,10 +127,13 @@ class Scpi_Instrument():
 
     def __del__(self):
         try:
+            # if connection has been estabilished terminate it
             if hasattr(self, 'instrument'):
                 self.instrument.close()
         except VisaIOError:
-            return None
+            # if connection not connection has been estabilished (such as if an
+            # error is throw in __init__) do nothing
+            pass
         return None
 
     def __repr__(self):
@@ -99,6 +151,9 @@ class Scpi_Instrument():
         comp &= (self.__class__.__name__ == obj.__class__.__name__)
 
         return comp
+
+    def __ne__(self, obj):
+        return not self.__eq__(obj)
 
     def send_raw_scpi(self, command_str):
         """
