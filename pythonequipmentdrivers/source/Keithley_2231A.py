@@ -1,9 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument, VisaIOError
 from time import sleep as _sleep
 import numpy as _np
 
 
-class Keithley_2231A(_Scpi_Instrument):
+class Keithley_2231A(Scpi_Instrument):
     """
     Keithley_2231A(address)
 
@@ -18,8 +18,16 @@ class Keithley_2231A(_Scpi_Instrument):
         return None
 
     def __del__(self):
-        self.set_access_remote('local')
-        super().__del__()
+        try:
+            # if connection has been estabilished terminate it
+            if hasattr(self, 'instrument'):
+                self.set_access_remote('local')
+                self.instrument.close()
+        except VisaIOError:
+            # if connection not connection has been estabilished (such as if an
+            # error is throw in __init__) do nothing
+            pass
+        return None
 
     def set_access_remote(self, mode):
         """

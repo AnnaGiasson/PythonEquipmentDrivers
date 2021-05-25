@@ -1,0 +1,43 @@
+{
+    "data_columns": ["v_out_set", "v_in_set", "i_out_set",
+        "v_in_mean", "v_in_min", "v_in_pkpk", "v_in_freq",
+        "eao_high", "eao_max", "v_out_mean", "v_out_min",
+        "i_mon_high", "i_in_high", "i_in_max", "i_drive_high"],
+    "i_out_list": [
+        50,
+        100,
+        150,
+        200,
+        250,
+        300,
+        350,
+        400,
+        450,
+        500,
+        550,
+        600,
+        650,
+        700,
+        750,
+        800,
+        850,
+        900,
+        950,
+        1000,
+        1050
+    ],
+    "meas_delay": 1,
+    "test_name": "Transient_Measurements",
+    "v_in_list": [
+        40,
+        48,
+        54,
+        60
+    ],
+    "v_out_list": [
+        0.4,
+        0.6,
+        0.8,
+        1.1
+    ]
+}

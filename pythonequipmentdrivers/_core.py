@@ -2,6 +2,7 @@ import pyvisa
 from pyvisa import VisaIOError
 from importlib import import_module as _import_module
 import json
+from pathlib import Path
 
 
 # Globals
@@ -189,8 +190,8 @@ class EnvironmentSetup():
     """
     Class for handling the instantiation of generic sets of test equipment
     based on addressing data from file. Can blindly connect to all equipment in
-    the provided file (equipment_json) or optionally can varify that a specific
-    set of equipment is in file (based on object_mask)
+    the provided file or dictionary (equipment_setup) and can optionally verify
+    that a specific set of equipment is in file (based on object_mask)
 
     # Add expected/assumed format of json file
     Expected JSON file format
@@ -264,15 +265,26 @@ class EnvironmentSetup():
     therefore need to be named.
     """
 
-    def __init__(self, equipment_json, object_mask=None, init_devices=False):
+    def __init__(self, equipment_setup, object_mask=None, init_devices=False,
+                 **kwargs):
 
         # init
-        self.equipment_json_path = equipment_json
         self.object_mask = object_mask
 
-        # read equipment info from file
-        with open(self.equipment_json_path, 'rb') as read_file:
-            self.configuration = json.load(read_file)
+        if isinstance(equipment_setup, (str, Path)):
+            self.equipment_json_path = equipment_setup
+
+            # read equipment info from file
+            with open(self.equipment_json_path, 'rb') as read_file:
+                self.configuration = json.load(read_file)
+
+        elif isinstance(equipment_setup, dict):
+            self.equipment_json_path = None
+            self.configuration = equipment_setup
+        else:
+            raise ValueError('Unsupported type for arguement "equipment_setup"'
+                             ' should a str/Path object to a JSON file or a'
+                             ' dictionary')
 
         # check that required items are present in file
         if self.object_mask is not None:
@@ -288,10 +300,11 @@ class EnvironmentSetup():
                 print(f"Missing items: {', '.join(missing_items)}")
                 raise IOError("Required Equipment Missing")
 
-        self._make_connections(init_devices=init_devices)
+        self._make_connections(init_devices=init_devices,
+                               verbose=kwargs.get('verbose', True))
         return None
 
-    def _make_connections(self, init_devices=False):
+    def _make_connections(self, init_devices=False, verbose=True):
         """
         Establishs connections to the equipment specified in equipment_json
         """
@@ -319,16 +332,20 @@ class EnvironmentSetup():
                 vars(self)[device_name] = class_(device_info['address'],
                                                  **kwargs)
 
-                print(f'[CONNECTED] {device_name}')
+                if verbose:
+                    print(f'[CONNECTED] {device_name}')
 
                 if ('init' in device_info) and init_devices:
                     # get the instance in question
                     inst = getattr(self, device_name)
                     initiaize_device(inst, device_info['init'])
+                    if verbose:
+                        print('\tInitialzed')
 
             except (VisaIOError, ConnectionError) as error:
 
-                print(f'[FAILED CONNECTION] {device_name}')
+                if verbose:
+                    print(f'[FAILED CONNECTION] {device_name}')
 
                 if self.object_mask is not None:
                     # if the failed connection is for a piece of required
@@ -338,7 +355,8 @@ class EnvironmentSetup():
 
             except (ModuleNotFoundError, AttributeError) as error:
 
-                print(f'[UNSUPPORTED DEVICE] {device_name}\t{error}')
+                if verbose:
+                    print(f'[UNSUPPORTED DEVICE] {device_name}\t{error}')
 
                 if self.object_mask is not None:
                     # if the failed connection is for a piece of required
