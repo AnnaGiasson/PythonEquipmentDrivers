@@ -75,7 +75,7 @@
                               ["set_channel_display", {"channel": 5, "mode": true}],
                               ["set_channel_display", {"channel": 6, "mode": true}],
                               ["set_channel_display", {"channel": 7, "mode": true}],
-                              ["set_channel_display", {"channel": 8, "mode": true}],
+                              ["set_channel_display", {"channel": 8, "mode": false}],
                               ["set_measure_config", {"channel": 1, "meas_type": "MEAN", "meas_idx": 1}],
                               ["set_measure_config", {"channel": 1, "meas_type": "MIN", "meas_idx": 2}],
                               ["set_measure_config", {"channel": 1, "meas_type": "PKPK", "meas_idx": 3}],
