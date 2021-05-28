@@ -1,6 +1,6 @@
 from pythonequipmentdrivers import Scpi_Instrument, VisaIOError
-from time import sleep as _sleep
-import numpy as _np
+from time import sleep
+import numpy as np
 
 
 class Keithley_2231A(Scpi_Instrument):
@@ -263,7 +263,7 @@ class Keithley_2231A(Scpi_Instrument):
 
         start_level = self.get_voltage(channel)
         self.set_voltage(level, channel)
-        _sleep(duration)
+        sleep(duration)
         self.set_voltage(start_level, channel)
         return None
 
@@ -287,9 +287,9 @@ class Keithley_2231A(Scpi_Instrument):
         to communicate with this device and the connected electrical network.
         """
 
-        for v in _np.linspace(start, stop, int(n)):
+        for v in np.linspace(start, stop, int(n)):
             self.set_voltage(v, channel)
-            _sleep(dt)
+            sleep(dt)
         return None
 
     def slew(self, start, stop, channel, n=100, dt=0.01, dwell=0):
@@ -317,7 +317,7 @@ class Keithley_2231A(Scpi_Instrument):
         """
 
         self.ramp(start, stop, channel, n=int(n/2), dt=dt)
-        _sleep(dwell)
+        sleep(dwell)
         self.ramp(stop, start, channel, n=int(n/2), dt=dt)
         return None
 

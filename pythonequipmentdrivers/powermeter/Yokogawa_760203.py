@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class Yokogawa_760203(_Scpi_Instrument):  # 3 phase
+class Yokogawa_760203(Scpi_Instrument):  # 3 phase
     """
     Yokogawa_760203(address)
 

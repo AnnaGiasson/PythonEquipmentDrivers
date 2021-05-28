@@ -1,9 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import numpy as _np
-from time import sleep as _sleep
+from pythonequipmentdrivers import Scpi_Instrument
+import numpy as np
+from time import sleep
 
 
-class Chroma_63206A(_Scpi_Instrument):  # 6 kW
+class Chroma_63206A(Scpi_Instrument):  # 6 kW
     """
     Chroma_63206A(address)
 
@@ -408,7 +408,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         reads the current setpoint of the load in constant voltage mode
         """
 
-        response = self.instrument.query(f"VOLT:STAT:ILIM?")
+        response = self.instrument.query("VOLT:STAT:ILIM?")
         return float(response)
 
     def set_power(self, power, channel=0):
@@ -494,7 +494,7 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
 
         start_level = self.get_current(1)
         self.set_current(level)
-        _sleep(duration)
+        sleep(duration)
         self.set_current(start_level)
         return None
 
@@ -517,9 +517,9 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         with this device
         """
 
-        for i in _np.linspace(start, stop, int(n)):
+        for i in np.linspace(start, stop, int(n)):
             self.set_current(i)
-            _sleep(dt)
+            sleep(dt)
         return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
@@ -545,6 +545,10 @@ class Chroma_63206A(_Scpi_Instrument):  # 6 kW
         """
 
         self.ramp(start, stop, n=int(n), dt=dt)
-        _sleep(dwell)
+        sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
         return None
+
+
+if __name__ == '__main__':
+    pass

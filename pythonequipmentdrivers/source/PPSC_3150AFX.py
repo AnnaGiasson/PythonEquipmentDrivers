@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class PPSC_3150AFX(_Scpi_Instrument):
+class PPSC_3150AFX(Scpi_Instrument):
     """
     PPSC_3150AFX(address)
 

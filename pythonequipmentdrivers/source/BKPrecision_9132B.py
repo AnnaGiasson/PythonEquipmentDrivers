@@ -1,7 +1,7 @@
-from .Keithley_2231A import Keithley_2231A as _Keithley_2231A
+from .Keithley_2231A import Keithley_2231A
 
 
-class BKPrecision_9132B(_Keithley_2231A):
+class BKPrecision_9132B(Keithley_2231A):
     """
     BKPrecision_9132B(address)
 

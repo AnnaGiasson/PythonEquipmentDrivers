@@ -1,9 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-from time import sleep as _sleep
-import numpy as _np
+from pythonequipmentdrivers import Scpi_Instrument
+from time import sleep
+import numpy as np
 
 
-class Chroma_62012P(_Scpi_Instrument):
+class Chroma_62012P(Scpi_Instrument):
     """
     Chroma_62012P(address)
 
@@ -287,7 +287,7 @@ class Chroma_62012P(_Scpi_Instrument):
 
         start_level = self.get_voltage()
         self.set_voltage(level)
-        _sleep(duration)
+        sleep(duration)
         self.set_voltage(start_level)
         return None
 
@@ -310,9 +310,9 @@ class Chroma_62012P(_Scpi_Instrument):
         to communicate with this device and the connected electrical network.
         """
 
-        for i in _np.linspace(start, stop, int(n)):
+        for i in np.linspace(start, stop, int(n)):
             self.set_voltage(i)
-            _sleep(dt)
+            sleep(dt)
         return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
@@ -339,7 +339,7 @@ class Chroma_62012P(_Scpi_Instrument):
         """
 
         self.ramp(start, stop, n=int(n/2), dt=dt)
-        _sleep(dwell)
+        sleep(dwell)
         self.ramp(stop, start, n=int(n/2), dt=dt)
         return None
 

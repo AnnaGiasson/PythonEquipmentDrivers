@@ -1,9 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import struct as _struct
-import numpy as _np
+from pythonequipmentdrivers import Scpi_Instrument
+import struct
+import numpy as np
 
 
-class Tektronix_MSO5xxx(_Scpi_Instrument):
+class Tektronix_MSO5xxx(Scpi_Instrument):
     """
     Tektronix_MSO5xxx(address)
 
@@ -81,8 +81,8 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         record_len = self.get_record_length()
 
         #   enforce valid start/stop points
-        start_percent = int(_np.clip(start_percent, 0, 100))
-        stop_percent = int(_np.clip(stop_percent, 0, 100))
+        start_percent = int(np.clip(start_percent, 0, 100))
+        stop_percent = int(np.clip(stop_percent, 0, 100))
 
         start_idx = int(start_percent/100*record_len)
         stop_idx = int(stop_percent/100*record_len)
@@ -116,14 +116,13 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         adc_wave = data[header_len:-1]
 
         # convert from byte-string to array (counts)
-        adc_wave = _np.array(_struct.unpack('%sB' % len(adc_wave),
-                                            adc_wave))
+        adc_wave = np.array(struct.unpack(f'{len(adc_wave)}B', adc_wave))
 
         # convert to analog waveform
         amplitude_array = (adc_wave - bytes_offset)*bytes_amp_scale
         amplitude_array += wvfrm_offset
 
-        time_array = _np.arange(0, dt*len(amplitude_array), dt)
+        time_array = np.arange(0, dt*len(amplitude_array), dt)
 
         # accounting for trigger position
         trig_percent = self.get_trigger_position()
@@ -626,7 +625,7 @@ class Tektronix_MSO5xxx(_Scpi_Instrument):
         Gets the method used to calculate the 0% and 100% reference levels.
         """
 
-        resp = self.instrument.query(f'MEASU:METH?')
+        resp = self.instrument.query('MEASU:METH?')
         return resp.strip('\n')
 
     def set_measure_reference_method(self, method):

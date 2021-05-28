@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 
 
-class Lecroy_WR8xxx(_Scpi_Instrument):
+class Lecroy_WR8xxx(Scpi_Instrument):
     """
     Lecroy_WR8xxx(address)
 

@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
+class Chroma_66204(Scpi_Instrument):  # 3 phase + neutral / output
     """
     Chroma_66204(address)
 
@@ -129,7 +129,7 @@ class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
         return self.format_data(frequency)
 
     def get_efficiency(self):
-        eff = self.instrument.query(f'FETC:EFF?')
+        eff = self.instrument.query('FETC:EFF?')
 
         return self.format_data(eff)
 
@@ -161,22 +161,22 @@ class Chroma_66204(_Scpi_Instrument):  # 3 phase + neutral / output
         return self.format_data(harmoincs)
 
     def get_3phase_power_real(self):
-        p_real = self.instrument.query(f'FETC:SIGM:POW:REAL?')
+        p_real = self.instrument.query('FETC:SIGM:POW:REAL?')
 
         return self.format_data(p_real)
 
     def get_3phase_power_reactive(self):
-        p_reactive = self.instrument.query(f'FETC:SIGM:POW:REAC?')
+        p_reactive = self.instrument.query('FETC:SIGM:POW:REAC?')
 
         return self.format_data(p_reactive)
 
     def get_3phase_power_apparent(self):
-        p_apparent = self.instrument.query(f'FETC:SIGM:POW:APP?')
+        p_apparent = self.instrument.query('FETC:SIGM:POW:APP?')
 
         return self.format_data(p_apparent)
 
     def get_3phase_power_factor(self):
-        pf = self.instrument.query(f'FETC:SIGM:POW:PFAC?')
+        pf = self.instrument.query('FETC:SIGM:POW:PFAC?')
 
         return self.format_data(pf)
 

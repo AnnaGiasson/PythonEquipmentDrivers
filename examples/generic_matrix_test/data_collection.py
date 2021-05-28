@@ -35,24 +35,49 @@ from pathlib import Path
 import json
 from time import sleep
 from itertools import product
-import sys
 
 
 class Test_Environment():
 
     g_i_drive = 200
     g_i_mon = 2000
-    k_ratio = 48
 
-    def __init__(self, equipment_config, **kwargs) -> None:
+    """
+    Test_Environment(equipment_config, **kwargs)
+
+    This module provides an abstraction for performing generic test environment
+    functions by handling the function calls needed to control specific test
+    equipment.
+
+    By seperating the control of specific instruments from the general test you
+    can easily write or change the test routine to work with different test
+    equipment, or alternatively, easily use same equipment setup for a variaty
+    of tests.
+
+    Args:
+        equipment_config (str, Path, dict): equipment configuration information
+            to instatiate an EnvironmentSetup object. See
+            help(pythonequipmentdrivers.EnvironmentSetup) for more information.
+
+    Kwargs:
+        initialize (bool, optional): If true the Test_Environment object will
+            attempt to run any initialization sequences for equipment that are
+            present in "equipment_config". Defaults to False.
+
+    Returns:
+        None
+    """
+
+    def __init__(self, equipment_config, **kwargs):
 
         init = kwargs.get("initialize", False)
         self.env = ped.EnvironmentSetup(equipment_config, init_devices=init)
+        return None
 
     def set_operating_point(self, **op_point):
 
         if op_point.get('v_dr', False):
-            self.set_v_dr(op_point.get('v_dr'))
+            self.set_v_aux(op_point.get('v_dr'))
 
         if op_point.get('v_out', False):
             self.set_v_out(op_point.get('v_out'))
@@ -66,6 +91,27 @@ class Test_Environment():
         return None
 
     def set_v_in(self, voltage, **kwargs):
+        """
+        set_v_in(self, voltage, **kwargs)
+
+        Sets the level, or toggles on/off, the voltage source present at the
+        Vin connection of the test environment.
+
+        Args:
+            voltage (float, int): voltage level to set in Volts DC.
+
+        Kwargs:
+            enable (bool, optional): If true, enables the output of the voltage
+                source after setting the requested output voltage level.
+                Defaults to False.
+
+            disable (bool, optional): If true, enables the output of the
+                voltage source after setting the requested output voltage
+                level. Defaults to False.
+
+        Returns:
+            None
+        """
 
         # set levels
         self.env.source.set_voltage(voltage)
@@ -75,7 +121,7 @@ class Test_Environment():
             if not self.env.source.get_state():
                 self.env.source.on()
 
-        elif kwargs.get("disable", True):
+        elif kwargs.get("disable", False):
             if self.env.source.get_state():
                 self.env.source.off()
 
@@ -92,6 +138,27 @@ class Test_Environment():
         return min([max([102.71584607*v_ref - 32.04081548, 2]), 98])
 
     def set_v_out(self, voltage, **kwargs):
+        """
+        set_v_out(self, voltage, **kwargs)
+
+        Sets the level, or toggles on/off, the voltage source present at the
+        Vout connection of the test environment.
+
+        Args:
+            voltage (float, int): voltage level to set in Volts DC.
+
+        Kwargs:
+            enable (bool, optional): If true, enables the output of the voltage
+                source after setting the requested output voltage level.
+                Defaults to False.
+
+            disable (bool, optional): If true, enables the output of the
+                voltage source after setting the requested output voltage
+                level. Defaults to False.
+
+        Returns:
+            None
+        """
 
         channel = kwargs.get('v_ref_chan', 2)
 
@@ -104,13 +171,34 @@ class Test_Environment():
             if not self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(1, source=channel)
 
-        elif kwargs.get("disable", True):
+        elif kwargs.get("disable", False):
             if self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(0, source=channel)
 
         return None
 
     def set_i_out(self, current, **kwargs):
+        """
+        set_i_out(self, current, **kwargs)
+
+        Sets the level, or toggles on/off, the current source present at the
+        Iout connection of the test environment.
+
+        Args:
+            current (float, int): current level to set in Amps DC.
+
+        Kwargs:
+            enable (bool, optional): If true, enables the output of the current
+                source after setting the requested output current level.
+                Defaults to False.
+
+            disable (bool, optional): If true, enables the output of the
+                current source after setting the requested output current
+                level. Defaults to False.
+
+        Returns:
+            None
+        """
 
         channel = kwargs.get('i_drive_chan', 1)
 
@@ -128,13 +216,34 @@ class Test_Environment():
             if not self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(1, source=channel)
 
-        elif kwargs.get("disable", True):
+        elif kwargs.get("disable", False):
             if self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(0, source=channel)
 
         return None
 
-    def set_v_dr(self, voltage=5.1, channel=1, **kwargs):
+    def set_v_aux(self, voltage=5.1, channel=1, **kwargs):
+        """
+        set_v_aux(self, voltage, **kwargs)
+
+        Sets the level, or toggles on/off, the voltage source present at the
+        Vaux connection of the test environment.
+
+        Args:
+            voltage (float, int): voltage level to set in Volts DC.
+
+        Kwargs:
+            enable (bool, optional): If true, enables the output of the voltage
+                source after setting the requested output voltage level.
+                Defaults to False.
+
+            disable (bool, optional): If true, enables the output of the
+                voltage source after setting the requested output voltage
+                level. Defaults to False.
+
+        Returns:
+            None
+        """
 
         # set levels
         self.env.aux_source.set_voltage(voltage, channel)
@@ -144,7 +253,7 @@ class Test_Environment():
             if not self.env.aux_source.get_output_state(channel):
                 self.env.aux_source.set_output_state(1, channel)
 
-        elif kwargs.get("disable", True):
+        elif kwargs.get("disable", False):
             if self.env.aux_source.get_output_state(channel):
                 self.env.aux_source.set_output_state(0, channel)
 
@@ -152,7 +261,7 @@ class Test_Environment():
 
     def initialize(self, v_in=40, v_out=0.8, i_out=10, **kwargs):
 
-        self.set_v_dr(enable=True)
+        self.set_v_aux(enable=True)
         sleep(0.5)  # give time for controller to wake up
 
         self.set_v_out(v_out, enable=True)
@@ -168,7 +277,7 @@ class Test_Environment():
         self.set_v_in(0, disable=True)
         sleep(0.5)  # to allow output to discharge
 
-        self.set_v_dr(0, disable=True)
+        self.set_v_aux(0, disable=True)
 
         self.set_v_out(0, disable=True)
         self.set_i_out(10, current_low=0, disable=True)
@@ -184,9 +293,10 @@ class Test_Environment():
         if op_point.get('v_out', False):
 
             v_o = op_point.get('v_out')
+            k_ratio = 48  # ratio between intermidiate and output voltages
 
             self.env.oscilloscope.set_channel_offset(3, -v_o)
-            self.env.oscilloscope.set_channel_offset(4, -v_o*self.k_ratio)
+            self.env.oscilloscope.set_channel_offset(4, -v_o*k_ratio)
 
         if op_point.get('v_in', False):
 
@@ -228,70 +338,62 @@ class Test_Environment():
 
 class User_Feedback():
 
-    def write(self, stream):
-        sys.stdout.write(stream)
-        return None
-
     def initialization(self, directory, images, raw_data):
 
-        self.write('Test environment initialized\n')
+        print('Test environment initialized')
 
-        self.write(f'Created test directory: {directory}\n')
+        print(f'Created test directory: {directory}')
         if images:
-            self.write("Saving images\n"
-                       f"\tdirectory: {Path(directory) / 'images'}\n")
+            print("Saving images\n"
+                  f"\tdirectory: {Path(directory) / 'images'}")
         if raw_data:
-            self.write("Saving raw data\n"
-                       f"\tdirectory: {Path(directory) / 'raw_data'}\n")
-        self.write('\n')
+            print("Saving raw data\n"
+                  f"\tdirectory: {Path(directory) / 'raw_data'}")
+        print('')
 
         return None
 
     def test_start(self):
-        self.write('\n***** Starting Test *****\n\n')
+        print('\n***** Starting Test *****\n')
         return None
 
     def test_progress(self, **op_point):
 
-        self.write('Testing Op point ')
+        print('Testing Op point ', end='')
         for key, val in op_point.items():
-            self.write(f'|  {key} = {val}  |')
-
-        self.write('\n')
+            print(f'|  {key} = {val}  |', end='')
+        print('')
 
         return None
 
     def test_finish(self):
-        self.write("\n***** Test Complete *****\n\n")
+        print("\n***** Test Complete *****\n")
         return None
 
     def test_error(self, error):
-        self.write('\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                   'An error has occured which interrupted testing'
-                   '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n')
-        self.write(f'Error: {error}\n')
+        print('\n!!!!!!!!!!!!!!!!!!!!!!!! '
+              'An error has occured which interrupted testing'
+              ' !!!!!!!!!!!!!!!!!!!!!!!!\n')
+        print(f'Error: {error}\n')
         return None
 
-    def test_data_logged(self, image_name):
-        self.write('\tMeasurement data saved to file.\n')
-        self.write(f'\tScope image saved to file: {Path(image_name).name}\n')
+    def test_data_logged(self, file_name):
+        print('\tMeasurement data saved to file.')
+        print(f'\tScope image saved to file: {Path(file_name).name}')
         return None
 
     def idling(self):
-        self.write('\tCooling Down .....\n\n')
+        print('\tCooling Down .....\n')
         return None
 
 
 class Matrix_Test():
 
-    # Vout needs to be converted to mV before use
-    image_template = r"Vout{}mV_Vin{}V_Iout{}A"
-
     def __init__(self, test_env: Test_Environment, test_config, **kwargs):
 
         # Using MVC architecture, this class is the Controller
-        self.test_env = test_env  # Model
-        self.ux = User_Feedback()  # View
+        self.test_env = test_env        # Model
+        self.user_fb = User_Feedback()  # View
 
         # get parameters that define the test
         if isinstance(test_config, (str, Path)):
@@ -312,7 +414,7 @@ class Matrix_Test():
                                                     raw_data=save_raw_data,
                                                     **self.test_config)
 
-        self.ux.initialization(self.test_dir, save_images, save_raw_data)
+        self.user_fb.initialization(self.test_dir, save_images, save_raw_data)
 
         # create data table / add header row
         self.data_file = kwargs.get('file_name', 'data')
@@ -323,6 +425,9 @@ class Matrix_Test():
         return None
 
     def run(self):
+
+        # Vout needs to be converted to mV before use
+        fname_template = r"Vout{}mV_Vin{}V_Iout{}A"
 
         try:
 
@@ -335,7 +440,7 @@ class Matrix_Test():
             meas_delay = self.test_config.get('meas_delay', 0.5)
 
             # begin test
-            self.ux.test_start()
+            self.user_fb.test_start()
             self.test_env.initialize(v_in=v_in_list[0],
                                      v_out=v_out_list[0],
                                      i_out=i_out_list[0])
@@ -344,34 +449,34 @@ class Matrix_Test():
             for (v_o, v_i, i_o) in product(v_out_list, v_in_list, i_out_list):
 
                 # prepare setup
-                self.ux.test_progress(v_out=v_o, v_in=v_i, i_out=i_o)
+                self.user_fb.test_progress(v_out=v_o, v_in=v_i, i_out=i_o)
                 self.test_env.set_operating_point(v_out=v_o, v_in=v_i,
                                                   i_out=i_o)
 
                 self.test_env.adjust_scope(v_out=v_o, v_in=v_i, i_out=i_o)
 
                 # get data
-                image_name = self.image_template.format(int(1e3*v_o), int(v_i),
-                                                        int(i_o))
-                image_name = self.test_dir / 'images' / image_name
+                fpath = fname_template.format(int(1e3*v_o), int(v_i), int(i_o))
+                fpath = self.test_dir / 'images' / fpath
 
                 datum = self.test_env.collect_data(meas_delay=meas_delay,
-                                                   image_name=image_name)
-                self.ux.test_data_logged(image_name)
+                                                   image_name=fpath)
 
+                # save data to file
                 ped.utility.log_data(self.test_dir, self.data_file,
                                      v_o, v_i, i_o, *datum)
+                self.user_fb.test_data_logged(fpath)
 
                 # prepare for next iteration
                 self.test_env.idle()
-                self.ux.idling()
+                self.user_fb.idling()
                 sleep(20*i_o/i_out_max)  # cool down after full load
 
         except ped.VisaIOError as error:
-            self.ux.test_error(error)
+            self.user_fb.test_error(error)
 
         else:
-            self.ux.test_finish()
+            self.user_fb.test_finish()
 
         finally:
             self.test_env.shut_down()

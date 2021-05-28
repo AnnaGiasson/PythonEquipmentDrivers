@@ -1,6 +1,6 @@
 import pyvisa
 from pyvisa import VisaIOError
-from importlib import import_module as _import_module
+from importlib import import_module
 import json
 from pathlib import Path
 
@@ -58,6 +58,7 @@ def identify_devices(verbose=False):
 
 
 class Scpi_Instrument():
+
     def __init__(self, address, **kwargs):
         self.address = address
         self.instrument = rm.open_resource(self.address)
@@ -148,24 +149,59 @@ class Scpi_Instrument():
         return f'Instrument ID: {self.idn}\nAddress: {self.address}'
 
     def __eq__(self, obj):
-        comp = (self.address == obj.address)
-        comp &= (self.__class__.__name__ == obj.__class__.__name__)
 
-        return comp
+        """
+        __eq__(obj)
+
+        Args:
+            obj (object): object to compare
+
+        Returns:
+            bool: True if the objects are both instances of Scpi_Instrument
+                (or any class that inherits from Scpi_Instrument) and have the
+                same address and class name. Otherwise False.
+        """
+
+        if not isinstance(obj, Scpi_Instrument):
+            return False
+
+        if not (self.address == obj.address):
+            return False
+
+        if not (self.__class__.__name__ == obj.__class__.__name__):
+            return False
+
+        return True
 
     def __ne__(self, obj):
+        """
+        __ne__(obj)
+
+        Args:
+            obj (object): object to compare
+
+        Returns:
+            bool: whether or not to object are not equal. Defined as the
+                inverse of the result from __eq__
+        """
+
         return not self.__eq__(obj)
 
     def send_raw_scpi(self, command_str):
         """
         send_raw_scpi(command_str)
 
-        command_str: string, scpi command to be passed through to the device.
-
         Pass-through function which forwards the contents of 'command_str' to
         the device. This function is intended to be used for API calls for
         functionally that is not currently supported. Can only be used for
         commands, will not return queries.
+
+        Args:
+            command_str: string, scpi command to be passed through to the
+                device.
+
+        Returns:
+            None
         """
 
         self.instrument.write(command_str)
@@ -175,12 +211,14 @@ class Scpi_Instrument():
         """
         query_raw_scpi(query)
 
-        query_str: string, scpi query to be passed through to the device.
-
         Pass-through function which forwards the contents of 'query_str' to
         the device, returning the response without any processing. This
         function is intended to be used for API calls for functionally that is
         not currently supported. Only to be used for queries.
+
+        Args:
+            query_str: string, scpi query to be passed through to the device.
+
         """
 
         return self.instrument.query(query_str)
@@ -300,11 +338,11 @@ class EnvironmentSetup():
                 print(f"Missing items: {', '.join(missing_items)}")
                 raise IOError("Required Equipment Missing")
 
-        self._make_connections(init_devices=init_devices,
-                               verbose=kwargs.get('verbose', True))
+        self.__make_connections(init_devices=init_devices,
+                                verbose=kwargs.get('verbose', True))
         return None
 
-    def _make_connections(self, init_devices=False, verbose=True):
+    def __make_connections(self, init_devices=False, verbose=True):
         """
         Establishs connections to the equipment specified in equipment_json
         """
@@ -321,7 +359,7 @@ class EnvironmentSetup():
 
             try:
                 # get object to instantate from config file
-                class_ = getattr(_import_module(device_info['definition']),
+                class_ = getattr(import_module(device_info['definition']),
                                  device_info['object'])
 
                 # get any kwargs for instanciation
@@ -366,15 +404,27 @@ class EnvironmentSetup():
         return None
 
 
-def get_callable_instance_methods(instance):
+def get_callable_methods(instance):
+    """
+    get_callable_methods(instance)
+
+    Returns a tuple of all callable methods of an object or instance that are
+    not "dunder"/"magic"/"private" methods
+
+    Args:
+        instance (object): object or instance of an object to get methods of
+
+    Returns:
+        tuple: collection of callable methods.
+    """
 
     # get items in __dir__() that are callable (will include sub-classes)
-    valid_cmds = filter(lambda meth: (callable(getattr(instance, meth))),
+    valid_cmds = filter(lambda method: (callable(getattr(instance, method))),
                         instance.__dir__())
 
     # filter out ignore dunders
-    valid_cmds = filter(lambda m: ('__' not in m), valid_cmds)
-    return list(valid_cmds)
+    valid_cmds = filter(lambda func_name: ('__' not in func_name), valid_cmds)
+    return tuple(valid_cmds)
 
 
 def initiaize_device(inst, initialization_sequence):
@@ -395,8 +445,9 @@ def initiaize_device(inst, initialization_sequence):
     Here "inst" has the two methods "set_voltage", and "off". The first of
     which requires the arguement voltage and the second of which has no args.
     """
+
     # get possible instance methods
-    valid_cmds = get_callable_instance_methods(inst)
+    valid_cmds = get_callable_methods(inst)
 
     # for cmd in initialization_sequence:
     for cmd, args in initialization_sequence:

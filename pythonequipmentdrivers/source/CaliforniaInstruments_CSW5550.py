@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class CaliforniaInstruments_CSW5550(_Scpi_Instrument):
+class CaliforniaInstruments_CSW5550(Scpi_Instrument):
     """
     Programmers Manual
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF

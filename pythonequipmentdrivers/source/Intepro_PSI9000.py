@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class Intepro_PSI9000(_Scpi_Instrument):
+class Intepro_PSI9000(Scpi_Instrument):
     """
     note: with this supply, the device must be locked before it will respond to
           commands

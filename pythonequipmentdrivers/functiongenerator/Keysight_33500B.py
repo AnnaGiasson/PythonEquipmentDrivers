@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 
 
-class Keysight_33500B(_Scpi_Instrument):
+class Keysight_33500B(Scpi_Instrument):
     """
     Keysight_33500B(address)
 

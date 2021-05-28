@@ -1,6 +1,6 @@
-import win32com.client as _win32client
-import numpy as _np
-import re as _re
+import win32com
+import numpy as np
+import re
 
 
 class Bode100():
@@ -20,6 +20,7 @@ class Bode100():
     # descriptions of each state
     execution_state_names = ('Ok', 'Overload', 'Error', 'DeviceLost',
                              'Cancelled', 'CalibrationMandatory',)
+
     execution_state_desc = ('Measurement successfully completed.',
                             'Overload detected. Check OverloadLevel.',
                             'Unknown error occurred during measurement.',
@@ -33,15 +34,16 @@ class Bode100():
         api_link = "OmicronLab.VectorNetworkAnalysis.AutomationInterface"
 
         try:
-            self.instrument = _win32client.Dispatch(api_link)
-        except _win32client.pywintypes.com_error as err:
+            self.instrument = win32com.client.Dispatch(api_link)
+
+        except win32com.client.pywintypes.com_error as err:
             raise ConnectionError(f"Could not load device API: {err}")
 
         if address is None:
             # get connected devices, filter out incompatible devices
             devices = self.instrument.ScanForFreeDevices()
-            pattern = _re.compile(r'^[B,b]ode100')
-            devices = list(filter(lambda s: _re.match(pattern, s) is not None,
+            pattern = re.compile(r'^[B,b]ode100')
+            devices = list(filter(lambda s: re.match(pattern, s) is not None,
                                   devices))
             if len(devices) == 0:
                 raise ConnectionError("No free devices")
@@ -65,13 +67,8 @@ class Bode100():
         return f"{self.idn}"
 
     def __del__(self):
-        try:
+        if hasattr(self, "connection"):
             self.connection.ShutDown()
-
-        except AttributeError:
-            # if instrument is inaccessible __init__ will raise a Visa Error
-            # and instrument wont be initialized thus it can't be closed
-            pass
         return None
 
     def configure_gain_phase_setup(self, measurement, **config):
@@ -185,7 +182,7 @@ class Bode100():
         """
 
         # extract & format data
-        freq = _np.array(results.MeasurementFrequencies)
+        freq = np.array(results.MeasurementFrequencies)
 
         # mag
         gain_unit_lut = ('db', 'linear')
@@ -193,7 +190,7 @@ class Bode100():
             raise ValueError('Invalid option for argument "gain_unit"')
 
         gain_unit = options.get('gain_unit', 'db').lower()
-        mag = _np.array(results.Magnitude(gain_unit_lut.index(gain_unit)))
+        mag = np.array(results.Magnitude(gain_unit_lut.index(gain_unit)))
 
         # phase
         phase_unit_lut = ('radians', 'degrees')
@@ -203,9 +200,9 @@ class Bode100():
         phase_unit = options.get('phase_unit', 'degrees').lower()
         phase_idx = phase_unit_lut.index(phase_unit)
         if options.get('wrap_phase', True):
-            phase = _np.array(results.Phase(phase_idx))
+            phase = np.array(results.Phase(phase_idx))
         else:
-            phase = _np.array(results.UnwrappedPhase(phase_idx))
+            phase = np.array(results.UnwrappedPhase(phase_idx))
 
         return freq, mag, phase
 
@@ -291,7 +288,7 @@ class Bode100():
         # execute measurement
         try:
             state = measurement.ExecuteMeasurement()
-        except _win32client.pywintypes.com_error as error:
+        except win32com.client.pywintypes.com_error as error:
             self.connection.ShutDown()
             raise Exception(error.excepinfo[2])
 

@@ -1,10 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import struct as _struct
-import numpy as _np
-from time import sleep as _sleep
+from pythonequipmentdrivers import Scpi_Instrument
+import struct
+import numpy as np
+from time import sleep
 
 
-class Tektronix_DPO4xxx(_Scpi_Instrument):
+class Tektronix_DPO4xxx(Scpi_Instrument):
     """
     Tektronix_DPO4xxx(address)
 
@@ -96,12 +96,12 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         if start_percent is None:
             start_percent = 0
         else:
-            start_percent = int(_np.clip(start_percent, 0, 100))
+            start_percent = int(np.clip(start_percent, 0, 100))
 
         if stop_percent is None:
             stop_percent = 100
         else:
-            stop_percent = int(_np.clip(stop_percent, 0, 100))
+            stop_percent = int(np.clip(stop_percent, 0, 100))
 
         start_idx = int(start_percent/100*record_len)
         stop_idx = int(stop_percent/100*record_len)
@@ -115,12 +115,11 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         header_len = 2 + int(data[1])
 
         adc_wave = data[header_len:-1]
-        adc_wave = _np.array(_struct.unpack('%sB' % len(adc_wave),
-                                            adc_wave))
+        adc_wave = np.array(struct.unpack(f'{len(adc_wave)}B', adc_wave))
         amplitude_array = (adc_wave - bytes_offset)*bytes_amp_scale
         amplitude_array += wvfrm_offset
 
-        time_array = _np.arange(0, dt*len(amplitude_array), dt)
+        time_array = np.arange(0, dt*len(amplitude_array), dt)
         # accounting for trigger position
         trig_idx = int(trig_percent/100*record_len)
         time_array -= (trig_idx - min([start_idx, stop_idx]))*dt
@@ -323,7 +322,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         return None
 
     def get_trigger_position(self):  # returns percent of record len
-        return float(self.instrument.query(f"HOR:POS?"))
+        return float(self.instrument.query("HOR:POS?"))
 
     def set_trigger_mode(self, mode):
         """Valid modes are "AUTO" and "NORM" """
@@ -393,7 +392,7 @@ class Tektronix_DPO4xxx(_Scpi_Instrument):
         self.instrument.write("SAVE:IMAG:FILEF PNG")
         self.instrument.write("HARDCOPY START")
         self.instrument.write('*OPC?')
-        _sleep(buffering_delay)
+        sleep(buffering_delay)
 
         raw_data = self.instrument.read_raw()
 

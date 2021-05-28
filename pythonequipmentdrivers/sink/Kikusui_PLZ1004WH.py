@@ -1,9 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import numpy as _np
-from time import sleep as _sleep
+from pythonequipmentdrivers import Scpi_Instrument
+import numpy as np
+from time import sleep
 
 
-class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
+class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
     """
     Programmers Manual:
     http://www.kikusui.co.jp/kiku_manuals/P/PLZ4W/i_f_manual/english/sr_sys1_sour.html
@@ -275,7 +275,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
 
         returns: float
         """
-        response = self.instrument.query(f"COND?")
+        response = self.instrument.query("COND?")
         return float(response)
 
     def set_switching_state(self, state):
@@ -401,7 +401,7 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
 
         start_level = self.get_current()
         self.set_current(level)
-        _sleep(duration)
+        sleep(duration)
         self.set_current(start_level)
         return None
 
@@ -424,9 +424,9 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         with this device
         """
 
-        for i in _np.linspace(start, stop, int(n)):
+        for i in np.linspace(start, stop, int(n)):
             self.set_current(i)
-            _sleep(dt)
+            sleep(dt)
         return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
@@ -452,6 +452,10 @@ class Kikusui_PLZ1004WH(_Scpi_Instrument):  # 1 kW
         """
 
         self.ramp(start, stop, n=int(n), dt=dt)
-        _sleep(dwell)
+        sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
         return None
+
+
+if __name__ == '__main__':
+    pass

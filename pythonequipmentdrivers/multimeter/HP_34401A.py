@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class HP_34401A(_Scpi_Instrument):
+class HP_34401A(Scpi_Instrument):
     """
     HP_34401A()
 

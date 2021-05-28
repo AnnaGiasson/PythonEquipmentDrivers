@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
+from pythonequipmentdrivers import Scpi_Instrument
 
 
-class Fluke_DMM(_Scpi_Instrument):
+class Fluke_DMM(Scpi_Instrument):
     """
     Fluke_DMM(address, factor=1)
 

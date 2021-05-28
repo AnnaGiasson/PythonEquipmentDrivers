@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-from time import sleep as _sleep
+from pythonequipmentdrivers import Scpi_Instrument
+from time import sleep
 
 
-class Elgar_1750A(_Scpi_Instrument):
+class Elgar_1750A(Scpi_Instrument):
     """
     Elgar_1750A(address)
 
@@ -157,7 +157,7 @@ class Elgar_1750A(_Scpi_Instrument):
                 # Create segment 1. Segment pointer is automatically
                 # incremented to seg 1.
                 self.instrument.write('Edit:seq:insert {}'.format(index + 1))
-                _sleep(0.1)
+                sleep(0.1)
 
         # ----- setup sequence execution parameters -----
         # execute sequence once and stop
@@ -169,7 +169,7 @@ class Elgar_1750A(_Scpi_Instrument):
 
         if run:
             self.on()
-            _sleep(1)
+            sleep(1)
             self.instrument.write('Source:seq run')  # execute sequence
 
         return True

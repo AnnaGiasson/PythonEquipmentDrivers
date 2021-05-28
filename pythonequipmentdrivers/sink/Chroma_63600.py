@@ -1,6 +1,6 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import numpy as _np
-from time import sleep as _sleep
+from pythonequipmentdrivers import Scpi_Instrument
+import numpy as np
+from time import sleep
 
 
 # Look into programming "sequences" and "programs" to the device. See basic
@@ -8,7 +8,7 @@ from time import sleep as _sleep
 
 # add set/get methods for the current and resistance ranges
 
-class Chroma_63600(_Scpi_Instrument):
+class Chroma_63600(Scpi_Instrument):
     """
     Chroma_63600(address)
 
@@ -938,7 +938,7 @@ class Chroma_63600(_Scpi_Instrument):
         voltages = list(map(float, response.split(',')))
 
         if return_average:
-            return _np.mean(voltages)
+            return np.mean(voltages)
         else:
             return voltages
 
@@ -998,7 +998,7 @@ class Chroma_63600(_Scpi_Instrument):
 
         start_level = self.get_current(1)
         self.set_current(level)
-        _sleep(duration)
+        sleep(duration)
         self.set_current(start_level)
         return None
 
@@ -1021,9 +1021,9 @@ class Chroma_63600(_Scpi_Instrument):
         with this device
         """
 
-        for i in _np.linspace(start, stop, int(n)):
+        for i in np.linspace(start, stop, int(n)):
             self.set_current(i)
-            _sleep(dt)
+            sleep(dt)
         return None
 
     def slew(self, start, stop, n=100, dt=0.01, dwell=0):
@@ -1049,7 +1049,7 @@ class Chroma_63600(_Scpi_Instrument):
         """
 
         self.ramp(start, stop, n=int(n), dt=dt)
-        _sleep(dwell)
+        sleep(dwell)
         self.ramp(stop, start, n=int(n), dt=dt)
         return None
 
@@ -1073,11 +1073,4 @@ class Chroma_63600(_Scpi_Instrument):
 
 
 if __name__ == '__main__':
-    # import pythonequipmentdrivers as ped
-    # import numpy as np
-    # from time import sleep
-
-    # config_file = "C:/Users/agiasson/Desktop/apps_bench4_config.json"
-    # env = ped.EnvironmentSetup(config_file, init_devices=True)
-    # sink = Chroma_63600("GPIB0::7::INSTR")
     pass
