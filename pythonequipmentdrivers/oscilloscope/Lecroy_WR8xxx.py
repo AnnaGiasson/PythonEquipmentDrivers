@@ -1,5 +1,6 @@
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
+from typing import Union
 
 
 class Lecroy_WR8xxx(Scpi_Instrument):
@@ -26,7 +27,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         self.set_comm_header('short')
         return None
 
-    def select_channel(self, channel, state):
+    def select_channel(self, channel: int, state: bool) -> None:
         """
         select_channel(channel)
 
@@ -39,43 +40,39 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         Enables/disables the display of the specified channel.
         """
 
-        cmd_str = f'C{channel}:TRACE '
-        if state == 1:
-            cmd_str += "ON"
-        elif state == 0:
-            cmd_str += "OFF"
-        else:
-            raise ValueError(f"Invalid arguement 'state': {state}")
+        cmd_str = f"C{int(channel)}:TRACE {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
         return None
 
-    def set_channel_scale(self, channel, scale):
+    def set_channel_scale(self, channel: int, scale: float) -> None:
         """
         set_channel_scale(channel, scale)
 
-        channel: int, channel number of channel
-
-        scale: int/float, scale of the channel amplitude across one
-        vertical division on the display.
-
         sets the scale of vertical divisons for the specified channel
+
+        Args:
+            channel (int): channel number to query information on
+            scale (float): scale of the channel amplitude across one
+                vertical division on the display.
         """
 
-        self.instrument.write(f"C{channel}:VDIV {scale}")
+        self.instrument.write(f'C{int(channel)}:VDIV {float(scale)}')
         return None
 
-    def get_channel_scale(self, channel):
+    def get_channel_scale(self, channel: int) -> float:
         """
         get_channel_scale(channel)
 
-        channel: int, channel number of channel
+        Retrives the scale for vertical divisons for the specified channel
 
-        retrives the scale for vertical divisons for the specified channel
+        Args:
+            channel (int): channel number to query information on
 
-        returns: float
+        Returns:
+            (float): vertical scale
         """
 
-        response = self.instrument.query(f"C{channel}:VDIV?")
+        response = self.instrument.query(f'C{int(channel)}:VDIV?')
         val = response.split()[1]
         return float(val)
 
@@ -92,6 +89,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         sets the vertical offset for the display of the specified channel.
         """
+
         if use_divisions:
             offset *= self.get_channel_scale(channel)
         self.instrument.write(f"C{channel}:OFFSET {offset}")
@@ -132,29 +130,32 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         coupling = response.split()[-1]
         return coupling_map[coupling]
 
-    def set_horizontal_scale(self, scale):
+    def set_horizontal_scale(self, scale: float) -> None:
         """
         set_horizontal_scale(scale)
 
-        scale: int/float, time scale across one horizontal division on the
-               display in seconds.
-
         sets the scale of horizontal divisons (for all channels) to the
         specified value in seconds.
+
+        Args:
+            scale (float): time scale across one horizontal division on the
+                display in seconds.
         """
 
-        self.instrument.write(f"TIME_DIV {scale}")
+        self.instrument.write(f'TIME_DIV {float(scale)}')
         return None
 
-    def get_horizontal_scale(self):
+    def get_horizontal_scale(self) -> float:
         """
         get_horizontal_scale()
 
         retrieves the scale of horizontal divisons in seconds.
 
-        returns: float
+        Returns:
+            (float): horizontal scale
         """
-        response = self.instrument.query("TIME_DIV?")
+
+        response = self.instrument.query('TIME_DIV?')
         val = response.split()[1]
         return float(val)
 
@@ -589,42 +590,87 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             description[key] = value
         return description
 
-    def get_channel_data(self, *channels, sparsing=1, return_time=True):
+    def get_channel_data(self, *channels: int, **kwargs) -> tuple:
+        """
+        get_channel_data(*channels, return_time=True, dtype=np.float32)
 
-        # setup transfer (sparsing, num_points, first_point, seg_num)
-        # for now only sparsing is supported (defaults to no sparsing)
-        self.instrument.write(f"WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0")
+        Retrieves waveform data from the oscilloscope on the specified
+        channel(s). A sparse representation of each waveform and be returned by
+        setting the sparsing factor, "sparsing", to a values > 1.
+
+        Args:
+            *channels: (int, Iterable[int]) or sequence of ints, channel
+                number(s) of the waveform(s) to be transferred. valid options
+                are 1-4
+
+        Kwargs:
+            sparsing (int, optional): sparsing factor, every n-th point of the
+                waveform will be returned.
+            return_time (bool, optional): Whether or not to return the time
+                array with the rest of the waveform data. Defaults to True.
+            dtype (type, optional): data type to be used for waveform data.
+                Defaults to float32.
+
+        Returns:
+            Union[tuple, numpy.array]: waveform data. if len(channels) > 1 or
+                or if return_time is true this is a tuple of numpy arrays. If
+                time information is returned it will always be the first value,
+                any additional waveforms will be returned in the same order
+                they were passed. In the case of len(channels) == 1 and
+                return_time is False a single numpy array is returned
+        """
+
+        # formatting info
+        sparsing = int(kwargs.get('sparsing', 1))
+        dtype = kwargs.get('dtype', np.float32)
+
+        # set up scope for data transfer
+        #   format: (sparsing, num_points, first_point, seg_num)
+        self.instrument.write(f'WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0')
+        #   for now only sparsing is supported (defaults to no sparsing)
 
         waves = []
-        for i, channel in enumerate(channels):
-            # parameters required for reconstruction
+        for channel in channels:
+            # get waveform metadata
             desc = self.get_waveform_description(channel)
-            v_div = desc['vertical_gain']
-            v_off = desc['vertical_offset']
+            y_offset = desc['vertical_offset']
+            y_scale = desc['vertical_gain']
 
-            # get raw data
-            self.instrument.write(f"C{channel}:WF? DAT1")
-            response = self.instrument.read_raw()[22:-1]
-            # response = self.instrument.read_raw()
+            # get raw data, strip header
+            self.instrument.write(f'C{channel}:WF? DAT1')
+            raw_data = self.instrument.read_raw()[22:-1]
 
-            # process data
-            adc_counts = np.frombuffer(response, np.byte, -1)
-            wave = adc_counts*v_div - v_off
-            waves.append(wave.astype(np.float32))
+            data = np.frombuffer(raw_data, np.byte, count=len(raw_data))
 
-            if (i == 0) and return_time:
+            # decode into measured value using waveform metadata
+            wave = data*y_scale - y_offset
+            waves.append(wave.astype(dtype))
+        else:
+            if kwargs.get('return_time', True):
                 t_div = desc['horiz_interval']
                 t_off = desc['horiz_offset']
-                t = np.arange(len(wave))*t_div*sparsing + t_off
-                t = t.astype(np.float32)
 
-        if return_time:
-            return t, *waves
-        if len(waves) == 1:
-            return waves[0]
-        return waves
+                # all waveforms assumed to have same duration (just use last)
+                t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
 
-    def set_channel_label(self, channel, label):
+                return t, *waves
+            else:
+                if len(waves) == 1:
+                    return waves[0]
+                return waves
+
+    def set_channel_label(self, channel: int, label: str) -> None:
+        """
+        set_channel_label(channel, label)
+
+        updates the text label on a channel specified by "channel" with the
+        value given in "label".
+
+        Args:
+            channel (int): channel number to update label of.
+            label (str): text label to assign to the specified
+        """
+
         q_str = f"""vbs 'app.acquisition.C{channel}.LabelsText = "{label}" '"""
         self.instrument.write(q_str)
         return None
@@ -642,7 +688,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             self.instrument.write('PERSIST OFF')
         return None
 
-    def get_persistence_state(self, state):
+    def get_persistence_state(self):
 
         response = self.instrument.query('PERSIST?')
         response = response.split()[1]
@@ -651,8 +697,19 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             return True
         return False
 
-    def set_persistence_time(self, duration):
-        valid_durs = [0.5, 1, 2, 5, 1, 20, 'inf']
+    def set_persistence_time(self, duration: Union[float, str]) -> None:
+        """
+        set_persistence_time(duration)
+
+        sets the persistence of the waveform buffers to include all captures
+        within a time window specified by "duration"
+
+        Args:
+            duration (Union[float, str]): The exposure time for the
+                oscilloscope capture display in seconds. Valid values are
+                positive numbers or "inf" to set the maximum exposure time
+        """
+        valid_durs = (0.5, 1, 2, 5, 1, 20, 'inf')
 
         if isinstance(duration, str):
             duration = duration.lower()
@@ -664,7 +721,15 @@ class Lecroy_WR8xxx(Scpi_Instrument):
                              ', '.join(map(str, valid_durs)))
         return None
 
-    def get_persistence_time(self):
+    def get_persistence_time(self) -> Union[float, str]:
+        """
+        get_persistence_time()
+
+        Retrives the persistence time set for the waveform buffers.
+
+        Returns:
+            (Union[float, str]): persistence time
+        """
 
         response = self.instrument.query('PESU?')
         dur = response.split()[1].split(',')[0]

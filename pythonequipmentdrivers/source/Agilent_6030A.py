@@ -1,6 +1,7 @@
 from .HP_6632A import HP_6632A
 
 
+# acts as an alias of HP_6632A
 class Agilent_6030A(HP_6632A):
     """
     Agilent_6030A(address)
@@ -10,9 +11,7 @@ class Agilent_6030A(HP_6632A):
     object for accessing basic functionallity of the Agilent 6030A DC supply
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
+    pass
 
 
 if __name__ == '__main__':

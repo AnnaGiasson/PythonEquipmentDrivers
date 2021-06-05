@@ -24,15 +24,15 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
         return None
 
-    def select_channel(self, channel, state):
+    def select_channel(self, channel: int, state: bool) -> None:
         """
         select_channel(channel)
 
         channel: int, channel number of channel
                     valid options are 1,2,3, and 4
 
-        state: int, whether or not the respective channel is
-                selected/visable on the screen. Valid options are 0 or 1
+        state: bool, whether or not the respective channel is
+                selected/visable on the screen.
 
         selects the specified channel. This is allow the specified channel
         to be seen on top of the others in the display. With a given
@@ -40,139 +40,129 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         the selected channel.
         """
 
-        cmd_str = f'SEL:CH{channel} '
-        if state == 1:
-            cmd_str += "ON"
-        elif state == 0:
-            cmd_str += "OFF"
-        else:
-            raise ValueError(f"Invalid arguement 'state': {state}")
+        cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
         return None
 
     # investigate using faster data encoding scheme     # check
-    def get_channel_data(self, channel, start_percent=0, stop_percent=100):
+    def get_channel_data(self, *channels: int, **kwargs) -> tuple:
         """
-        get_channel_data(channel, start_percent=None, stop_percent=None)
+        get_channel_data(*channels, start_percent=0, stop_percent=100,
+                         return_time=True, dtype=np.float32)
 
-        channel: int, channel number of the waveform to be transferred.
-            valid options are 1,2,3, and 4
-        start_percent (optional): int, point in time to begin the waveform
-                                    transfer number represents percent of the
-                                    record length. Valid settings are 0-100.
-                                    Default is 0%
-        stop_percent (optional): int, point in time to end the waveform
-                                    transfer number represents percent of the
-                                    record length. Valid settings are 0-100.
-                                    Default is 100%
-
-        returns: tuple, (time array, amplitude array), both arrays are of
-                    floats
-
-        returns waveform data from the oscilloscope on the specified
-        channel. Optionally points to start / stop the transfer can be
+        Retrieves waveform data from the oscilloscope on the specified
+        channel(s). Optionally points to start / stop the transfer can be
         given. start_percent and stop_percent can be set independently, the
         waveform returned will always start from the smaller of the two and
-        go to the largest. By default the entire waveform will be
-        transferred.
+        go to the largest.
+
+        Args:
+            *channels: (int, Iterable[int]) or sequence of ints, channel
+                number(s) of the waveform(s) to be transferred. valid options
+                are 1-4
+
+        Kwargs:
+            start_percent (int, optional): point in time to begin the waveform
+                transfer number represents percent of the record length. Valid
+                settings are 0-100. Defaults to 0.
+            stop_percent (int, optional): point in time to begin the waveform
+                transfer number represents percent of the record length. Valid
+                settings are 0-100. Defaults to 100.
+            return_time (bool, optional): Whether or not to return the time
+                array with the rest of the waveform data. Defaults to True.
+            dtype (type, optional): data type to be used for waveform data.
+                Defaults to float32.
+
+        Returns:
+            Union[tuple, numpy.array]: waveform data. if len(channels) > 1 or
+                or if return_time is true this is a tuple of numpy arrays. If
+                time information is returned it will always be the first value,
+                any additional waveforms will be returned in the same order
+                they were passed. In the case of len(channels) == 1 and
+                return_time is False a single numpy array is returned
         """
 
-        # get data to define waveform capture with indexes
-        record_len = self.get_record_length()
+        # get record window metadata
+        N = self.get_record_length()
+        x_offset = int(self.get_trigger_position()/100*N)
 
-        #   enforce valid start/stop points
-        start_percent = int(np.clip(start_percent, 0, 100))
-        stop_percent = int(np.clip(stop_percent, 0, 100))
+        # formatting info
+        dtype = kwargs.get('dtype', np.float32)
+        start_idx = np.clip(kwargs.get('start_percent', 0), 0, 100)/100*N
+        stop_idx = np.clip(kwargs.get('stop_percent', 100), 0, 100)/100*N
 
-        start_idx = int(start_percent/100*record_len)
-        stop_idx = int(stop_percent/100*record_len)
+        waves = []
+        for channel in channels:
 
-        # configure data transfer
-        self.instrument.write(f'DATA:START {start_idx}')  # array start pos
-        self.instrument.write(f'DATA:STOP {stop_idx}')  # array stop pos
-        self.instrument.write(f'DATA:SOU CH{channel}')  # data source
-        #   byte enc. (signe int little-endian)
-        self.instrument.write('DATA:ENC SRP')
+            # configure data transfer
+            self.instrument.write(f'DATA:START {start_idx}')  # data range
+            self.instrument.write(f'DATA:STOP {stop_idx}')
+            self.instrument.write(f'DATA:SOU CH{channel}')  # data source
+            self.instrument.write('DATA:ENC SRP')  # encoding, int little-end
 
-        # get info to convert bytes to an analog waveform
-        #   number of counts corresponding to amp of 0
-        bytes_offset = float(self.instrument.query("WFMPRE:YOFF?"))
+            # get waveform metadata
+            dt = float(self.instrument.query('WFMPRE:XINCR?'))  # sampling time
+            y_offset = float(self.instrument.query('WFMPRE:YOFF?'))
+            y_scale = float(self.instrument.query('WFMPRE:YMULT?'))
 
-        #   conversion between counts and amp
-        bytes_amp_scale = float(self.instrument.query("WFMPRE:YMULT?"))
+            adc_offset = float(self.instrument.query('WFMPRE:YZERO?'))
 
-        #   offset of the waveform on the scope
-        wvfrm_offset = float(self.instrument.query("WFMPRE:YZERO?"))
+            # get raw data, strip header
+            self.instrument.write('CURVE?')
+            raw_data = self.instrument.read_raw()
 
-        #   sampling time
-        dt = float(self.instrument.query("WFMPRE:XINCR?"))
+            header_len = 2 + int(raw_data[1])
+            raw_data = raw_data[header_len:-1]
 
-        # get the data
-        self.instrument.write('CURVE?')
-        data = self.instrument.read_raw()
+            data = np.array(struct.unpack(f'{len(raw_data)}B', raw_data),
+                            dtype=dtype)
 
-        #   strip off header
-        header_len = 2 + int(data[1])
-        adc_wave = data[header_len:-1]
+            # decode into measured value using waveform metadata
+            wave = (data - y_offset)*y_scale + adc_offset
+            waves.append(wave)
+        else:
+            if kwargs.get('return_time', True):
+                # generate time vector / account for trigger position
+                # all waveforms assumed to have same duration (just use last)
 
-        # convert from byte-string to array (counts)
-        adc_wave = np.array(struct.unpack(f'{len(adc_wave)}B', adc_wave))
+                t = np.arange(0, dt*len(wave), dt, dtype=dtype)
+                t -= (x_offset - min([start_idx, stop_idx]))*dt
 
-        # convert to analog waveform
-        amplitude_array = (adc_wave - bytes_offset)*bytes_amp_scale
-        amplitude_array += wvfrm_offset
+                return t, *waves
+            else:
+                if len(waves) == 1:
+                    return waves[0]
+                return waves
 
-        time_array = np.arange(0, dt*len(amplitude_array), dt)
-
-        # accounting for trigger position
-        trig_percent = self.get_trigger_position()
-        trig_idx = int(trig_percent/100*record_len)
-        time_array -= (trig_idx - min([start_idx, stop_idx]))*dt
-
-        return time_array, amplitude_array
-
-    def set_channel_label(self, channel, label):
+    def set_channel_label(self, channel: int, label: str) -> None:
         """
         set_channel_label(channel, label)
 
-        channel: int/list, channel number or list of channel numbers to
-                    update label of.
-        label: str/list, text label or list of text labels to assign to
-                each channel listed in "channel"
-
         updates the text label on a channel specified by "channel" with the
-        value given in "label". Alternatively, lists can be passed for each
-        channel and label to set multiple labels at once. List inputs
-        should be the same length for both inputs
+        value given in "label".
+
+        Args:
+            channel (int): channel number to update label of.
+            label (str): text label to assign to the specified
         """
 
-        if type(channel) == list and type(label) == list:
-            if len(channel) != len(label):
-                raise ValueError("Lengths of 'channel' and 'label' are "
-                                 + "mismatched")
-            for chan, lab in zip(channel, label):
-                self.instrument.write(f'CH{chan}:LAB:NAM "{lab}"')
-
-        elif type(channel) == int and type(label) == str:
-            self.instrument.write(f'CH{channel}:LAB:NAM "{label}"')
-
-        else:
-            raise ValueError("Channel should be int or list of ints, label"
-                             + " should be string or list of strings")
+        self.instrument.write(f'CH{int(channel)}:LAB:NAM "{label}"')
         return None
 
-    def get_channel_label(self, channel):
+    def get_channel_label(self, channel: int) -> str:
         """
         get_channel_label(channel)
 
-        channel: int channel number to get label of.
+        retrives the label currently used by the specified channel
 
-        retrives the label currently used by the channel specified by
-        'channel'
+        Args:
+            channel (int): channel number to get label of.
 
-        returns string
+        Returns:
+            (str): specified channel label
         """
-        response = self.instrument.query(f"CH{channel}:LAB:NAM?")
+
+        response = self.instrument.query(f'CH{channel}:LAB:NAM?')
         return response.strip().replace('"', '')
 
     def set_channel_label_position(self, channel, rel_coords):
@@ -244,35 +234,35 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         response = self.instrument.query(f"CH{channel}:BAN?")
         return float(response)
 
-    def set_channel_scale(self, channel, scale):
+    def set_channel_scale(self, channel: int, scale: float) -> None:
         """
         set_channel_scale(channel, scale)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
-
-        scale: int/float, scale of the channel amplitude across one
-        vertical division on the display.
-
         sets the scale of vertical divisons for the specified channel
+
+        Args:
+            channel (int): channel number to query information on
+            scale (float): scale of the channel amplitude across one
+                vertical division on the display.
         """
 
-        self.instrument.write(f"CH{channel}:SCA {scale}")
+        self.instrument.write(f'CH{int(channel)}:SCA {float(scale)}')
         return None
 
     def get_channel_scale(self, channel):
         """
         get_channel_scale(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrives the scale for vertical divisons for the specified channel
 
-        retrives the scale for vertical divisons for the specified channel
+        Args:
+            channel (int): channel number to query information on
 
-        returns: float
+        Returns:
+            (float): vertical scale
         """
 
-        response = self.instrument.query(f"CH{channel}:SCA?")
+        response = self.instrument.query(f'CH{int(channel)}:SCA?')
         return float(response)
 
     def set_channel_offset(self, channel, offset):
@@ -942,30 +932,33 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         return float(self.instrument.query("HOR:RECO?"))
 
-    def set_horizontal_scale(self, scale):
+    def set_horizontal_scale(self, scale: float) -> None:
         """
         set_horizontal_scale(scale)
 
-        scale: int/float, time scale across one horizontal division on the
-               display in seconds.
-
         sets the scale of horizontal divisons (for all channels) to the
         specified value in seconds.
+
+        Args:
+            scale (float): time scale across one horizontal division on the
+                display in seconds.
         """
 
-        self.instrument.write(f"HOR:SCA {scale}")
+        self.instrument.write(f'HOR:SCA {scale}')
         return None
 
-    def get_horizontal_scale(self):
+    def get_horizontal_scale(self) -> float:
         """
         get_horizontal_scale()
 
         retrieves the scale of horizontal divisons in seconds.
 
-        returns: float
+        Returns:
+            (float): horizontal scale
         """
 
-        return float(self.instrument.query("HOR:SCA?"))
+        response = self.instrument.query('HOR:SCA?')
+        return float(response)
 
     def set_horizontal_roll_mode(self, mode):
         """
