@@ -235,6 +235,7 @@ class Scpi_Instrument():
 
         return self.instrument.read(**kwargs)
 
+
 class EnvironmentSetup():
     """
     Class for handling the instantiation of generic sets of test equipment
