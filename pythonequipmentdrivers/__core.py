@@ -187,7 +187,7 @@ class Scpi_Instrument():
 
         return not self.__eq__(obj)
 
-    def send_raw_scpi(self, command_str):
+    def send_raw_scpi(self, command_str, **kwargs):
         """
         send_raw_scpi(command_str)
 
@@ -204,10 +204,10 @@ class Scpi_Instrument():
             None
         """
 
-        self.instrument.write(command_str)
+        self.instrument.write(command_str, **kwargs)
         return None
 
-    def query_raw_scpi(self, query_str):
+    def query_raw_scpi(self, query_str, **kwargs):
         """
         query_raw_scpi(query)
 
@@ -221,8 +221,19 @@ class Scpi_Instrument():
 
         """
 
-        return self.instrument.query(query_str)
+        return self.instrument.query(query_str, **kwargs)
 
+    def read_raw_scpi(self, **kwargs):
+        """
+        read_raw_scpi()
+
+        Pass-through function which reads the device, returning the response
+        without any processing. This function is intended to be used for API
+        calls for functionally that is not currently supported.
+        Only to be used for read.
+        """
+
+        return self.instrument.read(**kwargs)
 
 class EnvironmentSetup():
     """
