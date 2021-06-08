@@ -31,6 +31,10 @@ class HP_34401A(Scpi_Instrument):
                             'DIOD': "DIOD",
                             'CONT': "CONT",
                             'PER': "PER"}
+        self.valid_trigger = {'IMMEDIATE': "IMMediate",
+                              'BUS': "BUS",
+                              'EXTERNAL': "EXTernal",
+                              'INTERNAL': "INTernal"}
         return None
 
     def set_mode(self, mode):
@@ -66,6 +70,53 @@ class HP_34401A(Scpi_Instrument):
         response = self.instrument.query("FUNC?")
         response = response.rstrip().replace('"', '')
         return response
+
+    def set_trigger(self, trigger, **kwargs):
+        """
+        set_trigger(trigger)
+
+        trigger: str, type of trigger to be done
+            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'
+            which correspond to 'BUS', 'IMMEDIATE', 'EXTERNAL'
+            respectively (not case sensitive)
+
+        Configures the multimeter to trigger as specified
+        The TRIGger subsystem configures the triggering that controls
+        measurement acquisition.
+        Recommendation: All triggered measurements should be made using an
+        appropriate fixed manual range. That is, turn autorange off
+        ([SENSe:]<function>:RANGe:AUTO OFF) or set a fixed range using the
+        [SENSe:]<function>:RANGe, CONFigure, or MEASure command.
+
+        """
+        if 'delay' in kwargs:
+            delay = kwargs['delay'].upper()
+            self.instrument.write(f"TRIG:DELay {delay}")
+        else:
+            raise ValueError("Invalid trigger option")
+        if 'count' in kwargs:
+            count = kwargs['count'].upper()
+            self.instrument.write(f"TRIG:COUNt {count}")
+        else:
+            raise ValueError("Invalid trigger option")
+        if 'level' in kwargs:
+            level = kwargs['level'].upper()
+            self.instrument.write(f"TRIG:LEVel {level}")
+        else:
+            raise ValueError("Invalid trigger option")
+        if 'slope' in kwargs:
+            slope = kwargs['slope'].upper()
+            self.instrument.write(f"TRIG:SLOPe {slope}")
+        else:
+            raise ValueError("Invalid trigger option")
+
+        trigger = trigger.upper()
+        if trigger in self.valid_trigger:
+            self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
+        else:
+            raise ValueError("Invalid trigger option")
+
+        return
 
     def measure_voltage(self):
         """
