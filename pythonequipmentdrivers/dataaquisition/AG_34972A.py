@@ -22,7 +22,7 @@ class AG_34972A(_Scpi_Instrument):
     def __init__(self, address, **kwargs):
         super().__init__(address)
         self.ch_change_time = kwargs.get('ch_change_time', float(0.050))
-        self.modes = {'VOLT': 'VOLT',
+        self.valid_modes = {'VOLT': 'VOLT',
                       'CURR': 'CURR',
                       'V': 'VOLT',
                       'A': 'CURR',
@@ -40,15 +40,15 @@ class AG_34972A(_Scpi_Instrument):
                       }
         self.acdc = {'DC': 'DC',
                      'AC': 'AC'}
-        self.mranges = {'AUTO': '',
-                              'MIN': 'MIN,',
-                              'MAX': 'MAX,',
-                              'DEF': 'DEF,',
-                              0.1: '0.1,',
-                              1: '1,',
-                              10: '10,',
-                              100: '100,',
-                              300: '300,'}
+        self.valid_ranges = {'AUTO': '',
+                        'MIN': 'MIN,',
+                        'MAX': 'MAX,',
+                        'DEF': 'DEF,',
+                        0.1: '0.1,',
+                        1: '1,',
+                        10: '10,',
+                        100: '100,',
+                        300: '300,'}
         self.nplc = {'0.02': '0.02,',
                      '0.2': '0.2,',
                      '1': '1,',
@@ -100,8 +100,8 @@ class AG_34972A(_Scpi_Instrument):
         """
 
         mode = mode.upper()
-        if mode in self.modes:
-            self.instrument.write(f"CONF:{self.modes[mode]}")
+        if mode in self.valid_modes:
+            self.instrument.write(f"CONF:{self.valid_modes[mode]}")
         else:
             raise ValueError("Invalid mode option")
         return
@@ -286,8 +286,8 @@ class AG_34972A(_Scpi_Instrument):
         else:
             chanlist = [chan]
         mode = mode.upper()
-        if mode in self.modes:
-            mode = self.modes[mode]
+        if mode in self.valid_modes:
+            mode = self.valid_modes[mode]
         else:
             raise ValueError("Invalid mode option")
             return
@@ -308,11 +308,11 @@ class AG_34972A(_Scpi_Instrument):
             except AttributeError:
                 pass
             try:
-                signal_range = self.mranges[signal_range]
+                signal_range = self.valid_ranges[signal_range]
             except (ValueError, KeyError):
                 if kwargs.get('verbose', False):
                     print("signal_range not in list, using max")
-                signal_range = self.mranges['MAX']
+                signal_range = self.valid_ranges['MAX']
 
         try:
             nplc = nplc.upper()
