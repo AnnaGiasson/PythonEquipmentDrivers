@@ -1,3 +1,4 @@
+from sys import version
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 import time
 
@@ -274,7 +275,7 @@ class AG_34972A(_Scpi_Instrument):
 
         Args:
             chan (int or str or list): channel number or list to apply
-                                       settings to
+                                       common settings to
             example: chan=101, applies to channel 101 only.
             example: chan='202:207,209,302:308' --> channels 02 through 07
             and 09 on the module in slot 200 and channels 02 through 08 on
@@ -382,12 +383,20 @@ class AG_34972A(_Scpi_Instrument):
 
         return
 
-    def close_chan(self, chan):
+    def close_chan(self, chan, **kwargs):
         """Close relay on channel #
         Args:
             chan (int): Channel to close
         """
-        self.instrument.write(f"ROUT:CLOS (@{chan})")
+        if isinstance(chan, int):
+            self.instrument.write(f"ROUT:CLOS (@{chan})")
+        else:
+            chanstr, chanlist = self.format_channel_list(chan)
+            chanstr, chanlist = self.format_channel_list(chanlist[0])
+            if kwargs.get('verbose', False):
+                print(f"unable to close multiple channels, closing: "
+                      f"{chanlist[0]}")
+            self.instrument.write(f"ROUT:CLOS (@{chanstr})")
         return
 
     def open_chan(self, chan):
@@ -412,7 +421,7 @@ class AG_34972A(_Scpi_Instrument):
         time.sleep(n * self.ch_change_time)
         return
 
-    def monitor(self, chan):
+    def monitor(self, chan, **kwargs):
         """
         monitor(chan)
         sets the mux to monitor the chan given and reads in realtime
@@ -423,8 +432,15 @@ class AG_34972A(_Scpi_Instrument):
         Returns:
             None
         """
-        scanlist = str(chan)
-        self.instrument.write(f'ROUT:MON (@{scanlist})')
+        if isinstance(chan, int):
+            self.instrument.write(f"ROUT:CLOS (@{chan})")
+        else:
+            chanstr, chanlist = self.format_channel_list(chan)
+            chanstr, chanlist = self.format_channel_list(chanlist[0])
+            if kwargs.get('verbose', False):
+                print(f"unable to close multiple channels, closing: "
+                      f"{chanlist[0]}")
+            self.instrument.write(f'ROUT:MON (@{chanstr})')
         return None
 
     def mon_data(self, chan: int = None):
