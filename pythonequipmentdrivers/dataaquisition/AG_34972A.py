@@ -1,6 +1,6 @@
-from sys import version
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 import time
+from pyvisa import VisaIOError
 
 
 class AG_34972A(_Scpi_Instrument):
@@ -80,9 +80,25 @@ class AG_34972A(_Scpi_Instrument):
         return None
 
     def resp_format(self, response, type: type = int):
+        """resp_format(response(str data), type(int/float/etc))
+
+        Args:
+            response (str): string of data to parse
+            type (type, optional): what type to output. Defaults to int.
+
+        Returns:
+            list[type], or type: return is a list if more than 1 element
+                                 otherwise returns the single element as type
+        """
         response = response.strip()
-        start = response.find('@')
-        response = list(map(type, response[start+1:-1].split(',')))
+        start = response.find('@')  # note this returns -1 if not found
+        # that works out OK because data needs to be parsed from the first
+        # character anyway, so this is not an error, but I don't like
+        # that it isn't explicitly trying to find the correct character
+        try:
+            response = list(map(type, response[start+1:-1].split(',')))
+        except ValueError:
+            raise
         if len(response) == 1:
             return response[0]
         return response
@@ -203,12 +219,18 @@ class AG_34972A(_Scpi_Instrument):
         Returns:
             float or list (float): channel measurement(s)
         """
-        self.scanlist, chanlist = self.format_channel_list(chan)
-        response = self.instrument.query(f'MEASure? (@{self.scanlist})')
-        response = response.strip()
-        start = response.find('\'')
-        response = list(map(float, response[start+1:].split(',')))
-        if len(chan) > 1:
+        chanstr, chanlist = self.format_channel_list(chan)
+        response = self.instrument.query(f'MEASure? (@{chanstr})')
+        # response = response.strip()
+        # start = response.find('\'')
+        try:
+            # response = list(map(float, response[start+1:].split(',')))
+            response = self.resp_format(response, float)
+        except ValueError:  # usually when that channel can't do that!
+            print(f"channel {chanstr} unable! Return 0.0")
+            print(f"{self.instrument.query('SYSTem:ERRor?')}")
+            return float(0)
+        if len(chanlist) > 1:
             return response
         else:
             return response[0]
@@ -407,7 +429,6 @@ class AG_34972A(_Scpi_Instrument):
         self.instrument.write(f"ROUT:OPEN (@{chan})")
         return
 
-    @property
     def relay_delay(self, n: int = 1, **kwargs):
         """relay_delay(n)
         relays need time to switch, this provides that time.
@@ -456,10 +477,15 @@ class AG_34972A(_Scpi_Instrument):
             float: chan data
         """
         if chan is not None:
-            scanlist = str(chan)
-            self.instrument.write(f'ROUT:MON (@{scanlist})')
+            chanstr, chanlist = self.format_channel_list(chan)
+            self.instrument.write(f'ROUT:MON (@{chanstr})')
             self.relay_delay()
-        response = self.instrument.query('ROUT:MON:DATA?')
+        try:
+            response = self.instrument.query('ROUT:MON:DATA?')
+        except VisaIOError:  # usually when channel not configured
+            print(f"channel {chanstr} not configured?? Return 0.0")
+            print(f"{self.instrument.query('SYSTem:ERRor?')}")
+            return float(0)
         return self.resp_format(response, type=float)
 
     def measure_voltage(self, chan):
