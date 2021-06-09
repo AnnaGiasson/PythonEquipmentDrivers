@@ -312,36 +312,24 @@ class AG_34972A(_Scpi_Instrument):
         # response = list(map(int, response[start+1:-1].split(',')))
         return self.resp_format(response, type=float)
 
-    def initiate(self, chan: list = None):
+    def initiate(self):
         """
-        measure(chan)
-        performs an immediate sweep of the scan_list and
-        returns the data to the internal memory
-        Use FETCh to get the data.
+        Initialize the meter, used with BUS trigger typically
+        Use fetch_data (FETCh) to get the data.
+        Returns:
+            None
+        """
+        self.instrument.write('INITiate')
+        return None
 
-        Aguments:
-            chan (int)[list]: optional list of channels to include in new
-            scan list.  Note that scan list is overwritten every time
-            If not passed in, uses existing list (recommended)
+    def fetch_data(self):
+        """fetch_data
 
         Returns:
-            list (float): channel measurements
+            [list, float]: data in meter memory resulting from all scans
         """
-        if chan is not None:
-            scanlist = ",".join(map(str, chan))
-            self.instrument.write(f'INITiate (@{scanlist})')
-        else:
-            self.instrument.write('INITiate')
-        init_done = [int(0)]
-        while init_done[0] == 0:
-            status = self.instrument.query('*OPC?')
-            statusint = list(map(int, status.split(',')))
-            init_done[0] = 0x01 & statusint[0]
-        response = self.instrument.query('FETCh?')
-        # response = response.strip()
-        # start = response.find('@')
-        # response = list(map(int, response[start+1:-1].split(',')))
-        return self.resp_format(response, type=float)
+        response = self.instrument.query('FETC?')
+        return self.resp_format(response, float)
 
     def config_chan(self, chan, mode='volt', acdc='dc',
                     signal_range='auto', resolution=None,
