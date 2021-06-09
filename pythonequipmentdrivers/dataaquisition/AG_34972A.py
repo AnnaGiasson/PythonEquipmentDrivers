@@ -23,32 +23,32 @@ class AG_34972A(_Scpi_Instrument):
         super().__init__(address)
         self.ch_change_time = kwargs.get('ch_change_time', float(0.050))
         self.valid_modes = {'VOLT': 'VOLT',
-                      'CURR': 'CURR',
-                      'V': 'VOLT',
-                      'A': 'CURR',
-                      'FREQ': 'FREQ',
-                      'F': 'FREQ',
-                      'OHMS': 'RES',
-                      'O': 'RES',
-                      'DIOD': 'DIOD',
-                      'D': 'DIOD',
-                      'DIODE': 'DIOD',
-                      'CONT': 'CONT',
-                      'C': 'CONT',
-                      'PER': 'PER',
-                      'P': 'PER'
-                      }
+                            'CURR': 'CURR',
+                            'V': 'VOLT',
+                            'A': 'CURR',
+                            'FREQ': 'FREQ',
+                            'F': 'FREQ',
+                            'OHMS': 'RES',
+                            'O': 'RES',
+                            'DIOD': 'DIOD',
+                            'D': 'DIOD',
+                            'DIODE': 'DIOD',
+                            'CONT': 'CONT',
+                            'C': 'CONT',
+                            'PER': 'PER',
+                            'P': 'PER'
+                            }
         self.acdc = {'DC': 'DC',
                      'AC': 'AC'}
         self.valid_ranges = {'AUTO': '',
-                        'MIN': 'MIN,',
-                        'MAX': 'MAX,',
-                        'DEF': 'DEF,',
-                        0.1: '0.1,',
-                        1: '1,',
-                        10: '10,',
-                        100: '100,',
-                        300: '300,'}
+                             'MIN': 'MIN,',
+                             'MAX': 'MAX,',
+                             'DEF': 'DEF,',
+                             0.1: '0.1,',
+                             1: '1,',
+                             10: '10,',
+                             100: '100,',
+                             300: '300,'}
         self.nplc = {'0.02': '0.02,',
                      '0.2': '0.2,',
                      '1': '1,',
@@ -299,7 +299,7 @@ class AG_34972A(_Scpi_Instrument):
             raise ValueError("Invalid acdc option")
             return
 
-        # if range is not provided, cannot use nplc
+        # if range is not provided, cannot use nplc in CONF command
         if signal_range.upper() == 'AUTO':
             signal_range = False
         else:
@@ -357,10 +357,6 @@ class AG_34972A(_Scpi_Instrument):
                     print(string2)
                 self.instrument.write(string)
                 self.instrument.write(string2)
-
-        if kwargs.get('verbose', False):
-            print(string)
-        self.instrument.write(string)
 
         return
 
@@ -505,7 +501,7 @@ class AG_34972A(_Scpi_Instrument):
             response = self.instrument.query("MEAS:RES?")
             return float(response)
 
-    def measure_frequency(self):
+    def measure_frequency(self, ch):
         """
         measure_frequency()
 
