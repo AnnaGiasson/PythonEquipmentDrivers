@@ -433,7 +433,7 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         if isinstance(chan, int):
-            self.instrument.write(f"ROUT:CLOS (@{chan})")
+            self.instrument.write(f"ROUT:MON (@{chan})")
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
