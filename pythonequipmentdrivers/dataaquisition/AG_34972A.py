@@ -69,14 +69,20 @@ class AG_34972A(_Scpi_Instrument):
                      20: '20,',
                      100: '100,',
                      200: '200,'}
-        self.trigger = {'BUS': 'BUS',
-                        'IMMEDIATE': 'IMMediate',
-                        'EXTERNAL': 'EXTernal',
-                        'ALARM1': 'ALARm1',
-                        'ALARM2': 'ALARm2',
-                        'ALARM3': 'ALARm3',
-                        'ALARM4': 'ALARm4',
-                        'TIMER': 'TIMer'}
+        self.valid_trigger = {'BUS': 'BUS',
+                              'IMMEDIATE': 'IMMediate',
+                              'IMM': 'IMMediate',
+                              'EXTERNAL': 'EXTernal',
+                              'EXT': 'EXTernal',
+                              'ALARM1': 'ALARm1',
+                              'ALARM2': 'ALARm2',
+                              'ALARM3': 'ALARm3',
+                              'ALARM4': 'ALARm4',
+                              'TIMER': 'TIMer',
+                              'TIME': 'TIMer',
+                              'TIM': 'TIMer'}
+        self.trigger_mode = self.valid_trigger[
+            self.instrument.query('TRIG:SOUR?').strip()]
         return None
 
     def resp_format(self, response, type: type = int):
@@ -138,7 +144,7 @@ class AG_34972A(_Scpi_Instrument):
         response = response.rstrip().replace('"', '')
         return response
 
-    def set_trigger(self, trigger):
+    def set_trigger_source(self, trigger: str = 'IMMEDIATE'):
         """
         set_trigger(trigger)
 
@@ -151,10 +157,57 @@ class AG_34972A(_Scpi_Instrument):
         """
         trigger = trigger.upper()
         if trigger in self.valid_trigger:
-            self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
+            self.trigger_mode = self.valid_trigger[trigger]
+            self.instrument.write(f"TRIG:SOUR {self.trigger_mode}")
         else:
             raise ValueError("Invalid trigger option")
         return
+
+    def set_trigger_count(self, count):
+        """set_trigger_count(count)
+
+        Args:
+            count ([int]): how many readings to take when triggered
+
+        Raises:
+            ValueError: [description]
+        """
+
+        if isinstance(count, int):
+            self.instrument.write(f"TRIG:COUN {count}")
+        else:
+            raise ValueError("Invalid trigger count number type, use int")
+        return
+
+    def set_trigger_timer(self, delay):
+        """set_trigger_count(count)
+
+        Args:
+            count ([float]): delay between scanlist readings when triggered
+                             note, entire scanlist is measured each time
+                             then the delay runs, then the scanlist again...
+        Raises:
+            ValueError: [description]
+        """
+
+        if isinstance(delay, float):
+            self.instrument.write(f"TRIG:TIM {delay}")
+        else:
+            raise ValueError("Invalid trigger count number type, use int")
+        return
+
+    def trigger(self):
+        """trigger()
+        If the unit is setup to BUS trigger, sends trigger, otherwise pass
+        If the unit is not setup to BUS trigger, it will log an error
+        Returns:
+            None
+        """
+        if self.trigger_mode == self.valid_trigge['BUS']:
+            self.instrument.write('*TRG')
+        else:
+            pass
+        return None
 
     def get_scan_list(self):
         """
@@ -235,7 +288,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             return response[0]
 
-    def read(self, chan: None):
+    def read(self, chan=None):
         """
         measure(chan)
         performs an immediate sweep of the scan_list and
