@@ -116,8 +116,8 @@ class AG_34972A(_Scpi_Instrument):
 
         returns: str
         """
-        channel = ",".join(map(str, chan))
-        response = self.instrument.query(f"FUNC? (@{channel})")
+        chanstr, chanlist = self.format_channel_list(chan)
+        response = self.instrument.query(f"FUNC? (@{chanstr})")
         response = response.rstrip().replace('"', '')
         return response
 
@@ -156,6 +156,19 @@ class AG_34972A(_Scpi_Instrument):
         self.scanlist = list(map(int, response[start+1:-1].split(',')))
         return self.scanlist
 
+    def format_channel_list(self, chan):
+        if isinstance(chan, list):
+            chanstr = ",".join(map(str, chan))
+            chanlist = chan
+        elif isinstance(chan, str):
+            chanstr = chan
+            temp = chan.strip()
+            chanlist = list(map(int, temp[+1:-1].split(',')))
+        else:  # must be an int
+            chanstr = f"{chan}"
+            chanlist = [chan]
+        return chanstr, chanlist
+
     def set_scan_list(self, chan, delay: bool = False):
         """set_scan_list(chan)
         sets the list of channels to scan, the meter will scan them once
@@ -168,17 +181,9 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         # need either a string or a list to iterate for channels to setup
-        if isinstance(chan, list):
-            self.scanlist = ",".join(map(str, chan))
-            chanlist = chan
-        elif isinstance(chan, str):
-            self.scanlist = chan
-            temp = chan.strip()
-            chanlist = list(map(int, temp[+1:-1].split(',')))
-        else:  # must be an int
-            self.scanlist = f"{chan}"
-            chanlist = [chan]
-        # self.scanlist = ",".join(map(str, chan))
+        self.scanlist, chanlist = self.format_channel_list(chan)
+
+        # self.scanlist = ",".join(map(str, chan))  # old way
         self.instrument.write(f'ROUT:SCAN (@{self.scanlist})')
         if delay:
             self.relay_delay(n=len(chanlist))
@@ -197,8 +202,8 @@ class AG_34972A(_Scpi_Instrument):
         Returns:
             float or list (float): channel measurement(s)
         """
-        channel = ",".join(map(str, chan))
-        response = self.instrument.query(f'MEASure? (@{channel})')
+        self.scanlist, chanlist = self.format_channel_list(chan)
+        response = self.instrument.query(f'MEASure? (@{self.scanlist})')
         response = response.strip()
         start = response.find('\'')
         response = list(map(float, response[start+1:].split(',')))
@@ -291,16 +296,17 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         # need either a string or a list to iterate for channels to setup
-        if isinstance(chan, list):
-            chanstr = ",".join(map(str, chan))
-            chanlist = chan
-        elif isinstance(chan, str):
-            chanstr = chan
-            temp = chan.strip()
-            chanlist = list(map(int, temp[+1:-1].split(',')))
-        else:  # must be an int
-            chanstr = f"{chan}"
-            chanlist = [chan]
+        # if isinstance(chan, list):
+        #     chanstr = ",".join(map(str, chan))
+        #     chanlist = chan
+        # elif isinstance(chan, str):
+        #     chanstr = chan
+        #     temp = chan.strip()
+        #     chanlist = list(map(int, temp[+1:-1].split(',')))
+        # else:  # must be an int
+        #     chanstr = f"{chan}"
+        #     chanlist = [chan]
+        chanstr, chanlist = self.format_channel_list(chan)
         mode = mode.upper()
         if mode in self.valid_modes:
             mode = self.valid_modes[mode]
