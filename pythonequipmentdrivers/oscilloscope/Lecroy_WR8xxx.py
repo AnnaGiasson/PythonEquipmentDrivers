@@ -653,7 +653,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
                 # all waveforms assumed to have same duration (just use last)
                 t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
 
-                return t, *waves
+                return (t, *waves)
             else:
                 if len(waves) == 1:
                     return waves[0]

@@ -125,7 +125,7 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
                 t = np.arange(0, dt*len(wave), dt, dtype=dtype)
                 t -= (x_offset - min([start_idx, stop_idx]))*dt
 
-                return t, *waves
+                return (t, *waves)
             else:
                 if len(waves) == 1:
                     return waves[0]
