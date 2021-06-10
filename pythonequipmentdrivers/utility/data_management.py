@@ -51,13 +51,30 @@ def log_data(directory, file_name, *data, init=False):
         init (bool, optional): Whether or not to open the log file in write
             mode ("True", for creating a new file) or append mode ("False" for
             adding additional data). Defaults to False.
-
+    Example:
+        cwd = Path().parent.resolve()
+        mydata = [3, 4, 5]
+        moredata = {6, 7, 8}
+        log_data(cwd, None, "column A", "column B", "column C", init=True)
+        log_data(cwd, None, 1, 2, 3)
+        log_data(cwd, None, *mydata)  # note use of generator
+        log_data(cwd, None, *moredata)  # note use of generator
     Returns:
         NoneType
     """
 
-    with open(Path(directory) / f'{file_name}.csv', 'w' if init else 'a') as f:
+    if file_name is None:
+        file_name = 'data'
 
+    if directory is not None:
+        cwd = Path(directory)
+    else:
+        try:
+            cwd = Path(__file__).parent.resolve()
+        except NameError:  # command line is being used, use active directory
+            cwd = Path().parent.resolve()
+
+    with open(cwd / f'{file_name}.csv', 'w' if init else 'a') as f:
         print(*data, sep=',', file=f)
 
     return None
