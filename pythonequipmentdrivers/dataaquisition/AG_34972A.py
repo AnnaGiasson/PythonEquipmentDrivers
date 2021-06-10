@@ -109,7 +109,7 @@ class AG_34972A(_Scpi_Instrument):
             return response[0]
         return response
 
-    def set_mode(self, mode, chan):
+    def set_mode(self, mode, chan, **kwargs):
         """
         set_mode(mode)
 
@@ -129,12 +129,12 @@ class AG_34972A(_Scpi_Instrument):
         if mode in self.valid_modes:
             chanstr, chanlist = self.format_channel_list(chan)
             self.instrument.write(f"CONF:{self.valid_modes[mode]} "
-                                  f"(@{chanstr})")
+                                  f"(@{chanstr})", **kwargs)
         else:
             raise ValueError("Invalid mode option")
         return
 
-    def get_mode(self, chan):
+    def get_mode(self, chan, **kwargs):
         """
         get_mode(chan)
 
@@ -144,20 +144,20 @@ class AG_34972A(_Scpi_Instrument):
         returns: str
         """
         chanstr, chanlist = self.format_channel_list(chan)
-        response = self.instrument.query(f"FUNC? (@{chanstr})")
+        response = self.instrument.query(f"FUNC? (@{chanstr})", **kwargs)
         response = response.rstrip().replace('"', '')
         return response
 
-    def get_error(self):
+    def get_error(self, **kwargs):
         """get_error
 
         Returns:
             [list]: last error in the buffer
         """
-        response = self.instrument.query('SYSTem:ERRor?')
+        response = self.instrument.query('SYSTem:ERRor?', **kwargs)
         return self.resp_format(response, str)
 
-    def set_trigger_source(self, trigger: str = 'IMMEDIATE'):
+    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs):
         """
         set_trigger(trigger)
 
@@ -171,17 +171,17 @@ class AG_34972A(_Scpi_Instrument):
         trigger = trigger.upper()
         if trigger in self.valid_trigger:
             self.trigger_mode = self.valid_trigger[trigger]
-            self.instrument.write(f"TRIG:SOUR {self.trigger_mode}")
+            self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
         else:
             raise ValueError("Invalid trigger option")
         return
 
-    def get_trigger_source(self):
+    def get_trigger_source(self, **kwargs):
         self.trigger_mode = self.valid_trigger[self.resp_format(
-            self.instrument.query(f"TRIG:SOUR?"), str)]
+            self.instrument.query(f"TRIG:SOUR?", **kwargs), str)]
         return self.trigger_mode
 
-    def set_trigger_count(self, count: int = None):
+    def set_trigger_count(self, count: int = None, **kwargs):
         """set_trigger_count(count)
 
         Args:
@@ -193,37 +193,39 @@ class AG_34972A(_Scpi_Instrument):
         if count is None:
             return self.get_trigger_count()
         elif isinstance(count, int):
-            self.instrument.write(f"TRIG:COUN {count}")
+            self.instrument.write(f"TRIG:COUN {count}", **kwargs)
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
 
-    def get_trigger_count(self):
-        return self.resp_format(self.instrument.query(f"TRIG:COUN?"), int)
+    def get_trigger_count(self, **kwargs):
+        return self.resp_format(self.instrument.query(f"TRIG:COUN?",
+                                                      **kwargs), int)
 
-    def set_trigger_timer(self, delay: float = None):
-        """set_trigger_count(count)
+    def set_trigger_timer(self, delaytime: float = None, **kwargs):
+        """set_trigger_count(delaytime)
 
         Args:
-            count ([float]): delay between scanlist readings when triggered
+            delaytime ([float]): delay between scanlist readings when triggered
                              note, entire scanlist is measured each time
                              then the delay runs, then the scanlist again...
                              if None is sent, returns count
         Raises:
             ValueError: [description]
         """
-        if delay is None:
+        if delaytime is None:
             return self.get_trigger_timer()
-        if isinstance(delay, float):
-            self.instrument.write(f"TRIG:TIM {delay}")
+        if isinstance(delaytime, float):
+            self.instrument.write(f"TRIG:TIM {delaytime}", **kwargs)
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
 
-    def get_trigger_timer(self):
-        return self.resp_format(self.instrument.query(f"TRIG:TIM?"), float)
+    def get_trigger_timer(self, **kwargs):
+        return self.resp_format(self.instrument.query(f"TRIG:TIM?",
+                                                      **kwargs), float)
 
-    def trigger(self):
+    def trigger(self, **kwargs):
         """trigger()
         If the unit is setup to BUS trigger, sends trigger, otherwise pass
         If the unit is not setup to BUS trigger, it will log an error
@@ -231,12 +233,12 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         if self.trigger_mode == self.valid_trigger['BUS']:
-            self.instrument.write('*TRG')
+            self.instrument.write('*TRG', **kwargs)
         else:
             pass
         return None
 
-    def get_scan_list(self):
+    def get_scan_list(self, **kwargs):
         """
         get_scan_list()
 
@@ -247,7 +249,7 @@ class AG_34972A(_Scpi_Instrument):
         returns:
             list (int): channel numbers in scanlist
         """
-        response = self.instrument.query("ROUT:SCAN?")
+        response = self.instrument.query("ROUT:SCAN?", **kwargs)
         response = response.strip()
         start = response.find('@')
         self.scanlist = list(map(int, response[start+1:-1].split(',')))
@@ -266,14 +268,14 @@ class AG_34972A(_Scpi_Instrument):
             chanlist = [chan]
         return chanstr, chanlist
 
-    def set_scan_list(self, chan, delay: bool = False):
+    def set_scan_list(self, chan, relaytime: bool = False, **kwargs):
         """set_scan_list(chan)
         sets the list of channels to scan, the meter will scan them once
         immediately!
         Aguments:
             chan (int)[list]: list of channels to include in new
             scan list.  Note that scan list is overwritten every time
-            delay (bool): ch_change_time delay before return.
+            relaytime (bool): ch_change_time delay before return.
         returns:
             None
         """
@@ -281,12 +283,12 @@ class AG_34972A(_Scpi_Instrument):
         self.scanlist, chanlist = self.format_channel_list(chan)
 
         # self.scanlist = ",".join(map(str, chan))  # old way
-        self.instrument.write(f'ROUT:SCAN (@{self.scanlist})')
-        if delay:
+        self.instrument.write(f'ROUT:SCAN (@{self.scanlist})', **kwargs)
+        if relaytime:
             self.relay_delay(n=len(chanlist))
         return None
 
-    def measure(self, chan):
+    def measure(self, chan, **kwargs):
         """
         measure(chan)
         performs an immediate sweep of the given scan_list and
@@ -300,7 +302,7 @@ class AG_34972A(_Scpi_Instrument):
             float or list (float): channel measurement(s)
         """
         chanstr, chanlist = self.format_channel_list(chan)
-        response = self.instrument.query(f'MEASure? (@{chanstr})')
+        response = self.instrument.query(f'MEASure? (@{chanstr})', **kwargs)
         # response = response.strip()
         # start = response.find('\'')
         try:
@@ -308,14 +310,14 @@ class AG_34972A(_Scpi_Instrument):
             response = self.resp_format(response, float)
         except ValueError:  # usually when that channel can't do that!
             print(f"channel {chanstr} unable! Return 0.0")
-            print(f"{self.instrument.query('SYSTem:ERRor?')}")
+            print(f"{self.instrument.query('SYSTem:ERRor?')}", **kwargs)
             return float(0)
         if len(chanlist) > 1:
             return response
         else:
             return response[0]
 
-    def read(self, chan=None):
+    def read(self, chan=None, **kwargs):
         """
         measure(chan)
         performs an immediate sweep of the scan_list and
@@ -331,36 +333,36 @@ class AG_34972A(_Scpi_Instrument):
         """
         if chan is not None:
             scanlist = ",".join(map(str, chan))
-            response = self.instrument.query(f'READ? (@{scanlist})')
+            response = self.instrument.query(f'READ? (@{scanlist})', **kwargs)
         else:
-            response = self.instrument.query('READ?')
+            response = self.instrument.query('READ?', **kwargs)
         # response = response.strip()
         # start = response.find('@')
         # response = list(map(int, response[start+1:-1].split(',')))
         return self.resp_format(response, type=float)
 
-    def init(self):
+    def init(self, **kwargs):
         """
         Initialize the meter, used with BUS trigger typically
         Use fetch_data (FETCh) to get the data.
         Returns:
             None
         """
-        self.instrument.write('INITiate')
+        self.instrument.write('INITiate', **kwargs)
         return None
 
-    def fetch_data(self):
+    def fetch_data(self, **kwargs):
         """fetch_data
 
         Returns:
             [list, float]: data in meter memory resulting from all scans
         """
-        response = self.instrument.query('FETC?')
+        response = self.instrument.query('FETC?', **kwargs)
         return self.resp_format(response, float)
 
     def config_chan(self, chan, mode='volt', acdc='dc',
                     signal_range='auto', resolution=None,
-                    nplc=0.02, **kwargs):
+                    nplc=0.02, verbose: bool = False, **kwargs):
         """config_chan(#)
 
         Args:
@@ -423,7 +425,7 @@ class AG_34972A(_Scpi_Instrument):
             try:
                 signal_range = self.valid_ranges[signal_range]
             except (ValueError, KeyError):
-                if kwargs.get('verbose', False):
+                if verbose:
                     print("signal_range not in list, using max")
                 signal_range = self.valid_ranges['MAX']
 
@@ -444,16 +446,16 @@ class AG_34972A(_Scpi_Instrument):
                       f"(@{chanstr})")
             if kwargs.get('verbose', False):
                 print(string)
-            self.instrument.write(string)
+            self.instrument.write(string, **kwargs)
         elif signal_range:
             string = (f"CONF:{mode}"
                       f":{acdc} "
                       f"{signal_range}"
                       f"{nplc}"
                       f"(@{chanstr})")
-            if kwargs.get('verbose', False):
+            if verbose:
                 print(string)
-            self.instrument.write(string)
+            self.instrument.write(string, **kwargs)
         else:
             for i in range(len(chanlist)):
                 string = (f"CONF:{mode}"
@@ -465,11 +467,11 @@ class AG_34972A(_Scpi_Instrument):
                            f"{x}"
                            f"{resolution if resolution else nplc}"
                            f"(@{chanlist[i]})")
-                if kwargs.get('verbose', False):
+                if verbose:
                     print(string)
                     print(string2)
-                self.instrument.write(string)
-                self.instrument.write(string2)
+                self.instrument.write(string, **kwargs)
+                self.instrument.write(string2, **kwargs)
 
         return
 
@@ -479,38 +481,39 @@ class AG_34972A(_Scpi_Instrument):
             chan (int): Channel to close
         """
         if isinstance(chan, int):
-            self.instrument.write(f"ROUT:CLOS (@{chan})")
+            self.instrument.write(f"ROUT:CLOS (@{chan})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
             if kwargs.get('verbose', False):
                 print(f"unable to close multiple channels, closing: "
                       f"{chanlist[0]}")
-            self.instrument.write(f"ROUT:CLOS (@{chanstr})")
+            self.instrument.write(f"ROUT:CLOS (@{chanstr})", **kwargs)
         return
 
-    def open_chan(self, chan):
+    def open_chan(self, chan, **kwargs):
         """Open relay on channel #
         Args:
             chan (int): Channel to Open
         """
-        self.instrument.write(f"ROUT:OPEN (@{chan})")
+        self.instrument.write(f"ROUT:OPEN (@{chan})", **kwargs)
         return
 
-    def relay_delay(self, n: int = 1, **kwargs):
+    def relay_delay(self, n: int = 1, ch_change_time=0.05):
         """relay_delay(n)
         relays need time to switch, this provides that time.
 
         Args:
             n (int, optional): number of relay delay periods. Defaults to 1.
-            ch_change_time (float, optiona): relay switching time, defaults to
+            ch_change_time (float, optional): relay switching time, defaults to
                                              0.050 seconds
         """
-        self.ch_change_time = kwargs.get('ch_change_time', self.ch_change_time)
+        if self.ch_change_time != ch_change_time:
+            self.ch_change_time = ch_change_time
         time.sleep(n * self.ch_change_time)
         return
 
-    def monitor(self, chan, **kwargs):
+    def monitor(self, chan, verbose: bool = False, **kwargs):
         """
         monitor(chan)
         sets the mux to monitor the chan given and reads in realtime
@@ -522,17 +525,17 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         if isinstance(chan, int):
-            self.instrument.write(f"ROUT:MON (@{chan})")
+            self.instrument.write(f"ROUT:MON (@{chan})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
-            if kwargs.get('verbose', False):
+            if verbose:
                 print(f"unable to close multiple channels, closing: "
                       f"{chanlist[0]}")
-            self.instrument.write(f'ROUT:MON (@{chanstr})')
+            self.instrument.write(f'ROUT:MON (@{chanstr})', **kwargs)
         return None
 
-    def mon_data(self, chan: int = None):
+    def mon_data(self, chan: int = None, **kwargs):
         """
         mon_data(chan)
         sets the mux to monitor the optional chan given and reads in realtime
@@ -546,17 +549,17 @@ class AG_34972A(_Scpi_Instrument):
         """
         if chan is not None:
             chanstr, chanlist = self.format_channel_list(chan)
-            self.instrument.write(f'ROUT:MON (@{chanstr})')
+            self.instrument.write(f'ROUT:MON (@{chanstr})', **kwargs)
             self.relay_delay()
         try:
-            response = self.instrument.query('ROUT:MON:DATA?')
+            response = self.instrument.query('ROUT:MON:DATA?', **kwargs)
         except VisaIOError:  # usually when channel not configured
             print(f"channel {chanstr} not configured?? Return 0.0")
-            print(f"{self.instrument.query('SYSTem:ERRor?')}")
+            print(f"{self.instrument.query('SYSTem:ERRor?')}", **kwargs)
             return float(0)
         return self.resp_format(response, type=float)
 
-    def measure_voltage(self, chan):
+    def measure_voltage(self, chan, **kwargs):
         """
         measure_voltage(chan)
 
@@ -568,13 +571,15 @@ class AG_34972A(_Scpi_Instrument):
         set_mode method.
 
         """
-        if self.get_mode() != 'VOLT':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'VOLT':
             raise IOError("dac is not configured to measure voltage")
         else:
-            response = self.instrument.query("MEAS:VOLT:DC?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:VOLT:DC? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
-    def measure_voltage_rms(self):
+    def measure_voltage_rms(self, chan, **kwargs):
         """
         measure_voltage_rms()
 
@@ -586,13 +591,15 @@ class AG_34972A(_Scpi_Instrument):
         set_mode method.
 
         """
-        if self.get_mode() != 'VOLT:AC':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'VOLT:AC':
             raise IOError("dac is not configured to measure AC voltage")
         else:
-            response = self.instrument.query("MEAS:VOLT:AC?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:VOLT:AC? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
-    def measure_current(self):
+    def measure_current(self, chan, **kwargs):
         """
         measure_current()
 
@@ -604,13 +611,15 @@ class AG_34972A(_Scpi_Instrument):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'CURR':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'CURR':
             raise IOError("dac is not configured to measure current")
         else:
-            response = self.instrument.query("MEAS:CURR:DC?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:CURR:DC? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
-    def measure_current_rms(self):
+    def measure_current_rms(self, chan, **kwargs):
         """
         measure_current_rms()
 
@@ -622,13 +631,15 @@ class AG_34972A(_Scpi_Instrument):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'CURR:AC':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'CURR:AC':
             raise IOError("dac is not configured to measure AC current")
         else:
-            response = self.instrument.query("MEAS:CURR:AC?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:CURR:AC? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
-    def measure_resistance(self):
+    def measure_resistance(self, chan, **kwargs):
         """
         measure_resistance()
 
@@ -640,13 +651,15 @@ class AG_34972A(_Scpi_Instrument):
         set_mode method.
 
         """
-        if self.get_mode() != 'RES':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'RES':
             raise IOError("dac is not configured to measure resistance")
         else:
-            response = self.instrument.query("MEAS:RES?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:RES? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
-    def measure_frequency(self, chan):
+    def measure_frequency(self, chan, **kwargs):
         """
         measure_frequency()
 
@@ -658,11 +671,13 @@ class AG_34972A(_Scpi_Instrument):
         set_mode method.
 
         """
-        if self.get_mode() != 'FREQ':
+        chanstr, chanlist = self.format_channel_list(chan)
+        if self.get_mode(chanstr) != 'FREQ':
             raise IOError("dac is not configured to measure frequency")
         else:
-            response = self.instrument.query("MEAS:FREQ?")
-            return float(response)
+            response = self.instrument.query(f"MEAS:FREQ? (@{chanstr})",
+                                             **kwargs)
+            return self.resp_format(response, type=float)
 
         """Agilent 34970A/72A Command Reference
         Keysight 34970A/34972A
