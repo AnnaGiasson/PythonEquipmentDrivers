@@ -104,12 +104,17 @@ class AG_34972A(_Scpi_Instrument):
                                  otherwise returns the single element as type
         """
         response = response.strip()
-        start = response.find('@')  # note this returns -1 if not found
+        if '@' in response:
+            start = response.find('@')  # note this returns -1 if not found
+            stop = -1
+        else:
+            start = -1
+            stop = None
         # that works out OK because data needs to be parsed from the first
         # character anyway, so this is not an error, but I don't like
         # that it isn't explicitly trying to find the correct character
         try:
-            response = list(map(type, response[start+1:-1].split(',')))
+            response = list(map(type, response[start+1:stop].split(',')))
         except ValueError:
             raise
         if len(response) == 1:
@@ -185,7 +190,7 @@ class AG_34972A(_Scpi_Instrument):
 
     def get_trigger_source(self, **kwargs):
         self.trigger_mode = self.valid_trigger[self.resp_format(
-            self.instrument.query(f"TRIG:SOUR?", **kwargs), str)]
+            self.instrument.query("TRIG:SOUR?", **kwargs), str)]
         return self.trigger_mode
 
     def set_trigger_count(self, count: int = None, **kwargs):
@@ -206,8 +211,8 @@ class AG_34972A(_Scpi_Instrument):
         return
 
     def get_trigger_count(self, **kwargs):
-        return self.resp_format(self.instrument.query(f"TRIG:COUN?",
-                                                      **kwargs), int)
+        return int(self.resp_format(self.instrument.query(f"TRIG:COUN?",
+                                                      **kwargs), float))
 
     def set_trigger_timer(self, delaytime: float = None, **kwargs):
         """set_trigger_count(delaytime)
@@ -282,7 +287,26 @@ class AG_34972A(_Scpi_Instrument):
         elif isinstance(chan, str):
             chanstr = chan
             temp = chan.strip()
-            chanlist = list(map(int, temp[+1:-1].split(',')))
+            if ':' in chan:
+                # used when someone passes a str with example:
+                # chan = '101,103:105,112'
+                # chanlist should result as:
+                # [101, 103, 104, 105, 112]
+                strlist = list(map(str, temp[0:None].split(',')))
+                chanrange = []
+                chanlist = []
+                for i in range(len(strlist)):
+                    chanrange.append(list(map(int, strlist[i][0:None].split(':'))))
+                for i in range(len(chanrange)):
+                    if len(chanrange[i]) == 2:
+                        chanlist.append(list(range(chanrange[i][0],
+                                                chanrange[i][1] + 1)))
+                    else:
+                        chanlist.append(chanrange[i])
+                # got them all, now flatten!
+                chanlist = list(item for iter_ in chanlist for item in iter_)
+            else:
+                chanlist = list(map(int, temp[0:None].split(',')))
         else:  # must be an int
             chanstr = f"{chan}"
             chanlist = [chan]
