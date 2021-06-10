@@ -1,4 +1,3 @@
-from typing import ValuesView
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 import time
 from pyvisa import VisaIOError
@@ -547,10 +546,10 @@ class AG_34972A(_Scpi_Instrument):
                 if not usefreq:
                     x = ':RES ' if resolution else ':NPLC '
                     string2 = (f"SENS:{mode}"
-                            f"{acdc}"
-                            f"{x}"
-                            f"{resolution if resolution else nplc}"
-                            f"(@{chanlist[i]})")
+                               f"{acdc}"
+                               f"{x}"
+                               f"{resolution if resolution else nplc}"
+                               f"(@{chanlist[i]})")
                     self.instrument.write(string2, **kwargs)
                     if verbose:
                         print(string2)
