@@ -300,7 +300,7 @@ class AG_34972A(_Scpi_Instrument):
                 for i in range(len(chanrange)):
                     if len(chanrange[i]) == 2:
                         chanlist.append(list(range(chanrange[i][0],
-                                                chanrange[i][1] + 1)))
+                                                   chanrange[i][1] + 1)))
                     else:
                         chanlist.append(chanrange[i])
                 # got them all, now flatten!
