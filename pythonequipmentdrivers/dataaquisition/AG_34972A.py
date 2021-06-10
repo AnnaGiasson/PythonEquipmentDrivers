@@ -212,7 +212,7 @@ class AG_34972A(_Scpi_Instrument):
 
     def get_trigger_count(self, **kwargs):
         return int(self.resp_format(self.instrument.query(f"TRIG:COUN?",
-                                                      **kwargs), float))
+                                                          **kwargs), float))
 
     def set_trigger_timer(self, delaytime: float = None, **kwargs):
         """set_trigger_count(delaytime)
@@ -296,7 +296,8 @@ class AG_34972A(_Scpi_Instrument):
                 chanrange = []
                 chanlist = []
                 for i in range(len(strlist)):
-                    chanrange.append(list(map(int, strlist[i][0:None].split(':'))))
+                    chanrange.append(list(map(int,
+                                              strlist[i][0:None].split(':'))))
                 for i in range(len(chanrange)):
                     if len(chanrange[i]) == 2:
                         chanlist.append(list(range(chanrange[i][0],
