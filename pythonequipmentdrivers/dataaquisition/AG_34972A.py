@@ -960,3 +960,12 @@ class AG_34972A(_Scpi_Instrument):
         34907A Module
         34908A Module
         """
+
+    def cls(self, **kwargs):
+        """cls()
+        Send VISA *CLS
+        Returns:
+            None
+        """
+        self.instrument.write('*CLS', **kwargs)
+        return None
