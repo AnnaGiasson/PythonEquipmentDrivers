@@ -474,6 +474,41 @@ def initiaize_device(inst, initialization_sequence):
     return None
 
 
+def get_equip(ped, jsonfile, equipment, init_devices=False, errors=True):
+    """get_equip(ped, jsonfile, equipment)
+
+    Args:
+        ped : pythonequipmentdrivers instance
+        jsonfile (file): setup file for pythonequipmentdrivers listing the
+                         equipment available to connect with
+        equipment (list or tuple): equipment to make connection to
+        init_devices (bool, optional): Send init commands to equipment.
+                                       Defaults to False. False leaves the
+                                       present settings in the equipment
+        errors (bool, optional): if False, ignore errors and return None
+    Returns:
+        env: instance of ped with your equipment ready for commands
+    Example:
+        jsonfile = 'bench.json'
+        equipment = ['multimeter_01', 'dac_01']
+        env = get_equip(ped, jsonfile, equipment)
+        env.multimeter_01.measure_voltage()
+    """
+    if equipment is None:
+        print("warning, no equipment requested!")
+    try:
+        env = ped.EnvironmentSetup(jsonfile,
+                                   object_mask=equipment,
+                                   init_devices=False)
+    except ConnectionError:
+        if errors:
+            raise
+        else:
+            print("no equipment found, running without!")
+            return None
+    return env
+
+
 # Testing Errors
 class LowVinError(Exception):
     def __init__(self, message="Vin measured below lower threshold"):
