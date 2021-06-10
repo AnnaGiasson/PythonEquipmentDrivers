@@ -1,3 +1,4 @@
+from typing import ValuesView
 from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
 import time
 from pyvisa import VisaIOError
@@ -40,8 +41,8 @@ class AG_34972A(_Scpi_Instrument):
                             'PER': 'PER',
                             'P': 'PER'
                             }
-        self.acdc = {'DC': 'DC',
-                     'AC': 'AC'}
+        self.acdc = {'DC': ':DC',
+                     'AC': ':AC'}
         self.valid_ranges = {'AUTO': '',
                              'MIN': 'MIN,',
                              'MAX': 'MAX,',
@@ -69,6 +70,24 @@ class AG_34972A(_Scpi_Instrument):
                      20: '20,',
                      100: '100,',
                      200: '200,'}
+        self.valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
+                                  '0.2': 0.00001,  # this * range = resolution
+                                  '1': 0.000003,
+                                  '2': 0.0000022,
+                                  '10': 0.000001,
+                                  '20': 0.0000008,
+                                  '100': 0.0000003,
+                                  '200': 0.00000022,
+                                  'MIN': 0.0001,
+                                  'MAX': 0.00000022,
+                                  0.02: 0.0001,
+                                  0.2: 0.00001,
+                                  1: 0.000003,
+                                  2: 0.0000022,
+                                  10: 0.000001,
+                                  20: 0.0000008,
+                                  100: 0.0000003,
+                                  200: 0.00000022}
         self.valid_trigger = {'BUS': 'BUS',
                               'IMMEDIATE': 'IMMediate',
                               'IMM': 'IMMediate',
@@ -454,14 +473,15 @@ class AG_34972A(_Scpi_Instrument):
             mode = self.valid_modes[mode]
         else:
             raise ValueError("Invalid mode option")
-            return
 
+        usefreq = mode == self.valid_modes['FREQ']
         acdc = acdc.upper()
-        if acdc in self.acdc:
+        if usefreq:
+            acdc = ''  # frequency doesn't use this
+        elif acdc in self.acdc:
             acdc = self.acdc[acdc]
         else:
             raise ValueError("Invalid acdc option")
-            return
 
         # if range is not provided, cannot use nplc in CONF command
         if signal_range.upper() == 'AUTO':
@@ -484,12 +504,23 @@ class AG_34972A(_Scpi_Instrument):
             pass
         if nplc in self.nplc:
             nplc = self.nplc[nplc]
+            if usefreq:
+                # if resolution is not None:
+                #     pass
+                # else:
+                #     # TypeError: can't multiply sequence by
+                #     # non-int of type 'float'
+                #     # didn't finish, had to abandon this special case due to
+                #     # complexity and time constraints
+                #     resolution = (self.valid_resolutions[nplc] *
+                #                   signal_range if signal_range else 300)
+                nplc = ''  # frequency doens't use this either
         else:
             raise ValueError("Invalid nplc option")
 
         if resolution and signal_range:
             string = (f"CONF:{mode}"
-                      f":{acdc} "
+                      f"{acdc} "
                       f"{signal_range}"
                       f"{resolution}"
                       f"(@{chanstr})")
@@ -498,7 +529,7 @@ class AG_34972A(_Scpi_Instrument):
             self.instrument.write(string, **kwargs)
         elif signal_range:
             string = (f"CONF:{mode}"
-                      f":{acdc} "
+                      f"{acdc} "
                       f"{signal_range}"
                       f"{nplc}"
                       f"(@{chanstr})")
@@ -508,19 +539,21 @@ class AG_34972A(_Scpi_Instrument):
         else:
             for i in range(len(chanlist)):
                 string = (f"CONF:{mode}"
-                          f":{acdc} "
+                          f"{acdc} "
                           f"(@{chanlist[i]})")
-                x = 'RES ' if resolution else 'NPLC '
-                string2 = (f"SENS:{mode}"
-                           f":{acdc}:"
-                           f"{x}"
-                           f"{resolution if resolution else nplc}"
-                           f"(@{chanlist[i]})")
+                self.instrument.write(string, **kwargs)
                 if verbose:
                     print(string)
-                    print(string2)
-                self.instrument.write(string, **kwargs)
-                self.instrument.write(string2, **kwargs)
+                if not usefreq:
+                    x = ':RES ' if resolution else ':NPLC '
+                    string2 = (f"SENS:{mode}"
+                            f"{acdc}"
+                            f"{x}"
+                            f"{resolution if resolution else nplc}"
+                            f"(@{chanlist[i]})")
+                    self.instrument.write(string2, **kwargs)
+                    if verbose:
+                        print(string2)
 
         return
 
@@ -579,7 +612,8 @@ class AG_34972A(_Scpi_Instrument):
             chanstr, chanlist = self.format_channel_list(
                 self.instrument.write("ROUT:MON?", **kwargs))
         elif isinstance(chan, int):
-            self.instrument.write(f"ROUT:MON (@{chan})", **kwargs)
+            chanstr, chanlist = self.format_channel_list(chan)
+            self.instrument.write(f"ROUT:MON (@{chanstr})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
@@ -1017,11 +1051,29 @@ class AG_34972A(_Scpi_Instrument):
 
     def cls(self, **kwargs):
         """cls()
-        Send VISA *CLS
+        Send VISA *CLS, clear visa bus
         Returns:
             None
         """
         self.instrument.write('*CLS', **kwargs)
+        return None
+
+    def abort(self, **kwargs):
+        """abort()
+        Send VISA ABORt, stop the scan!!
+        Returns:
+            None
+        """
+        self.instrument.write('ABORt', **kwargs)
+        return None
+
+    def rst(self, **kwargs):
+        """rst()
+        Send VISA *RST, reset the instrument
+        Returns:
+            None
+        """
+        self.instrument.write('*RST', **kwargs)
         return None
 
     def set_source(self, chan, voltage: float = None, **kwargs):
