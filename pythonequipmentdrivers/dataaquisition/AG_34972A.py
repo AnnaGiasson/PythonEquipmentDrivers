@@ -92,7 +92,7 @@ class AG_34972A(_Scpi_Instrument):
             self.instrument.query('TRIG:SOUR?').strip()]
         return None
 
-    def resp_format(self, response, type: type = int):
+    def resp_format(self, response, resp_type: type = int):
         """resp_format(response(str data), type(int/float/etc))
 
         Args:
@@ -114,7 +114,7 @@ class AG_34972A(_Scpi_Instrument):
         # character anyway, so this is not an error, but I don't like
         # that it isn't explicitly trying to find the correct character
         try:
-            response = list(map(type, response[start+1:stop].split(',')))
+            response = list(map(resp_type, response[start+1:stop].split(',')))
         except ValueError:
             raise
         if len(response) == 1:
@@ -275,9 +275,10 @@ class AG_34972A(_Scpi_Instrument):
             list (int): channel numbers in scanlist
         """
         response = self.instrument.query("ROUT:SCAN?", **kwargs)
-        response = response.strip()
-        start = response.find('@')
-        self.scanlist = list(map(int, response[start+1:-1].split(',')))
+        chanstr, self.scanlist = self.format_channel_list(response)
+        # response = response.strip()
+        # start = response.find('@')
+        # self.scanlist = list(map(int, response[start+1:-1].split(',')))
         return self.scanlist
 
     def format_channel_list(self, chan):
@@ -287,7 +288,7 @@ class AG_34972A(_Scpi_Instrument):
         elif isinstance(chan, str):
             chanstr = chan
             temp = chan.strip()
-            if ':' in chan:
+            if ':' in temp:
                 # used when someone passes a str with example:
                 # chan = '101,103:105,112'
                 # chanlist should result as:
@@ -306,6 +307,9 @@ class AG_34972A(_Scpi_Instrument):
                         chanlist.append(chanrange[i])
                 # got them all, now flatten!
                 chanlist = list(item for iter_ in chanlist for item in iter_)
+            elif '@' in temp:
+                start = temp.find('@')
+                chanlist = list(map(int, temp[start+1:-1].split(',')))
             else:
                 chanlist = list(map(int, temp[0:None].split(',')))
         else:  # must be an int
@@ -325,12 +329,12 @@ class AG_34972A(_Scpi_Instrument):
             None
         """
         # need either a string or a list to iterate for channels to setup
-        self.scanlist, chanlist = self.format_channel_list(chan)
+        chanstr, self.scanlist = self.format_channel_list(chan)
 
         # self.scanlist = ",".join(map(str, chan))  # old way
-        self.instrument.write(f'ROUT:SCAN (@{self.scanlist})', **kwargs)
+        self.instrument.write(f'ROUT:SCAN (@{chanstr})', **kwargs)
         if relaytime:
-            self.relay_delay(n=len(chanlist))
+            self.relay_delay(n=len(self.scanlist))
         return None
 
     def measure(self, chan, **kwargs):
@@ -384,7 +388,7 @@ class AG_34972A(_Scpi_Instrument):
         # response = response.strip()
         # start = response.find('@')
         # response = list(map(int, response[start+1:-1].split(',')))
-        return self.resp_format(response, type=float)
+        return self.resp_format(response, float)
 
     def init(self, **kwargs):
         """
@@ -558,18 +562,23 @@ class AG_34972A(_Scpi_Instrument):
         time.sleep(n * self.ch_change_time)
         return
 
-    def monitor(self, chan, verbose: bool = False, **kwargs):
+    def monitor(self, chan: int = None, verbose: bool = False, **kwargs):
         """
         monitor(chan)
         sets the mux to monitor the chan given and reads in realtime
 
         Aguments:
-            chan (int)[list]:  channel to monitor in realtime
+            chan (int)[list]:  channel to monitor in realtime. optional
+                               if chan=None, returns the actively monitored
+                               channel
 
         Returns:
-            None
+            chan (int):  channel being monitored
         """
-        if isinstance(chan, int):
+        if chan is None:
+            chanstr, chanlist = self.format_channel_list(
+                self.instrument.write("ROUT:MON?", **kwargs))
+        elif isinstance(chan, int):
             self.instrument.write(f"ROUT:MON (@{chan})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
@@ -578,7 +587,7 @@ class AG_34972A(_Scpi_Instrument):
                 print(f"unable to close multiple channels, closing: "
                       f"{chanlist[0]}")
             self.instrument.write(f'ROUT:MON (@{chanstr})', **kwargs)
-        return None
+        return chanlist[0]
 
     def mon_data(self, chan: int = None, **kwargs):
         """
@@ -602,7 +611,7 @@ class AG_34972A(_Scpi_Instrument):
             print(f"channel {chanstr} not configured?? Return 0.0")
             print(f"{self.instrument.query('SYSTem:ERRor?')}", **kwargs)
             return float(0)
-        return self.resp_format(response, type=float)
+        return self.resp_format(response, float)
 
     def measure_voltage(self, chan, **kwargs):
         """
@@ -622,7 +631,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:VOLT:DC? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
     def measure_voltage_rms(self, chan, **kwargs):
         """
@@ -642,7 +651,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:VOLT:AC? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
     def measure_current(self, chan, **kwargs):
         """
@@ -662,7 +671,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:CURR:DC? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
     def measure_current_rms(self, chan, **kwargs):
         """
@@ -682,7 +691,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:CURR:AC? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
     def measure_resistance(self, chan, **kwargs):
         """
@@ -702,7 +711,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:RES? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
     def measure_frequency(self, chan, **kwargs):
         """
@@ -722,7 +731,7 @@ class AG_34972A(_Scpi_Instrument):
         else:
             response = self.instrument.query(f"MEAS:FREQ? (@{chanstr})",
                                              **kwargs)
-            return self.resp_format(response, type=float)
+            return self.resp_format(response, float)
 
         """Agilent 34970A/72A Command Reference
         Keysight 34970A/34972A
@@ -1015,284 +1024,316 @@ class AG_34972A(_Scpi_Instrument):
         self.instrument.write('*CLS', **kwargs)
         return None
 
-    """Agilent 34970A/72A Command Reference
-    Keysight 34970A/34972A
-    Table of contents
-    Keysight 34970A/72A Command Reference
-    Command Language Introduction
-    Syntax Conventions
-    Command Separators
-    Querying Parameter Settings
-    Command Terminators
-    IEEE-488.2 Common Commands
-    Parameter Types
-    Using Device Clear
-    LAN Port Usage
-    Commands by Subsystem
-    ABORt
-    FETCh?
-    INITiate
-    INPut:IMPedance:AUTO
-    R?
-    READ?
-    UNIT:TEMPerature
-    CALCulate_Subsystem
-    CALCulate:AVERage:AVERage?
-    CALCulate:AVERage:CLEar
-    CALCulate:AVERage:COUNt?
-    CALCulate:AVERage:MAXimum?
-    CALCulate:AVERage:MAXimum:TIME?
-    CALCulate:AVERage:MINimum?
-    CALCulate:AVERage:MINimum:TIME?
-    CALCulate:AVERage:PTPeak?
-    CALCulate:COMPare:DATA
-    CALCulate:COMPare:MASK
-    CALCulate:COMPare:STATe
-    CALCulate:COMPare:TYPE
-    CALCulate:LIMit:LOWer
-    CALCulate:LIMit:LOWer:STATe
-    CALCulate:LIMit:UPPer
-    CALCulate:LIMit:UPPer:STATe
-    CALCulate:SCALe:GAIN
-    CALCulate:SCALe:OFFSet
-    CALCulate:SCALe:OFFSet:NULL
-    CALCulate:SCALe:STATe
-    CALCulate:SCALe:UNIT
-    CALibration_Subsystem
-    CALibration?
-    CALibration:COUNt?
-    CALibration:SECure:CODE
-    CALibration:SECure:STATe
-    CALibration:STRing
-    CALibration:VALue
-    CONFigure_Subsystem
-    CONFigure?
-    CONFigure:CURRent:AC
-    CONFigure:CURRent:DC
-    CONFigure:DIGital:BYTE
-    CONFigure:FREQuency
-    CONFigure:FRESistance
-    CONFigure:PERiod
-    CONFigure:RESistance
-    CONFigure:TEMPerature
-    CONFigure:TOTalize
-    CONFigure:VOLTage:AC
-    CONFigure:VOLTage:DC
-    DATA_Subsystem
-    DATA:LAST?
-    DATA:POINts?
-    DATA:POINts:EVENt:THReshold
-    DATA:REMove?
-    DIAGnostic_Subsystem
-    DIAGnostic:DMM:CYCLes?
-    DIAGnostic:DMM:CYCLes:CLEar
-    DIAGnostic:PEEK:SLOT:DATA?
-    DIAGnostic:POKE:SLOT:DATA
-    DIAGnostic:RELay:CYCLes?
-    DIAGnostic:RELay:CYCLes:CLEar
-    DISPlay_Subsystem
-    DISPlay
-    DISPlay:TEXT
-    DISPlay:TEXT:CLEar
-    FORMat_Subsystem
-    FORMat:READing:ALARm
-    FORMat:READing:CHANnel
-    FORMat:READing:TIME
-    FORMat:READing:TIME:TYPE
-    FORMat:READing:UNIT
-    IEEE-488_Commands
-    *CLS
-    *ESE
-    *ESR?
-    *IDN?
-    *OPC
-    *OPC?
-    *PSC
-    *RCL
-    *RST
-    *SAV
-    *SRE
-    *STB?
-    *TRG
-    *TST?
-    *WAI
-    INSTrument_Subsystem
-    INSTrument:DMM
-    INSTrument:DMM:INSTalled?
-    LXI_Subsystem
-    LXI:IDENtify[:STATe]
-    LXI:RESet
-    LXI:RESTart
-    MEASure_Subsystem
-    MEASure:CURRent:AC?
-    MEASure:CURRent:DC?
-    MEASure:DIGital:BYTE?
-    MEASure:FREQuency?
-    MEASure:FRESistance?
-    MEASure:PERiod?
-    MEASure:RESistance?
-    MEASure:TEMPerature?
-    MEASure:TOTalize?
-    MEASure:VOLTage:AC?
-    MEASure:VOLTage:DC?
-    MEMory_Subsystem
-    MEMory:NSTates?
-    MEMory:STATe:DELete
-    MEMory:STATe:NAME
-    MEMory:STATe:RECall:AUTO
-    MEMory:STATe:VALid?
-    MMEMory_Subsytem
-    MMEMory:EXPort?
-    MMEMory:FORMat:READing:CSEParator
-    MMEMory:FORMat:READing:RLIMit
-    MMEMory:IMPort:CATalog?
-    MMEMory:IMPort:CONFig?
-    MMEMory:LOG[:ENABle]
-    OUTPut_Subsystem
-    OUTPut:ALARm:CLEar:ALL
-    OUTPut:ALARm:MODE
-    OUTPut:ALARm:SLOPe
-    OUTPut:ALARm{1|2|3|4}:CLEar
-    OUTPut:ALARm{1|2|3|4}:SOURce
-    ROUTe_Subsystem
-    ROUTe:CHANnel:ADVance:SOURce
-    ROUTe:CHANnel:DELay
-    ROUTe:CHANnel:DELay:AUTO
-    ROUTe:CHANnel:FWIRe
-    ROUTe:CLOSe
-    ROUTe:CLOSe:EXCLusive
-    ROUTe:DONE?
-    ROUTe:MONItor
-    ROUTe:MONItor:DATA?
-    ROUTe:MONItor:STATe
-    ROUTe:OPEN
-    ROUTe:SCAN
-    ROUTe:SCAN:SIZE?
-    SENSe_Subsystem
-    [SENSe:]CURRent:AC:BANDwidth
-    [SENSe:]CURRent:AC:RANGe
-    [SENSe:]CURRent:AC:RANGe:AUTO
-    [SENSe:]CURRent:AC:RESolution
-    [SENSe:]CURRent:DC:APERture
-    [SENSe:]CURRent:DC:NPLC
-    [SENSe:]CURRent:DC:RANGe
-    [SENSe:]CURRent:DC:RANGe:AUTO
-    [SENSe:]CURRent:DC:RESolution
-    [SENSe:]DIGital:DATA:{BYTE|WORD}?
-    [SENSe:]FREQuency:APERture
-    [SENSe:]FREQuency:RANGe:LOWer
-    [SENSe:]FREQuency:VOLTage:RANGe
-    [SENSe:]FREQuency:VOLTage:RANGe:AUTO
-    [SENSe:]FRESistance:APERture
-    [SENSe:]FRESistance:NPLC
-    [SENSe:]FRESistance:OCOMpensated
-    [SENSe:]FRESistance:RANGe
-    [SENSe:]FRESistance:RANGe:AUTO
-    [SENSe:]FRESistance:RESolution
-    [SENSe:]FUNCtion
-    [SENSe:]PERiod:APERture
-    [SENSe:]PERiod:VOLTage:RANGe
-    [SENSe:]PERiod:VOLTage:RANGe:AUTO
-    [SENSe:]RESistance:APERture
-    [SENSe:]RESistance:NPLC
-    [SENSe:]RESistance:OCOMpensated
-    [SENSe:]RESistance:RANGe
-    [SENSe:]RESistance:RANGe:AUTO
-    [SENSe:]RESistance:RESolution
-    [SENSe:]TEMPerature:APERture
-    [SENSe:]TEMPerature:NPLC
-    [SENSe:]TEMPerature:RJUNction?
-    [SENSe:]TEMPerature:TRANsducer:FRTD:OCOMpensated
-    [SENSe:]TEMPerature:TRANsducer:FRTD:RESistance[:REFerence]
-    [SENSe:]TEMPerature:TRANsducer:FRTD:TYPE
-    [SENSe:]TEMPerature:TRANsducer:RTD:OCOMpensated
-    [SENSe:]TEMPerature:TRANsducer:RTD:RESistance[:REFerence]
-    [SENSe:]TEMPerature:TRANsducer:RTD:TYPE
-    [SENSe:]TEMPerature:TRANsducer:TCouple:CHECk
-    [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction
-    [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction:TYPE
-    [SENSe:]TEMPerature:TRANsducer:TCouple:TYPE
-    [SENSe:]TEMPerature:TRANsducer:THERmistor:TYPE
-    [SENSe:]TEMPerature:TRANsducer:TYPE
-    [SENSe:]TOTalize:CLEar:IMMediate
-    [SENSe:]TOTalize:DATA?
-    [SENSe:]TOTalize:SLOPe
-    [SENSe:]TOTalize:STARt[:IMMediate]
-    [SENSe:]TOTalize:STOP[:IMMediate]
-    [SENSe:]TOTalize:TYPE
-    [SENSe:]VOLTage:AC:BANDwidth
-    [SENSe:]VOLTage:AC:RANGe
-    [SENSe:]VOLTage:AC:RANGe:AUTO
-    [SENSe:]VOLTage:DC:APERture
-    [SENSe:]VOLTage:DC:NPLC
-    [SENSe:]VOLTage:DC:RANGe
-    [SENSe:]VOLTage:DC:RANGe:AUTO
-    [SENSe:]VOLTage:DC:RESolution
-    [SENSe:]ZERO:AUTO
-    SOURce_Subsystem
-    SOURce:DIGital:DATA[:{BYTE|WORD}]
-    SOURce:DIGital:STATe?
-    SOURce:VOLTage
-    STATus_Subsystem
-    STATus:ALARm:CONDition?
-    STATus:ALARm:ENABle
-    STATus:ALARm[:EVENt]?
-    STATus:OPERation:CONDition?
-    STATus:OPERation:ENABle
-    STATus:OPERation[:EVENt]?
-    STATus:PRESet
-    STATus:QUEStionable:CONDition?
-    STATus:QUEStionable:ENABle
-    STATus:QUEStionable[:EVENt]?
-    STATus Subsystem Introduction
-    SYSTem_Subsystem
-    LAN_Config
-    SYSTem:COMMunicate:LAN:CONTrol?
-    SYSTem:COMMunicate:LAN:DHCP
-    SYSTem:COMMunicate:LAN:DNS
-    SYSTem:COMMunicate:LAN:DOMain
-    SYSTem:COMMunicate:LAN:GATEway
-    SYSTem:COMMunicate:LAN:HOSTname
-    SYSTem:COMMunicate:LAN:IPADdress
-    SYSTem:COMMunicate:LAN:MAC?
-    SYSTem:COMMunicate:LAN:SMASk
-    SYSTem:COMMunicate:LAN:TELNet:PROMpt
-    SYSTem:COMMunicate:LAN:TELNet:WMESsage
-    SYSTem:COMMunicate:LAN:UPDate
-    SYSTem:ALARm?
-    SYSTem:CPON
-    SYSTem:CTYPe?
-    SYSTem:DATE
-    SYSTem:ERRor?
-    SYSTem:INTerface
-    SYSTem:LANGuage
-    SYSTem:LFRequency?
-    SYSTem:LOCal
-    SYSTem:LOCK:NAME?
-    SYSTem:LOCK:OWNer?
-    SYSTem:LOCK:RELease
-    SYSTem:LOCK:REQuest?
-    SYSTem:PRESet
-    SYSTem:RWLock
-    SYSTem:SECurity[:IMMediate]
-    SYSTem:TIME
-    SYSTem:TIME:SCAN?
-    SYSTem:VERSion?
-    TRIGger_Subsystem
-    TRIGger:COUNt
-    TRIGger:SOURce
-    TRIGger:TIMer
-    Commands A-Z
-    Command Quick Reference
-    Error Messages
-    Factory Reset State
-    Instrument Preset State
-    Plug-in Module Reference Information
-    34901A Module
-    34902A Module
-    34903A Module
-    34904A Module Summary
-    34905A/34906A Modules
-    34907A Module
-    34908A Module
-    """
+    def set_source(self, chan, voltage: float = None, **kwargs):
+        """set_source(chan, voltage)
+
+        Args:
+            chan (int, list): Channels to set voltage output on
+            voltage (float, optional): Voltage to command from DAC.
+                                       Defaults to None.
+
+        Returns:
+            [list of float or float]: Voltage now output
+        """
+        chanstr, chanlist = self.format_channel_list(chan)
+        if voltage is None:
+            return self.get_source(chan, **kwargs)
+        else:
+            self.instrument.write(f"SOUR:VOLT {voltage},(@{chanstr})",
+                                  **kwargs)
+            return voltage
+
+    def get_source(self, chan, **kwargs):
+        """get_source(chan)
+
+        Args:
+            chan (int, list): Channels to set voltage output on
+
+        Returns:
+            [list of float or float]: Voltage now output
+        """
+        chanstr, chanlist = self.format_channel_list(chan)
+        response = self.instrument.query(f"SOUR:VOLT? (@{chanstr})",
+                                         **kwargs)
+        return self.resp_format(response, float)
+
+    # Agilent 34970A/72A Command Reference
+    # Keysight 34970A/34972A
+    # Table of contents
+    # Keysight 34970A/72A Command Reference
+    # Command Language Introduction
+    # Syntax Conventions
+    # Command Separators
+    # Querying Parameter Settings
+    # Command Terminators
+    # IEEE-488.2 Common Commands
+    # Parameter Types
+    # Using Device Clear
+    # LAN Port Usage
+    # Commands by Subsystem
+    # ABORt
+    # FETCh?
+    # INITiate
+    # INPut:IMPedance:AUTO
+    # R?
+    # READ?
+    # UNIT:TEMPerature
+    # CALCulate_Subsystem
+    # CALCulate:AVERage:AVERage?
+    # CALCulate:AVERage:CLEar
+    # CALCulate:AVERage:COUNt?
+    # CALCulate:AVERage:MAXimum?
+    # CALCulate:AVERage:MAXimum:TIME?
+    # CALCulate:AVERage:MINimum?
+    # CALCulate:AVERage:MINimum:TIME?
+    # CALCulate:AVERage:PTPeak?
+    # CALCulate:COMPare:DATA
+    # CALCulate:COMPare:MASK
+    # CALCulate:COMPare:STATe
+    # CALCulate:COMPare:TYPE
+    # CALCulate:LIMit:LOWer
+    # CALCulate:LIMit:LOWer:STATe
+    # CALCulate:LIMit:UPPer
+    # CALCulate:LIMit:UPPer:STATe
+    # CALCulate:SCALe:GAIN
+    # CALCulate:SCALe:OFFSet
+    # CALCulate:SCALe:OFFSet:NULL
+    # CALCulate:SCALe:STATe
+    # CALCulate:SCALe:UNIT
+    # CALibration_Subsystem
+    # CALibration?
+    # CALibration:COUNt?
+    # CALibration:SECure:CODE
+    # CALibration:SECure:STATe
+    # CALibration:STRing
+    # CALibration:VALue
+    # CONFigure_Subsystem
+    # CONFigure?
+    # CONFigure:CURRent:AC
+    # CONFigure:CURRent:DC
+    # CONFigure:DIGital:BYTE
+    # CONFigure:FREQuency
+    # CONFigure:FRESistance
+    # CONFigure:PERiod
+    # CONFigure:RESistance
+    # CONFigure:TEMPerature
+    # CONFigure:TOTalize
+    # CONFigure:VOLTage:AC
+    # CONFigure:VOLTage:DC
+    # DATA_Subsystem
+    # DATA:LAST?
+    # DATA:POINts?
+    # DATA:POINts:EVENt:THReshold
+    # DATA:REMove?
+    # DIAGnostic_Subsystem
+    # DIAGnostic:DMM:CYCLes?
+    # DIAGnostic:DMM:CYCLes:CLEar
+    # DIAGnostic:PEEK:SLOT:DATA?
+    # DIAGnostic:POKE:SLOT:DATA
+    # DIAGnostic:RELay:CYCLes?
+    # DIAGnostic:RELay:CYCLes:CLEar
+    # DISPlay_Subsystem
+    # DISPlay
+    # DISPlay:TEXT
+    # DISPlay:TEXT:CLEar
+    # FORMat_Subsystem
+    # FORMat:READing:ALARm
+    # FORMat:READing:CHANnel
+    # FORMat:READing:TIME
+    # FORMat:READing:TIME:TYPE
+    # FORMat:READing:UNIT
+    # IEEE-488_Commands
+    # *CLS
+    # *ESE
+    # *ESR?
+    # *IDN?
+    # *OPC
+    # *OPC?
+    # *PSC
+    # *RCL
+    # *RST
+    # *SAV
+    # *SRE
+    # *STB?
+    # *TRG
+    # *TST?
+    # *WAI
+    # INSTrument_Subsystem
+    # INSTrument:DMM
+    # INSTrument:DMM:INSTalled?
+    # LXI_Subsystem
+    # LXI:IDENtify[:STATe]
+    # LXI:RESet
+    # LXI:RESTart
+    # MEASure_Subsystem
+    # MEASure:CURRent:AC?
+    # MEASure:CURRent:DC?
+    # MEASure:DIGital:BYTE?
+    # MEASure:FREQuency?
+    # MEASure:FRESistance?
+    # MEASure:PERiod?
+    # MEASure:RESistance?
+    # MEASure:TEMPerature?
+    # MEASure:TOTalize?
+    # MEASure:VOLTage:AC?
+    # MEASure:VOLTage:DC?
+    # MEMory_Subsystem
+    # MEMory:NSTates?
+    # MEMory:STATe:DELete
+    # MEMory:STATe:NAME
+    # MEMory:STATe:RECall:AUTO
+    # MEMory:STATe:VALid?
+    # MMEMory_Subsytem
+    # MMEMory:EXPort?
+    # MMEMory:FORMat:READing:CSEParator
+    # MMEMory:FORMat:READing:RLIMit
+    # MMEMory:IMPort:CATalog?
+    # MMEMory:IMPort:CONFig?
+    # MMEMory:LOG[:ENABle]
+    # OUTPut_Subsystem
+    # OUTPut:ALARm:CLEar:ALL
+    # OUTPut:ALARm:MODE
+    # OUTPut:ALARm:SLOPe
+    # OUTPut:ALARm{1|2|3|4}:CLEar
+    # OUTPut:ALARm{1|2|3|4}:SOURce
+    # ROUTe_Subsystem
+    # ROUTe:CHANnel:ADVance:SOURce
+    # ROUTe:CHANnel:DELay
+    # ROUTe:CHANnel:DELay:AUTO
+    # ROUTe:CHANnel:FWIRe
+    # ROUTe:CLOSe
+    # ROUTe:CLOSe:EXCLusive
+    # ROUTe:DONE?
+    # ROUTe:MONItor
+    # ROUTe:MONItor:DATA?
+    # ROUTe:MONItor:STATe
+    # ROUTe:OPEN
+    # ROUTe:SCAN
+    # ROUTe:SCAN:SIZE?
+    # SENSe_Subsystem
+    # [SENSe:]CURRent:AC:BANDwidth
+    # [SENSe:]CURRent:AC:RANGe
+    # [SENSe:]CURRent:AC:RANGe:AUTO
+    # [SENSe:]CURRent:AC:RESolution
+    # [SENSe:]CURRent:DC:APERture
+    # [SENSe:]CURRent:DC:NPLC
+    # [SENSe:]CURRent:DC:RANGe
+    # [SENSe:]CURRent:DC:RANGe:AUTO
+    # [SENSe:]CURRent:DC:RESolution
+    # [SENSe:]DIGital:DATA:{BYTE|WORD}?
+    # [SENSe:]FREQuency:APERture
+    # [SENSe:]FREQuency:RANGe:LOWer
+    # [SENSe:]FREQuency:VOLTage:RANGe
+    # [SENSe:]FREQuency:VOLTage:RANGe:AUTO
+    # [SENSe:]FRESistance:APERture
+    # [SENSe:]FRESistance:NPLC
+    # [SENSe:]FRESistance:OCOMpensated
+    # [SENSe:]FRESistance:RANGe
+    # [SENSe:]FRESistance:RANGe:AUTO
+    # [SENSe:]FRESistance:RESolution
+    # [SENSe:]FUNCtion
+    # [SENSe:]PERiod:APERture
+    # [SENSe:]PERiod:VOLTage:RANGe
+    # [SENSe:]PERiod:VOLTage:RANGe:AUTO
+    # [SENSe:]RESistance:APERture
+    # [SENSe:]RESistance:NPLC
+    # [SENSe:]RESistance:OCOMpensated
+    # [SENSe:]RESistance:RANGe
+    # [SENSe:]RESistance:RANGe:AUTO
+    # [SENSe:]RESistance:RESolution
+    # [SENSe:]TEMPerature:APERture
+    # [SENSe:]TEMPerature:NPLC
+    # [SENSe:]TEMPerature:RJUNction?
+    # [SENSe:]TEMPerature:TRANsducer:FRTD:OCOMpensated
+    # [SENSe:]TEMPerature:TRANsducer:FRTD:RESistance[:REFerence]
+    # [SENSe:]TEMPerature:TRANsducer:FRTD:TYPE
+    # [SENSe:]TEMPerature:TRANsducer:RTD:OCOMpensated
+    # [SENSe:]TEMPerature:TRANsducer:RTD:RESistance[:REFerence]
+    # [SENSe:]TEMPerature:TRANsducer:RTD:TYPE
+    # [SENSe:]TEMPerature:TRANsducer:TCouple:CHECk
+    # [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction
+    # [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction:TYPE
+    # [SENSe:]TEMPerature:TRANsducer:TCouple:TYPE
+    # [SENSe:]TEMPerature:TRANsducer:THERmistor:TYPE
+    # [SENSe:]TEMPerature:TRANsducer:TYPE
+    # [SENSe:]TOTalize:CLEar:IMMediate
+    # [SENSe:]TOTalize:DATA?
+    # [SENSe:]TOTalize:SLOPe
+    # [SENSe:]TOTalize:STARt[:IMMediate]
+    # [SENSe:]TOTalize:STOP[:IMMediate]
+    # [SENSe:]TOTalize:TYPE
+    # [SENSe:]VOLTage:AC:BANDwidth
+    # [SENSe:]VOLTage:AC:RANGe
+    # [SENSe:]VOLTage:AC:RANGe:AUTO
+    # [SENSe:]VOLTage:DC:APERture
+    # [SENSe:]VOLTage:DC:NPLC
+    # [SENSe:]VOLTage:DC:RANGe
+    # [SENSe:]VOLTage:DC:RANGe:AUTO
+    # [SENSe:]VOLTage:DC:RESolution
+    # [SENSe:]ZERO:AUTO
+    # SOURce_Subsystem
+    # SOURce:DIGital:DATA[:{BYTE|WORD}]
+    # SOURce:DIGital:STATe?
+    # SOURce:VOLTage
+    # STATus_Subsystem
+    # STATus:ALARm:CONDition?
+    # STATus:ALARm:ENABle
+    # STATus:ALARm[:EVENt]?
+    # STATus:OPERation:CONDition?
+    # STATus:OPERation:ENABle
+    # STATus:OPERation[:EVENt]?
+    # STATus:PRESet
+    # STATus:QUEStionable:CONDition?
+    # STATus:QUEStionable:ENABle
+    # STATus:QUEStionable[:EVENt]?
+    # STATus Subsystem Introduction
+    # SYSTem_Subsystem
+    # LAN_Config
+    # SYSTem:COMMunicate:LAN:CONTrol?
+    # SYSTem:COMMunicate:LAN:DHCP
+    # SYSTem:COMMunicate:LAN:DNS
+    # SYSTem:COMMunicate:LAN:DOMain
+    # SYSTem:COMMunicate:LAN:GATEway
+    # SYSTem:COMMunicate:LAN:HOSTname
+    # SYSTem:COMMunicate:LAN:IPADdress
+    # SYSTem:COMMunicate:LAN:MAC?
+    # SYSTem:COMMunicate:LAN:SMASk
+    # SYSTem:COMMunicate:LAN:TELNet:PROMpt
+    # SYSTem:COMMunicate:LAN:TELNet:WMESsage
+    # SYSTem:COMMunicate:LAN:UPDate
+    # SYSTem:ALARm?
+    # SYSTem:CPON
+    # SYSTem:CTYPe?
+    # SYSTem:DATE
+    # SYSTem:ERRor?
+    # SYSTem:INTerface
+    # SYSTem:LANGuage
+    # SYSTem:LFRequency?
+    # SYSTem:LOCal
+    # SYSTem:LOCK:NAME?
+    # SYSTem:LOCK:OWNer?
+    # SYSTem:LOCK:RELease
+    # SYSTem:LOCK:REQuest?
+    # SYSTem:PRESet
+    # SYSTem:RWLock
+    # SYSTem:SECurity[:IMMediate]
+    # SYSTem:TIME
+    # SYSTem:TIME:SCAN?
+    # SYSTem:VERSion?
+    # TRIGger_Subsystem
+    # TRIGger:COUNt
+    # TRIGger:SOURce
+    # TRIGger:TIMer
+    # Commands A-Z
+    # Command Quick Reference
+    # Error Messages
+    # Factory Reset State
+    # Instrument Preset State
+    # Plug-in Module Reference Information
+    # 34901A Module
+    # 34902A Module
+    # 34903A Module
+    # 34904A Module Summary
+    # 34905A/34906A Modules
+    # 34907A Module
+    # 34908A Module
