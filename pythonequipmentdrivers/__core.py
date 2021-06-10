@@ -489,9 +489,10 @@ def get_equip(ped, jsonfile, equipment, init_devices=False, errors=True):
     Returns:
         env: instance of ped with your equipment ready for commands
     Example:
+        import pythonequipmentdrivers as ped
         jsonfile = 'bench.json'
         equipment = ['multimeter_01', 'dac_01']
-        env = get_equip(ped, jsonfile, equipment)
+        env = ped.get_equip(ped, jsonfile, equipment)
         env.multimeter_01.measure_voltage()
     """
     if equipment is None:
