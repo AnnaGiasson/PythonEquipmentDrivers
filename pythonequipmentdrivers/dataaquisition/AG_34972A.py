@@ -22,8 +22,8 @@ class AG_34972A(_Scpi_Instrument):
 
     def __init__(self, address, **kwargs):
         super().__init__(address)
-        self.ch_change_time = kwargs.get('ch_change_time', float(0.050))
-        # measure_time = n * nplc * (1 / 50) + 0.02  # 50Hz assumption + buffer
+        if kwargs.get('reset', False):
+            self.cls()
         self.valid_modes = {'VOLT': 'VOLT',
                             'CURR': 'CURR',
                             'V': 'VOLT',
@@ -81,6 +81,13 @@ class AG_34972A(_Scpi_Instrument):
                               'TIMER': 'TIMer',
                               'TIME': 'TIMer',
                               'TIM': 'TIMer'}
+        self.ch_change_time = kwargs.get('ch_change_time', float(0.050))
+        # measure_time = n * nplc * (1 / 50) + 0.02  # 50Hz assumption + buffer
+        self.nplc_default = 1  # power line cycles to average
+        self.line_frequency = kwargs.get('line_frequency', float(50))  # Hz
+        self.scanlist = self.get_scan_list()
+        self.measure_time = (len(self.scanlist) * self.nplc_default *
+                             (1 / self.line_frequency) + self.ch_change_time)
         self.trigger_mode = self.valid_trigger[
             self.instrument.query('TRIG:SOUR?').strip()]
         return None
@@ -225,17 +232,30 @@ class AG_34972A(_Scpi_Instrument):
         return self.resp_format(self.instrument.query(f"TRIG:TIM?",
                                                       **kwargs), float)
 
-    def trigger(self, **kwargs):
-        """trigger()
+    def trigger(self, wait=True, **kwargs):
+        """trigger(wait)
         If the unit is setup to BUS trigger, sends trigger, otherwise pass
         If the unit is not setup to BUS trigger, it will log an error
+
+        Args:
+            wait (bool, optional): Does not return to caller until scantime
+                                   is complete.  Prevents Trigger Ignored
+                                   errors (-211). Defaults to True.
         Returns:
             None
         """
         if self.trigger_mode == self.valid_trigger['BUS']:
             self.instrument.write('*TRG', **kwargs)
         else:
+            print(f"Trigger not configured, set as: {self.trigger_mode}"
+                  f" should be {self.valid_trigger['BUS']}")
             pass
+        if wait:
+            time.sleep(self.measure_time)  # should work most of the time.
+            # it should also wait nplc time per channel
+            # need to make a function to track nplc time
+            # if nplc is longer than 1, then this will fail, if shorter
+            # then this will take way too long
         return None
 
     def get_scan_list(self, **kwargs):
@@ -332,8 +352,8 @@ class AG_34972A(_Scpi_Instrument):
             list (float): channel measurements
         """
         if chan is not None:
-            scanlist = ",".join(map(str, chan))
-            response = self.instrument.query(f'READ? (@{scanlist})', **kwargs)
+            chanstr, chanlist = self.format_channel_list(chan)
+            response = self.instrument.query(f'READ? (@{chanstr})', **kwargs)
         else:
             response = self.instrument.query('READ?', **kwargs)
         # response = response.strip()
@@ -969,3 +989,285 @@ class AG_34972A(_Scpi_Instrument):
         """
         self.instrument.write('*CLS', **kwargs)
         return None
+
+    """Agilent 34970A/72A Command Reference
+    Keysight 34970A/34972A
+    Table of contents
+    Keysight 34970A/72A Command Reference
+    Command Language Introduction
+    Syntax Conventions
+    Command Separators
+    Querying Parameter Settings
+    Command Terminators
+    IEEE-488.2 Common Commands
+    Parameter Types
+    Using Device Clear
+    LAN Port Usage
+    Commands by Subsystem
+    ABORt
+    FETCh?
+    INITiate
+    INPut:IMPedance:AUTO
+    R?
+    READ?
+    UNIT:TEMPerature
+    CALCulate_Subsystem
+    CALCulate:AVERage:AVERage?
+    CALCulate:AVERage:CLEar
+    CALCulate:AVERage:COUNt?
+    CALCulate:AVERage:MAXimum?
+    CALCulate:AVERage:MAXimum:TIME?
+    CALCulate:AVERage:MINimum?
+    CALCulate:AVERage:MINimum:TIME?
+    CALCulate:AVERage:PTPeak?
+    CALCulate:COMPare:DATA
+    CALCulate:COMPare:MASK
+    CALCulate:COMPare:STATe
+    CALCulate:COMPare:TYPE
+    CALCulate:LIMit:LOWer
+    CALCulate:LIMit:LOWer:STATe
+    CALCulate:LIMit:UPPer
+    CALCulate:LIMit:UPPer:STATe
+    CALCulate:SCALe:GAIN
+    CALCulate:SCALe:OFFSet
+    CALCulate:SCALe:OFFSet:NULL
+    CALCulate:SCALe:STATe
+    CALCulate:SCALe:UNIT
+    CALibration_Subsystem
+    CALibration?
+    CALibration:COUNt?
+    CALibration:SECure:CODE
+    CALibration:SECure:STATe
+    CALibration:STRing
+    CALibration:VALue
+    CONFigure_Subsystem
+    CONFigure?
+    CONFigure:CURRent:AC
+    CONFigure:CURRent:DC
+    CONFigure:DIGital:BYTE
+    CONFigure:FREQuency
+    CONFigure:FRESistance
+    CONFigure:PERiod
+    CONFigure:RESistance
+    CONFigure:TEMPerature
+    CONFigure:TOTalize
+    CONFigure:VOLTage:AC
+    CONFigure:VOLTage:DC
+    DATA_Subsystem
+    DATA:LAST?
+    DATA:POINts?
+    DATA:POINts:EVENt:THReshold
+    DATA:REMove?
+    DIAGnostic_Subsystem
+    DIAGnostic:DMM:CYCLes?
+    DIAGnostic:DMM:CYCLes:CLEar
+    DIAGnostic:PEEK:SLOT:DATA?
+    DIAGnostic:POKE:SLOT:DATA
+    DIAGnostic:RELay:CYCLes?
+    DIAGnostic:RELay:CYCLes:CLEar
+    DISPlay_Subsystem
+    DISPlay
+    DISPlay:TEXT
+    DISPlay:TEXT:CLEar
+    FORMat_Subsystem
+    FORMat:READing:ALARm
+    FORMat:READing:CHANnel
+    FORMat:READing:TIME
+    FORMat:READing:TIME:TYPE
+    FORMat:READing:UNIT
+    IEEE-488_Commands
+    *CLS
+    *ESE
+    *ESR?
+    *IDN?
+    *OPC
+    *OPC?
+    *PSC
+    *RCL
+    *RST
+    *SAV
+    *SRE
+    *STB?
+    *TRG
+    *TST?
+    *WAI
+    INSTrument_Subsystem
+    INSTrument:DMM
+    INSTrument:DMM:INSTalled?
+    LXI_Subsystem
+    LXI:IDENtify[:STATe]
+    LXI:RESet
+    LXI:RESTart
+    MEASure_Subsystem
+    MEASure:CURRent:AC?
+    MEASure:CURRent:DC?
+    MEASure:DIGital:BYTE?
+    MEASure:FREQuency?
+    MEASure:FRESistance?
+    MEASure:PERiod?
+    MEASure:RESistance?
+    MEASure:TEMPerature?
+    MEASure:TOTalize?
+    MEASure:VOLTage:AC?
+    MEASure:VOLTage:DC?
+    MEMory_Subsystem
+    MEMory:NSTates?
+    MEMory:STATe:DELete
+    MEMory:STATe:NAME
+    MEMory:STATe:RECall:AUTO
+    MEMory:STATe:VALid?
+    MMEMory_Subsytem
+    MMEMory:EXPort?
+    MMEMory:FORMat:READing:CSEParator
+    MMEMory:FORMat:READing:RLIMit
+    MMEMory:IMPort:CATalog?
+    MMEMory:IMPort:CONFig?
+    MMEMory:LOG[:ENABle]
+    OUTPut_Subsystem
+    OUTPut:ALARm:CLEar:ALL
+    OUTPut:ALARm:MODE
+    OUTPut:ALARm:SLOPe
+    OUTPut:ALARm{1|2|3|4}:CLEar
+    OUTPut:ALARm{1|2|3|4}:SOURce
+    ROUTe_Subsystem
+    ROUTe:CHANnel:ADVance:SOURce
+    ROUTe:CHANnel:DELay
+    ROUTe:CHANnel:DELay:AUTO
+    ROUTe:CHANnel:FWIRe
+    ROUTe:CLOSe
+    ROUTe:CLOSe:EXCLusive
+    ROUTe:DONE?
+    ROUTe:MONItor
+    ROUTe:MONItor:DATA?
+    ROUTe:MONItor:STATe
+    ROUTe:OPEN
+    ROUTe:SCAN
+    ROUTe:SCAN:SIZE?
+    SENSe_Subsystem
+    [SENSe:]CURRent:AC:BANDwidth
+    [SENSe:]CURRent:AC:RANGe
+    [SENSe:]CURRent:AC:RANGe:AUTO
+    [SENSe:]CURRent:AC:RESolution
+    [SENSe:]CURRent:DC:APERture
+    [SENSe:]CURRent:DC:NPLC
+    [SENSe:]CURRent:DC:RANGe
+    [SENSe:]CURRent:DC:RANGe:AUTO
+    [SENSe:]CURRent:DC:RESolution
+    [SENSe:]DIGital:DATA:{BYTE|WORD}?
+    [SENSe:]FREQuency:APERture
+    [SENSe:]FREQuency:RANGe:LOWer
+    [SENSe:]FREQuency:VOLTage:RANGe
+    [SENSe:]FREQuency:VOLTage:RANGe:AUTO
+    [SENSe:]FRESistance:APERture
+    [SENSe:]FRESistance:NPLC
+    [SENSe:]FRESistance:OCOMpensated
+    [SENSe:]FRESistance:RANGe
+    [SENSe:]FRESistance:RANGe:AUTO
+    [SENSe:]FRESistance:RESolution
+    [SENSe:]FUNCtion
+    [SENSe:]PERiod:APERture
+    [SENSe:]PERiod:VOLTage:RANGe
+    [SENSe:]PERiod:VOLTage:RANGe:AUTO
+    [SENSe:]RESistance:APERture
+    [SENSe:]RESistance:NPLC
+    [SENSe:]RESistance:OCOMpensated
+    [SENSe:]RESistance:RANGe
+    [SENSe:]RESistance:RANGe:AUTO
+    [SENSe:]RESistance:RESolution
+    [SENSe:]TEMPerature:APERture
+    [SENSe:]TEMPerature:NPLC
+    [SENSe:]TEMPerature:RJUNction?
+    [SENSe:]TEMPerature:TRANsducer:FRTD:OCOMpensated
+    [SENSe:]TEMPerature:TRANsducer:FRTD:RESistance[:REFerence]
+    [SENSe:]TEMPerature:TRANsducer:FRTD:TYPE
+    [SENSe:]TEMPerature:TRANsducer:RTD:OCOMpensated
+    [SENSe:]TEMPerature:TRANsducer:RTD:RESistance[:REFerence]
+    [SENSe:]TEMPerature:TRANsducer:RTD:TYPE
+    [SENSe:]TEMPerature:TRANsducer:TCouple:CHECk
+    [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction
+    [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction:TYPE
+    [SENSe:]TEMPerature:TRANsducer:TCouple:TYPE
+    [SENSe:]TEMPerature:TRANsducer:THERmistor:TYPE
+    [SENSe:]TEMPerature:TRANsducer:TYPE
+    [SENSe:]TOTalize:CLEar:IMMediate
+    [SENSe:]TOTalize:DATA?
+    [SENSe:]TOTalize:SLOPe
+    [SENSe:]TOTalize:STARt[:IMMediate]
+    [SENSe:]TOTalize:STOP[:IMMediate]
+    [SENSe:]TOTalize:TYPE
+    [SENSe:]VOLTage:AC:BANDwidth
+    [SENSe:]VOLTage:AC:RANGe
+    [SENSe:]VOLTage:AC:RANGe:AUTO
+    [SENSe:]VOLTage:DC:APERture
+    [SENSe:]VOLTage:DC:NPLC
+    [SENSe:]VOLTage:DC:RANGe
+    [SENSe:]VOLTage:DC:RANGe:AUTO
+    [SENSe:]VOLTage:DC:RESolution
+    [SENSe:]ZERO:AUTO
+    SOURce_Subsystem
+    SOURce:DIGital:DATA[:{BYTE|WORD}]
+    SOURce:DIGital:STATe?
+    SOURce:VOLTage
+    STATus_Subsystem
+    STATus:ALARm:CONDition?
+    STATus:ALARm:ENABle
+    STATus:ALARm[:EVENt]?
+    STATus:OPERation:CONDition?
+    STATus:OPERation:ENABle
+    STATus:OPERation[:EVENt]?
+    STATus:PRESet
+    STATus:QUEStionable:CONDition?
+    STATus:QUEStionable:ENABle
+    STATus:QUEStionable[:EVENt]?
+    STATus Subsystem Introduction
+    SYSTem_Subsystem
+    LAN_Config
+    SYSTem:COMMunicate:LAN:CONTrol?
+    SYSTem:COMMunicate:LAN:DHCP
+    SYSTem:COMMunicate:LAN:DNS
+    SYSTem:COMMunicate:LAN:DOMain
+    SYSTem:COMMunicate:LAN:GATEway
+    SYSTem:COMMunicate:LAN:HOSTname
+    SYSTem:COMMunicate:LAN:IPADdress
+    SYSTem:COMMunicate:LAN:MAC?
+    SYSTem:COMMunicate:LAN:SMASk
+    SYSTem:COMMunicate:LAN:TELNet:PROMpt
+    SYSTem:COMMunicate:LAN:TELNet:WMESsage
+    SYSTem:COMMunicate:LAN:UPDate
+    SYSTem:ALARm?
+    SYSTem:CPON
+    SYSTem:CTYPe?
+    SYSTem:DATE
+    SYSTem:ERRor?
+    SYSTem:INTerface
+    SYSTem:LANGuage
+    SYSTem:LFRequency?
+    SYSTem:LOCal
+    SYSTem:LOCK:NAME?
+    SYSTem:LOCK:OWNer?
+    SYSTem:LOCK:RELease
+    SYSTem:LOCK:REQuest?
+    SYSTem:PRESet
+    SYSTem:RWLock
+    SYSTem:SECurity[:IMMediate]
+    SYSTem:TIME
+    SYSTem:TIME:SCAN?
+    SYSTem:VERSion?
+    TRIGger_Subsystem
+    TRIGger:COUNt
+    TRIGger:SOURce
+    TRIGger:TIMer
+    Commands A-Z
+    Command Quick Reference
+    Error Messages
+    Factory Reset State
+    Instrument Preset State
+    Plug-in Module Reference Information
+    34901A Module
+    34902A Module
+    34903A Module
+    34904A Module Summary
+    34905A/34906A Modules
+    34907A Module
+    34908A Module
+    """
