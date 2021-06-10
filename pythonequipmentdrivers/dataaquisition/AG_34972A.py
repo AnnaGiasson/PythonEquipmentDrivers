@@ -109,23 +109,27 @@ class AG_34972A(_Scpi_Instrument):
             return response[0]
         return response
 
-    def set_mode(self, mode):
+    def set_mode(self, mode, chan):
         """
         set_mode(mode)
 
-        mode: str, type of measurement to be done
+        mode (str): type of measurement to be done
             valid modes are: 'VDC', 'VAC', 'ADC', 'AAC', 'FREQ', 'OHMS',
                              'DIOD', 'CONT', 'PER'
             which correspond to DC voltage, AC voltage, DC current, AC current,
             frequency, resistence, diode voltage, continuity, and period
             respectively (not case sensitive)
-
+        chan (list, int, str): channels to apply to
         Configures the dac to perform the specified measurement
+        RANGe will be AUTO
+        NPLC/RESOLUTION will be DEFAULT (usually 5.5d)
         """
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self.instrument.write(f"CONF:{self.valid_modes[mode]}")
+            chanstr, chanlist = self.format_channel_list(chan)
+            self.instrument.write(f"CONF:{self.valid_modes[mode]} "
+                                  f"(@{chanstr})")
         else:
             raise ValueError("Invalid mode option")
         return
@@ -143,6 +147,15 @@ class AG_34972A(_Scpi_Instrument):
         response = self.instrument.query(f"FUNC? (@{chanstr})")
         response = response.rstrip().replace('"', '')
         return response
+
+    def get_error(self):
+        """get_error
+
+        Returns:
+            [list]: last error in the buffer
+        """
+        response = self.instrument.query('SYSTem:ERRor?')
+        return self.resp_format(response, str)
 
     def set_trigger_source(self, trigger: str = 'IMMEDIATE'):
         """
@@ -163,7 +176,12 @@ class AG_34972A(_Scpi_Instrument):
             raise ValueError("Invalid trigger option")
         return
 
-    def set_trigger_count(self, count):
+    def get_trigger_source(self):
+        self.trigger_mode = self.valid_trigger[self.resp_format(
+            self.instrument.query(f"TRIG:SOUR?"), str)]
+        return self.trigger_mode
+
+    def set_trigger_count(self, count: int = None):
         """set_trigger_count(count)
 
         Args:
@@ -172,29 +190,38 @@ class AG_34972A(_Scpi_Instrument):
         Raises:
             ValueError: [description]
         """
-
-        if isinstance(count, int):
+        if count is None:
+            return self.get_trigger_count()
+        elif isinstance(count, int):
             self.instrument.write(f"TRIG:COUN {count}")
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
 
-    def set_trigger_timer(self, delay):
+    def get_trigger_count(self):
+        return self.resp_format(self.instrument.query(f"TRIG:COUN?"), int)
+
+    def set_trigger_timer(self, delay: float = None):
         """set_trigger_count(count)
 
         Args:
             count ([float]): delay between scanlist readings when triggered
                              note, entire scanlist is measured each time
                              then the delay runs, then the scanlist again...
+                             if None is sent, returns count
         Raises:
             ValueError: [description]
         """
-
+        if delay is None:
+            return self.get_trigger_timer()
         if isinstance(delay, float):
             self.instrument.write(f"TRIG:TIM {delay}")
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
+
+    def get_trigger_timer(self):
+        return self.resp_format(self.instrument.query(f"TRIG:TIM?"), float)
 
     def trigger(self):
         """trigger()
@@ -203,7 +230,7 @@ class AG_34972A(_Scpi_Instrument):
         Returns:
             None
         """
-        if self.trigger_mode == self.valid_trigge['BUS']:
+        if self.trigger_mode == self.valid_trigger['BUS']:
             self.instrument.write('*TRG')
         else:
             pass
@@ -312,7 +339,7 @@ class AG_34972A(_Scpi_Instrument):
         # response = list(map(int, response[start+1:-1].split(',')))
         return self.resp_format(response, type=float)
 
-    def initiate(self):
+    def init(self):
         """
         Initialize the meter, used with BUS trigger typically
         Use fetch_data (FETCh) to get the data.
