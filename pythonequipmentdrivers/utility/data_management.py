@@ -3,7 +3,7 @@ from time import strftime
 import json
 
 
-def log_data(directory, file_name, *data, init=False):
+def log_data(directory=None, file_name=None, *data, init=False):
     """
     log_data(directory, file_name, *data, init=False)
 
