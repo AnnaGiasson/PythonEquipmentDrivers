@@ -1105,6 +1105,10 @@ class AG_34972A(_Scpi_Instrument):
             self.measure_time = measure_time
         return self.measure_time
 
+    def set_local(self, **kwargs):
+        self.instrument.write("SYSTem:LOCal", **kwargs)
+        return
+
     # Agilent 34970A/72A Command Reference
     # Keysight 34970A/34972A
     # Table of contents

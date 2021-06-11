@@ -503,3 +503,7 @@ class HP_34401A(Scpi_Instrument):
         else:
             self.measure_time = measure_time
         return self.measure_time
+
+    def set_local(self, **kwargs):
+        self.instrument.write("SYSTem:LOCal", **kwargs)
+        return
