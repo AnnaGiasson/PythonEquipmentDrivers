@@ -104,10 +104,8 @@ class AG_34972A(_Scpi_Instrument):
         self.nplc_default = 1  # power line cycles to average
         self.line_frequency = kwargs.get('line_frequency', float(50))  # Hz
         self.scanlist = self.get_scan_list()
-        self.measure_time = (len(self.scanlist) * self.nplc_default *
-                             (1 / self.line_frequency) + self.ch_change_time)
-        self.trigger_mode = self.valid_trigger[
-            self.instrument.query('TRIG:SOUR?').strip()]
+        self.measure_time = self.set_measure_time()
+        self.trigger_mode = self.get_trigger_source()
         return None
 
     def resp_format(self, response, resp_type: type = int):
@@ -229,7 +227,7 @@ class AG_34972A(_Scpi_Instrument):
         return
 
     def get_trigger_count(self, **kwargs):
-        return int(self.resp_format(self.instrument.query(f"TRIG:COUN?",
+        return int(self.resp_format(self.instrument.query("TRIG:COUN?",
                                                           **kwargs), float))
 
     def set_trigger_timer(self, delaytime: float = None, **kwargs):
@@ -455,17 +453,7 @@ class AG_34972A(_Scpi_Instrument):
         Returns:
             None
         """
-        # need either a string or a list to iterate for channels to setup
-        # if isinstance(chan, list):
-        #     chanstr = ",".join(map(str, chan))
-        #     chanlist = chan
-        # elif isinstance(chan, str):
-        #     chanstr = chan
-        #     temp = chan.strip()
-        #     chanlist = list(map(int, temp[+1:-1].split(',')))
-        # else:  # must be an int
-        #     chanstr = f"{chan}"
-        #     chanlist = [chan]
+
         chanstr, chanlist = self.format_channel_list(chan)
         mode = mode.upper()
         if mode in self.valid_modes:
@@ -1107,6 +1095,15 @@ class AG_34972A(_Scpi_Instrument):
         response = self.instrument.query(f"SOUR:VOLT? (@{chanstr})",
                                          **kwargs)
         return self.resp_format(response, float)
+
+    def set_measure_time(self, measure_time: float = None):
+        if measure_time is None:
+            self.measure_time = (len(self.scanlist) * self.nplc_default *
+                                 (1 / self.line_frequency) +
+                                 self.ch_change_time)
+        else:
+            self.measure_time = measure_time
+        return self.measure_time
 
     # Agilent 34970A/72A Command Reference
     # Keysight 34970A/34972A

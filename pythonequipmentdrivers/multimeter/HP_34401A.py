@@ -1,4 +1,5 @@
 from pythonequipmentdrivers import Scpi_Instrument
+import time
 
 
 class HP_34401A(Scpi_Instrument):
@@ -31,10 +32,23 @@ class HP_34401A(Scpi_Instrument):
                             'DIOD': "DIOD",
                             'CONT': "CONT",
                             'PER': "PER"}
-        self.valid_trigger = {'IMMEDIATE': "IMMediate",
-                              'BUS': "BUS",
-                              'EXTERNAL': "EXTernal",
-                              'INTERNAL': "INTernal"}
+        self.valid_trigger = {'BUS': 'BUS',
+                              'IMMEDIATE': 'IMMediate',
+                              'IMM': 'IMMediate',
+                              'EXTERNAL': 'EXTernal',
+                              'EXT': 'EXTernal',
+                              'ALARM1': 'ALARm1',
+                              'ALARM2': 'ALARm2',
+                              'ALARM3': 'ALARm3',
+                              'ALARM4': 'ALARm4',
+                              'TIMER': 'TIMer',
+                              'TIME': 'TIMer',
+                              'TIM': 'TIMer'}
+        self.nplc_default = 1  # power line cycles to average
+        self.line_frequency = kwargs.get('line_frequency', float(50))  # Hz
+        self.sample_count = self.get_sample_count()
+        self.measure_time = self.set_measure_time()
+        self.trigger_mode = self.get_trigger_source()
         return None
 
     def set_mode(self, mode):
@@ -117,6 +131,51 @@ class HP_34401A(Scpi_Instrument):
             raise ValueError("Invalid trigger option")
 
         return
+
+    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs):
+        """
+        set_trigger(trigger)
+
+        trigger: str, type of trigger to be done
+            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'
+            which correspond to 'BUS', 'IMMEDIATE', 'EXTERNAL'
+            respectively (not case sensitive)
+
+        Configures the multimeter to trigger as specified
+        """
+        trigger = trigger.upper()
+        if trigger in self.valid_trigger:
+            self.trigger_mode = self.valid_trigger[trigger]
+            self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
+        else:
+            raise ValueError("Invalid trigger option")
+        return
+
+    def get_trigger_source(self, **kwargs):
+        self.trigger_mode = self.valid_trigger[self.resp_format(
+            self.instrument.query("TRIG:SOUR?", **kwargs), str)]
+        return self.trigger_mode
+
+    def set_trigger_count(self, count: int = None, **kwargs):
+        """set_trigger_count(count)
+
+        Args:
+            count ([int]): how many readings to take when triggered
+
+        Raises:
+            ValueError: [description]
+        """
+        if count is None:
+            return self.get_trigger_count()
+        elif isinstance(count, int):
+            self.instrument.write(f"TRIG:COUN {count}", **kwargs)
+        else:
+            raise ValueError("Invalid trigger count number type, use int")
+        return
+
+    def get_trigger_count(self, **kwargs):
+        return int(self.resp_format(self.instrument.query(f"TRIG:COUN?",
+                                                          **kwargs), float))
 
     def measure_voltage(self):
         """
@@ -225,3 +284,222 @@ class HP_34401A(Scpi_Instrument):
         else:
             response = self.instrument.query("MEAS:FREQ?")
             return float(response)
+
+    def init(self, **kwargs):
+        """
+        Initialize the meter, used with BUS trigger typically
+        Use fetch_data (FETCh) to get the data.
+        Returns:
+            None
+        """
+        self.instrument.write('INITiate', **kwargs)
+        return None
+
+    def cls(self, **kwargs):
+        """cls()
+        Send VISA *CLS, clear visa bus
+        Returns:
+            None
+        """
+        self.instrument.write('*CLS', **kwargs)
+        return None
+
+    def abort(self, **kwargs):
+        """abort()
+        Send VISA ABORt, stop the scan!!
+        Returns:
+            None
+        """
+        self.instrument.write('ABORt', **kwargs)
+        return None
+
+    def rst(self, **kwargs):
+        """rst()
+        Send VISA *RST, reset the instrument
+        Returns:
+            None
+        """
+        self.instrument.write('*RST', **kwargs)
+        return None
+
+    def trigger(self, wait=True, **kwargs):
+        """trigger(wait)
+        If the unit is setup to BUS trigger, sends trigger, otherwise pass
+        If the unit is not setup to BUS trigger, it will log an error
+
+        Args:
+            wait (bool, optional): Does not return to caller until scantime
+                                   is complete.  Prevents Trigger Ignored
+                                   errors (-211). Defaults to True.
+        Returns:
+            None
+        """
+        if self.trigger_mode == self.valid_trigger['BUS']:
+            self.instrument.write('*TRG', **kwargs)
+        else:
+            print(f"Trigger not configured, set as: {self.trigger_mode}"
+                  f" should be {self.valid_trigger['BUS']}")
+            pass
+        if wait:
+            time.sleep(self.measure_time)  # should work most of the time.
+            # it should also wait nplc time per channel
+            # need to make a function to track nplc time
+            # if nplc is longer than 1, then this will fail, if shorter
+            # then this will take way too long
+        return None
+
+    def set_sample_count(self, count: int = None, **kwargs):
+        if count is None:
+            return self.get_sample_count()
+        else:
+            self.instrument.write(f"SAMP:COUN {count}", **kwargs)
+        return
+
+    def get_sample_count(self, **kwargs):
+        self.sample_count = int(self.resp_format(
+            self.instrument.query("SAMP:COUN?", **kwargs), float))
+        return self.sample_count
+
+    def config(self, mode='volt', acdc='dc',
+               signal_range='auto', resolution=None,
+               nplc=0.02, verbose: bool = False, **kwargs):
+        """config_chan(#)
+
+        Args:
+            mode (str, optional): meter mode. Defaults to 'volt'.
+            acdc (str, optional): ac or dc measurement setting.
+                                  Defaults to 'dc'.
+            signal_range (str, optional): measurement range. Defaults to 'auto'
+            resolution (str, optional): 4.5, 5.5 or 6.5, if None uses nplc
+                                        nplc is recommended because script
+                                        timing is more deterministic.
+                                        Defaults to None.
+            nplc (float, optional): power line cycles to average.
+                                    Defaults to 0.02.
+        Raises:
+            ValueError: if a parameter isn't allowed
+        Returns:
+            None
+        """
+
+        mode = mode.upper()
+        if mode in self.valid_modes:
+            mode = self.valid_modes[mode]
+        else:
+            raise ValueError("Invalid mode option")
+
+        usefreq = mode == self.valid_modes['FREQ']
+        acdc = acdc.upper()
+        if usefreq:
+            acdc = ''  # frequency doesn't use this
+        elif acdc in self.acdc:
+            acdc = self.acdc[acdc]
+        else:
+            raise ValueError("Invalid acdc option")
+
+        # if range is not provided, cannot use nplc in CONF command
+        if signal_range.upper() == 'AUTO':
+            signal_range = False
+        else:
+            try:
+                signal_range = signal_range.upper()
+            except AttributeError:
+                pass
+            try:
+                signal_range = self.valid_ranges[signal_range]
+            except (ValueError, KeyError):
+                if verbose:
+                    print("signal_range not in list, using max")
+                signal_range = self.valid_ranges['MAX']
+
+        try:
+            nplc = nplc.upper()
+        except AttributeError:
+            pass
+        if nplc in self.nplc:
+            nplc = self.nplc[nplc]
+            if usefreq:
+                # if resolution is not None:
+                #     pass
+                # else:
+                #     # TypeError: can't multiply sequence by
+                #     # non-int of type 'float'
+                #     # didn't finish, had to abandon this special case due to
+                #     # complexity and time constraints
+                #     resolution = (self.valid_resolutions[nplc] *
+                #                   signal_range if signal_range else 300)
+                nplc = ''  # frequency doens't use this either
+        else:
+            raise ValueError("Invalid nplc option")
+
+        if resolution and signal_range:
+            string = (f"CONF:{mode}"
+                      f"{acdc} "
+                      f"{signal_range}"
+                      f"{resolution}")
+            if kwargs.get('verbose', False):
+                print(string)
+            self.instrument.write(string, **kwargs)
+        elif signal_range:
+            string = (f"CONF:{mode}"
+                      f"{acdc} "
+                      f"{signal_range}"
+                      f"{nplc}")
+            if verbose:
+                print(string)
+            self.instrument.write(string, **kwargs)
+        else:
+
+            string = (f"CONF:{mode}"
+                      f"{acdc}")
+            self.instrument.write(string, **kwargs)
+            if verbose:
+                print(string)
+            if not usefreq:
+                x = ':RES ' if resolution else ':NPLC '
+                string2 = (f"SENS:{mode}"
+                           f"{acdc}"
+                           f"{x}"
+                           f"{resolution if resolution else nplc}")
+                self.instrument.write(string2, **kwargs)
+                if verbose:
+                    print(string2)
+
+        return
+
+    def resp_format(self, response, resp_type: type = int):
+        """resp_format(response(str data), type(int/float/etc))
+
+        Args:
+            response (str): string of data to parse
+            type (type, optional): what type to output. Defaults to int.
+
+        Returns:
+            list[type], or type: return is a list if more than 1 element
+                                 otherwise returns the single element as type
+        """
+        response = response.strip()
+        if '@' in response:
+            start = response.find('@')  # note this returns -1 if not found
+            stop = -1
+        else:
+            start = -1
+            stop = None
+        # that works out OK because data needs to be parsed from the first
+        # character anyway, so this is not an error, but I don't like
+        # that it isn't explicitly trying to find the correct character
+        try:
+            response = list(map(resp_type, response[start+1:stop].split(',')))
+        except ValueError:
+            raise
+        if len(response) == 1:
+            return response[0]
+        return response
+
+    def set_measure_time(self, measure_time: float = None):
+        if measure_time is None:
+            self.measure_time = (self.sample_count * self.nplc_default *
+                                 (1 / self.line_frequency) + 0.01)
+        else:
+            self.measure_time = measure_time
+        return self.measure_time
