@@ -513,7 +513,6 @@ class HP_34401A(Scpi_Instrument):
             raise ValueError("Invalid acdc option")
 
         # if range is not provided, cannot use nplc in CONF command
-
         try:
             signal_range = signal_range.upper()
             if signal_range.upper() == 'AUTO':  # if not str, doesn't run this
@@ -557,30 +556,30 @@ class HP_34401A(Scpi_Instrument):
             if kwargs.get('verbose', False):
                 print(string)
             self.instrument.write(string, **kwargs)
-        elif signal_range:
-            string = (f"CONF:{mode}"
-                      f"{acdc} "
-                      f"{signal_range}"
-                      f"{nplc}")
-            if verbose:
-                print(string)
-            self.instrument.write(string, **kwargs)
         else:
-
-            string = (f"CONF:{mode}"
-                      f"{acdc}")
-            self.instrument.write(string, **kwargs)
-            if verbose:
-                print(string)
-            if not usefreq:
-                x = ':RES ' if resolution else ':NPLC '
-                string2 = (f"SENS:{mode}"
-                           f"{acdc}"
-                           f"{x}"
-                           f"{resolution if resolution else nplc}")
+            if signal_range:
+                string = (f"CONF:{mode}"
+                          f"{acdc} "
+                          f"{signal_range}")
+                if verbose:
+                    print(string)
+                self.instrument.write(string, **kwargs)
+            else:
+                string2 = (f"CONF:{mode}"
+                           f"{acdc}")
                 self.instrument.write(string2, **kwargs)
                 if verbose:
                     print(string2)
+            if resolution or nplc:
+                if not usefreq:
+                    x = ':RES ' if resolution else ':NPLC '
+                    string3 = (f"SENS:{mode}"
+                               f"{acdc}"
+                               f"{x}"
+                               f"{resolution if resolution else nplc}")
+                    self.instrument.write(string3, **kwargs)
+                    if verbose:
+                        print(string3)
 
         return
 

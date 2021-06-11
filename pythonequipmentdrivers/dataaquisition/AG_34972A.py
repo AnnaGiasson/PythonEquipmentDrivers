@@ -20,85 +20,120 @@ class AG_34972A(_Scpi_Instrument):
     recommend channels be passed in a list
     """
 
+    valid_modes = {'VOLT': 'VOLT',
+                   'CURR': 'CURR',
+                   'V': 'VOLT',
+                   'A': 'CURR',
+                   'FREQ': 'FREQ',
+                   'F': 'FREQ',
+                   'OHMS': 'RES',
+                   'O': 'RES',
+                   'RES': 'RES',
+                   'DIOD': 'DIOD',
+                   'D': 'DIOD',
+                   'DIODE': 'DIOD',
+                   'CONT': 'CONT',
+                   'C': 'CONT',
+                   'PER': 'PER',
+                   'P': 'PER'
+                   }
+    acdc = {'DC': ':DC',
+            'AC': ':AC'}
+    valid_ranges = {'AUTO': '',
+                    'MIN': 'MIN,',
+                    'MAX': 'MAX,',
+                    'DEF': 'DEF,',
+                    0.1: '0.1,',
+                    1: '1,',
+                    10: '10,',
+                    100: '100,',
+                    300: '300,',
+                    '0.1': '0.1,',
+                    '1': '1,',
+                    '10': '10,',
+                    '100': '100,',
+                    '300': '300,'}
+    valid_cranges = {'AUTO': '',
+                     'MIN': 'MIN,',
+                     'MAX': 'MAX,',
+                     'DEF': 'DEF,',
+                     0.01: '0.01,',
+                     0.1: '0.1,',
+                     1: '1,',
+                     '0.01': '0.01,',
+                     '0.1': '0.1,',
+                     '1': '1,'}
+    valid_Rranges = {'AUTO': '',
+                     'MIN': 'MIN,',
+                     'MAX': 'MAX,',
+                     'DEF': 'DEF,',
+                     100: '100,',
+                     1E3: '1E3,',
+                     10E3: '10E3,',
+                     100E3: '100E3,',
+                     1E6: '1E6,',
+                     10E6: '10E6,',
+                     100E6: '100E6,',
+                     '100': '100,',
+                     '1E3': '1E3,',
+                     '10E3': '10E3,',
+                     '100E3': '100E3,',
+                     '1E6': '1E6,',
+                     '10E6': '10E6,',
+                     '100E6': '100E6,'}
+    nplc = {'MIN': 'MIN,',
+            'MAX': 'MAX,',
+            0.02: '0.02,',
+            0.2: '0.2,',
+            1: '1,',
+            2: '2,',
+            10: '10,',
+            20: '20,',
+            100: '100,',
+            200: '200,',
+            '0.02': '0.02,',
+            '0.2': '0.2,',
+            '1': '1,',
+            '2': '2,',
+            '10': '10,',
+            '20': '20,',
+            '100': '100,',
+            '200': '200,'}
+    valid_resolutions = {'MIN': 0.0001,  # lookup based on nplc
+                         'MAX': 0.00000022,  # this * range = resolution
+                         '0.02': 0.0001,
+                         '0.2': 0.00001,
+                         '1': 0.000003,
+                         '2': 0.0000022,
+                         '10': 0.000001,
+                         '20': 0.0000008,
+                         '100': 0.0000003,
+                         '200': 0.00000022,
+                         0.02: 0.0001,
+                         0.2: 0.00001,
+                         1: 0.000003,
+                         2: 0.0000022,
+                         10: 0.000001,
+                         20: 0.0000008,
+                         100: 0.0000003,
+                         200: 0.00000022}
+    valid_trigger = {'BUS': 'BUS',
+                     'IMMEDIATE': 'IMMediate',
+                     'IMM': 'IMMediate',
+                     'EXTERNAL': 'EXTernal',
+                     'EXT': 'EXTernal',
+                     'ALARM1': 'ALARm1',
+                     'ALARM2': 'ALARm2',
+                     'ALARM3': 'ALARm3',
+                     'ALARM4': 'ALARm4',
+                     'TIMER': 'TIMer',
+                     'TIME': 'TIMer',
+                     'TIM': 'TIMer'}
+
     def __init__(self, address, **kwargs):
         super().__init__(address)
         if kwargs.get('reset', False):
             self.cls()
-        self.valid_modes = {'VOLT': 'VOLT',
-                            'CURR': 'CURR',
-                            'V': 'VOLT',
-                            'A': 'CURR',
-                            'FREQ': 'FREQ',
-                            'F': 'FREQ',
-                            'OHMS': 'RES',
-                            'O': 'RES',
-                            'DIOD': 'DIOD',
-                            'D': 'DIOD',
-                            'DIODE': 'DIOD',
-                            'CONT': 'CONT',
-                            'C': 'CONT',
-                            'PER': 'PER',
-                            'P': 'PER'
-                            }
-        self.acdc = {'DC': ':DC',
-                     'AC': ':AC'}
-        self.valid_ranges = {'AUTO': '',
-                             'MIN': 'MIN,',
-                             'MAX': 'MAX,',
-                             'DEF': 'DEF,',
-                             0.1: '0.1,',
-                             1: '1,',
-                             10: '10,',
-                             100: '100,',
-                             300: '300,'}
-        self.nplc = {'0.02': '0.02,',
-                     '0.2': '0.2,',
-                     '1': '1,',
-                     '2': '2,',
-                     '10': '10,',
-                     '20': '20,',
-                     '100': '100,',
-                     '200': '200,',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     0.02: '0.02,',
-                     0.2: '0.2,',
-                     1: '1,',
-                     2: '2,',
-                     10: '10,',
-                     20: '20,',
-                     100: '100,',
-                     200: '200,'}
-        self.valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
-                                  '0.2': 0.00001,  # this * range = resolution
-                                  '1': 0.000003,
-                                  '2': 0.0000022,
-                                  '10': 0.000001,
-                                  '20': 0.0000008,
-                                  '100': 0.0000003,
-                                  '200': 0.00000022,
-                                  'MIN': 0.0001,
-                                  'MAX': 0.00000022,
-                                  0.02: 0.0001,
-                                  0.2: 0.00001,
-                                  1: 0.000003,
-                                  2: 0.0000022,
-                                  10: 0.000001,
-                                  20: 0.0000008,
-                                  100: 0.0000003,
-                                  200: 0.00000022}
-        self.valid_trigger = {'BUS': 'BUS',
-                              'IMMEDIATE': 'IMMediate',
-                              'IMM': 'IMMediate',
-                              'EXTERNAL': 'EXTernal',
-                              'EXT': 'EXTernal',
-                              'ALARM1': 'ALARm1',
-                              'ALARM2': 'ALARm2',
-                              'ALARM3': 'ALARm3',
-                              'ALARM4': 'ALARm4',
-                              'TIMER': 'TIMer',
-                              'TIME': 'TIMer',
-                              'TIM': 'TIMer'}
         self.ch_change_time = kwargs.get('ch_change_time', float(0.050))
         # measure_time = n * nplc * (1 / 50) + 0.02  # 50Hz assumption + buffer
         self.nplc_default = 1  # power line cycles to average
@@ -462,6 +497,9 @@ class AG_34972A(_Scpi_Instrument):
             raise ValueError("Invalid mode option")
 
         usefreq = mode == self.valid_modes['FREQ']
+        usecurrent = mode == self.valid_modes['CURR']
+        useres = mode == self.valid_modes['RES']
+
         acdc = acdc.upper()
         if usefreq:
             acdc = ''  # frequency doesn't use this
@@ -471,19 +509,21 @@ class AG_34972A(_Scpi_Instrument):
             raise ValueError("Invalid acdc option")
 
         # if range is not provided, cannot use nplc in CONF command
-        if signal_range.upper() == 'AUTO':
-            signal_range = False
-        else:
-            try:
-                signal_range = signal_range.upper()
-            except AttributeError:
-                pass
-            try:
-                signal_range = self.valid_ranges[signal_range]
-            except (ValueError, KeyError):
-                if verbose:
-                    print("signal_range not in list, using max")
-                signal_range = self.valid_ranges['MAX']
+
+        try:
+            signal_range = signal_range.upper()
+            if signal_range.upper() == 'AUTO':  # if not str, doesn't run this
+                signal_range = False
+        except AttributeError:
+            pass
+        try:
+            signal_range = (self.valid_cranges[signal_range] if usecurrent
+                            else self.valid_Rranges[signal_range] if useres
+                            else self.valid_ranges[signal_range])
+        except (ValueError, KeyError):
+            if verbose:
+                print("signal_range not in list, using max")
+            signal_range = self.valid_ranges['MAX']
 
         try:
             nplc = nplc.upper()
@@ -514,33 +554,34 @@ class AG_34972A(_Scpi_Instrument):
             if kwargs.get('verbose', False):
                 print(string)
             self.instrument.write(string, **kwargs)
-        elif signal_range:
-            string = (f"CONF:{mode}"
-                      f"{acdc} "
-                      f"{signal_range}"
-                      f"{nplc}"
-                      f"(@{chanstr})")
-            if verbose:
-                print(string)
-            self.instrument.write(string, **kwargs)
         else:
-            for i in range(len(chanlist)):
+            if signal_range:
                 string = (f"CONF:{mode}"
                           f"{acdc} "
-                          f"(@{chanlist[i]})")
-                self.instrument.write(string, **kwargs)
+                          f"{signal_range}"
+                          f"(@{chanstr})")
                 if verbose:
                     print(string)
+                self.instrument.write(string, **kwargs)
+            else:
+                string2 = (f"CONF:{mode}"
+                           f"{acdc} "
+                           f"(@{chanstr})")
+                self.instrument.write(string2, **kwargs)
+                if verbose:
+                    print(string2)
+            if resolution or nplc:
                 if not usefreq:
                     x = ':RES ' if resolution else ':NPLC '
-                    string2 = (f"SENS:{mode}"
-                               f"{acdc}"
-                               f"{x}"
-                               f"{resolution if resolution else nplc}"
-                               f"(@{chanlist[i]})")
-                    self.instrument.write(string2, **kwargs)
-                    if verbose:
-                        print(string2)
+                    for i in range(len(chanlist)):
+                        string3 = (f"SENS:{mode}"
+                                   f"{acdc}"
+                                   f"{x}"
+                                   f"{resolution if resolution else nplc}"
+                                   f"(@{chanlist[i]})")
+                        self.instrument.write(string3, **kwargs)
+                        if verbose:
+                            print(string3)
 
         return
 
