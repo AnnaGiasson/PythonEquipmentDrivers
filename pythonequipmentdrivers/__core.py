@@ -415,6 +415,10 @@ class EnvironmentSetup():
                     raise ConnectionError(f"Failed connection: {device_name}")
         return None
 
+    # def __del__(self):
+    #     # something to consider... when python exits, should equipment
+    #     # be automatically released? (mode to local etc)
+    #     return None
 
 def get_callable_methods(instance):
     """
