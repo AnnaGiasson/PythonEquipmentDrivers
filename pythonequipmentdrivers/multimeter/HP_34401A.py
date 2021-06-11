@@ -20,77 +20,108 @@ class HP_34401A(Scpi_Instrument):
     http://ecee.colorado.edu/~mathys/ecen1400/pdf/references/HP34401A_BenchtopMultimeter.pdf
     """
 
+    valid_modes = {'VDC': "VOLT:DC",
+                   'VOLT': 'VOLT',
+                   'VAC': "VOLT:AC",
+                   'ADC': "CURR:DC",
+                   'AAC': "CURR:AC",
+                   'CURR': 'CURR',
+                   'V': 'VOLT',
+                   'A': 'CURR',
+                   'FREQ': "FREQ",
+                   'F': 'FREQ',
+                   'OHMS': "RES",
+                   'O': 'RES',
+                   'RES': 'RES',
+                   'FRES': 'FRES',
+                   'DIOD': "DIOD",
+                   'D': 'DIOD',
+                   'CONT': "CONT",
+                   'CONT': 'CONT',
+                   'PER': "PER",
+                   'P': 'PER'}
+    acdc = {'DC': ':DC',
+            'AC': ':AC'}
+    valid_ranges = {'AUTO': '',
+                    'MIN': 'MIN,',
+                    'MAX': 'MAX,',
+                    'DEF': 'DEF,',
+                    0.1: '0.1,',
+                    1: '1,',
+                    10: '10,',
+                    100: '100,',
+                    300: '300,'}
+    valid_cranges = {'AUTO': '',
+                     'MIN': 'MIN,',
+                     'MAX': 'MAX,',
+                     'DEF': 'DEF,',
+                     0.01: '0.01,',
+                     0.1: '0.1,',
+                     1: '1,',
+                     3: '3,'}
+    valid_Rranges = {'AUTO': '',
+                     'MIN': 'MIN,',
+                     'MAX': 'MAX,',
+                     'DEF': 'DEF,',
+                     100: '100,',
+                     1E3: '1E3,',
+                     10E3: '10E3,',
+                     100E3: '100E3,',
+                     1E6: '1E6,',
+                     10E6: '10E6,',
+                     100E6: '100E6,'}
+    nplc = {'0.02': '0.02,',
+            '0.2': '0.2,',
+            '1': '1,',
+            '2': '2,',
+            '10': '10,',
+            '20': '20,',
+            '100': '100,',
+            '200': '200,',
+            'MIN': 'MIN,',
+            'MAX': 'MAX,',
+            0.02: '0.02,',
+            0.2: '0.2,',
+            1: '1,',
+            2: '2,',
+            10: '10,',
+            20: '20,',
+            100: '100,',
+            200: '200,'}
+    valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
+                         '0.2': 0.00001,  # this * range = resolution
+                         '1': 0.000003,
+                         '2': 0.0000022,
+                         '10': 0.000001,
+                         '20': 0.0000008,
+                         '100': 0.0000003,
+                         '200': 0.00000022,
+                         'MIN': 0.0001,
+                         'MAX': 0.00000022,
+                         0.02: 0.0001,
+                         0.2: 0.00001,
+                         1: 0.000003,
+                         2: 0.0000022,
+                         10: 0.000001,
+                         20: 0.0000008,
+                         100: 0.0000003,
+                         200: 0.00000022}
+    valid_trigger = {'BUS': 'BUS',
+                     'IMMEDIATE': 'IMMediate',
+                     'IMM': 'IMMediate',
+                     'EXTERNAL': 'EXTernal',
+                     'EXT': 'EXTernal',
+                     'ALARM1': 'ALARm1',
+                     'ALARM2': 'ALARm2',
+                     'ALARM3': 'ALARm3',
+                     'ALARM4': 'ALARm4',
+                     'TIMER': 'TIMer',
+                     'TIME': 'TIMer',
+                     'TIM': 'TIMer'}
+
     def __init__(self, address, **kwargs):
         super().__init__(address, **kwargs)
         self.factor = kwargs.get('factor', 1.0)
-        self.valid_modes = {'VDC': "VOLT:DC",
-                            'VOLT': 'VOLT',
-                            'VAC': "VOLT:AC",
-                            'ADC': "CURR:DC",
-                            'AAC': "CURR:AC",
-                            'CURR': 'CURR',
-                            'V': 'VOLT',
-                            'A': 'CURR',
-                            'FREQ': "FREQ",
-                            'F': 'FREQ',
-                            'OHMS': "RES",
-                            'O': 'RES',
-                            'DIOD': "DIOD",
-                            'D': 'DIOD',
-                            'CONT': "CONT",
-                            'CONT': 'CONT',
-                            'PER': "PER",
-                            'P': 'PER'}
-        self.acdc = {'DC': ':DC',
-                     'AC': ':AC'}
-        self.nplc = {'0.02': '0.02,',
-                     '0.2': '0.2,',
-                     '1': '1,',
-                     '2': '2,',
-                     '10': '10,',
-                     '20': '20,',
-                     '100': '100,',
-                     '200': '200,',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     0.02: '0.02,',
-                     0.2: '0.2,',
-                     1: '1,',
-                     2: '2,',
-                     10: '10,',
-                     20: '20,',
-                     100: '100,',
-                     200: '200,'}
-        self.valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
-                                  '0.2': 0.00001,  # this * range = resolution
-                                  '1': 0.000003,
-                                  '2': 0.0000022,
-                                  '10': 0.000001,
-                                  '20': 0.0000008,
-                                  '100': 0.0000003,
-                                  '200': 0.00000022,
-                                  'MIN': 0.0001,
-                                  'MAX': 0.00000022,
-                                  0.02: 0.0001,
-                                  0.2: 0.00001,
-                                  1: 0.000003,
-                                  2: 0.0000022,
-                                  10: 0.000001,
-                                  20: 0.0000008,
-                                  100: 0.0000003,
-                                  200: 0.00000022}
-        self.valid_trigger = {'BUS': 'BUS',
-                              'IMMEDIATE': 'IMMediate',
-                              'IMM': 'IMMediate',
-                              'EXTERNAL': 'EXTernal',
-                              'EXT': 'EXTernal',
-                              'ALARM1': 'ALARm1',
-                              'ALARM2': 'ALARm2',
-                              'ALARM3': 'ALARm3',
-                              'ALARM4': 'ALARm4',
-                              'TIMER': 'TIMer',
-                              'TIME': 'TIMer',
-                              'TIM': 'TIMer'}
         self.nplc_default = 1  # power line cycles to average
         self.line_frequency = kwargs.get('line_frequency', float(50))  # Hz
         self.sample_count = self.get_sample_count()
@@ -131,6 +162,15 @@ class HP_34401A(Scpi_Instrument):
         response = self.instrument.query("FUNC?")
         response = response.rstrip().replace('"', '')
         return response
+
+    def get_error(self, **kwargs):
+        """get_error
+
+        Returns:
+            [list]: last error in the buffer
+        """
+        response = self.instrument.query('SYSTem:ERRor?', **kwargs)
+        return self.resp_format(response, str)
 
     def set_trigger(self, trigger, **kwargs):
         """
@@ -342,6 +382,15 @@ class HP_34401A(Scpi_Instrument):
         self.instrument.write('INITiate', **kwargs)
         return None
 
+    def fetch_data(self, **kwargs):
+        """fetch_data
+
+        Returns:
+            [list, float]: data in meter memory resulting from all scans
+        """
+        response = self.instrument.query('FETC?', **kwargs)
+        return self.resp_format(response, float)
+
     def cls(self, **kwargs):
         """cls()
         Send VISA *CLS, clear visa bus
@@ -436,6 +485,9 @@ class HP_34401A(Scpi_Instrument):
             raise ValueError("Invalid mode option")
 
         usefreq = mode == self.valid_modes['FREQ']
+        usecurrent = mode == self.valid_modes['CURR']
+        useres = mode == self.valid_modes['RES']
+
         acdc = acdc.upper()
         if usefreq:
             acdc = ''  # frequency doesn't use this
@@ -445,19 +497,21 @@ class HP_34401A(Scpi_Instrument):
             raise ValueError("Invalid acdc option")
 
         # if range is not provided, cannot use nplc in CONF command
-        if signal_range.upper() == 'AUTO':
-            signal_range = False
-        else:
-            try:
-                signal_range = signal_range.upper()
-            except AttributeError:
-                pass
-            try:
-                signal_range = self.valid_ranges[signal_range]
-            except (ValueError, KeyError):
-                if verbose:
-                    print("signal_range not in list, using max")
-                signal_range = self.valid_ranges['MAX']
+
+        try:
+            signal_range = signal_range.upper()
+            if signal_range.upper() == 'AUTO':  # if not str, doesn't run this
+                signal_range = False
+        except AttributeError:
+            pass
+        try:
+            signal_range = (self.valid_cranges[signal_range] if usecurrent
+                            else self.valid_Rranges[signal_range] if useres
+                            else self.valid_ranges[signal_range])
+        except (ValueError, KeyError):
+            if verbose:
+                print("signal_range not in list, using max")
+            signal_range = self.valid_ranges['MAX']  # same as MAX for current
 
         try:
             nplc = nplc.upper()
