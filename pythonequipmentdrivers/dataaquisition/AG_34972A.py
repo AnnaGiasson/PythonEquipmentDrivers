@@ -412,10 +412,9 @@ class AG_34972A(_Scpi_Instrument):
             print(f"channel {chanstr} unable! Return 0.0")
             print(f"{self.instrument.query('SYSTem:ERRor?')}", **kwargs)
             return float(0)
-        if len(chanlist) > 1:
-            return response
-        else:
-            return response[0]
+
+        return response
+
 
     def read(self, chan=None, **kwargs):
         """
