@@ -1,6 +1,7 @@
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from typing import Union
+from pathlib import Path
 
 
 class Lecroy_WR8xxx(Scpi_Instrument):
@@ -21,28 +22,25 @@ class Lecroy_WR8xxx(Scpi_Instrument):
     valid_trigger_slopes = {'POS': 'POS', 'RISE': 'POS',
                             'NEG': 'NEG', 'FALL': 'NEG'}
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.instrument.clear()
         self.set_comm_header('short')
-        return None
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
-        select_channel(channel)
+        select_channel(channel, state)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Selects the specified channel on the front panel display.
 
-        state: int, whether or not the respective channel is
-                selected/visable on the screen. Valid options are 0 or 1
-
-        Enables/disables the display of the specified channel.
+        Args:
+            channel (int): Channel number to select
+            state (bool): Whether or not the respective channel is
+                selected/visable on the screen.
         """
 
         cmd_str = f"C{int(channel)}:TRACE {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
-        return None
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
         """
@@ -51,7 +49,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         sets the scale of vertical divisons for the specified channel
 
         Args:
-            channel (int): channel number to query information on
+            channel (int): channel number to configure
             scale (float): scale of the channel amplitude across one
                 vertical division on the display.
         """
@@ -76,38 +74,39 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         val = response.split()[1]
         return float(val)
 
-    def set_channel_offset(self, channel, offset, use_divisions=False):
+    def set_channel_offset(self, channel: int, off: float, **kwargs) -> None:
         """
-        set_channel_offset(channel, offset)
+        set_channel_offset(channel, off, **kwargs)
 
-        channel: int, channel number of channel
+        Sets the vertical offset for the display of the specified channel.
 
-        offset: int/float, offset added to the channels waveform on the
-                display.
-        use_divisions: bool, if true offset will be treated as a number of
-                       vertical divisions
-
-        sets the vertical offset for the display of the specified channel.
+        Args:
+            channel (int): Channel number to query
+            off (float): vertical/amplitude offset
+        Kwargs
+            use_divisions (bool, optional): Whether or not the offset is
+                treated as a number of vertical divisions instead of an
+                amplltude. Defaults to False.
         """
 
-        if use_divisions:
-            offset *= self.get_channel_scale(channel)
-        self.instrument.write(f"C{channel}:OFFSET {offset}")
-        return None
+        if kwargs.get('use_divisions', False):
+            offset = float(off)*self.get_channel_scale(int(channel))
+        self.instrument.write(f"C{int(channel)}:OFFSET {float(offset)}")
 
-    def get_channel_offset(self, channel):
+    def get_channel_offset(self, channel: int) -> float:
         """
         get_channel_offset(channel)
 
-        channel: int, channel number of channel
+        Retrives the vertical offset for the display of the specified channel.
 
-        retrives the vertical offset for the display of the specified
-        channel.
+        Args:
+            channel (int): Channel number to query
 
-        returns: float
+        Returns:
+            float: vertical/amplitude offset
         """
 
-        response = self.instrument.query(f"C{channel}:OFFSET?")
+        response = self.instrument.query(f"C{int(channel)}:OFFSET?")
         val = response.split()[1]
         return float(val)
 
@@ -265,7 +264,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         self.instrument.write("TRMD NORM")
         return None
 
-    def trigger_single(self):
+    def trigger_single(self) -> None:
         """
         trigger_single()
 
@@ -274,9 +273,8 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD SINGLE")
-        return None
 
-    def trigger_stop(self):
+    def trigger_stop(self) -> None:
         """
         trigger_stop()
 
@@ -284,9 +282,8 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         acquiring new data. equivalent to set_trigger_acquire_state(0).
         """
         self.instrument.write('STOP')
-        return None
 
-    def trigger_force(self):
+    def trigger_force(self) -> None:
         """
         trigger_force()
 
@@ -295,7 +292,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("FRTR")
-        return None
 
     def trigger_auto(self):
         """
@@ -392,49 +388,48 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         response = response.strip().split()[-1]  # strip newline and CMD name
         return response
 
-    def set_trigger_level(self, level, source=None):
+    def set_trigger_level(self, level: float, **kwargs) -> None:
         """
-        set_trigger_level(level)
-
-        level: (float) vertical position of the trigger, units depend on
-                the signal being triggered on.
-        source: (int, or None) channel number to set the trigger level for. If
-                None the channel currently used for triggering will be used
-                (default = None)
+        set_trigger_level(self, level, **kwargs)
 
         Sets the vertical position of the trigger point in the units of the
         triggering waveform
-        """
 
-        if source is None:
-            source = self.get_trigger_source()
-
-        self.instrument.write(f'C{source}:TRLV {float(level)}\n')
-        return None
-
-    def get_trigger_level(self, source=None):
-        """
-        get_level()
-
-        returns
-        level: (float) vertical position of the trigger, units depend on
+        Args:
+            level (float): vertical position of the trigger, units depend on
                 the signal being triggered on.
-        source: (int, or None) channel number to get the trigger level for. If
-                None the channel currently used for triggering will be used
-                (default = None)
-
-        Gets the vertical position of the trigger point in the units of the
-        triggering waveform
+        Kwargs:
+            source (int): channel number to set the trigger level for. If not
+                provided the default behavior is to use whichever channel is
+                currently being used for triggering.
         """
 
-        if source is None:
-            source = self.get_trigger_source()
+        source = kwargs.get('source', self.get_trigger_source())
+        self.instrument.write(f'C{int(source)}:TRLV {float(level)}\n')
 
-        read_cmd = f'C{source}:TRLV'
+    def get_trigger_level(self, **kwargs) -> float:
+        """
+        get_level(**kwargs)
+
+        Returns the vertical position of the trigger level in the units of the
+        triggering waveform
+
+        Kwargs:
+            source (int): channel number to set the trigger level for. If not
+                provided the default behavior is to use whichever channel is
+                currently being used for triggering.
+
+        Returns:
+            float: vertical position of the trigger, units depend on
+                the signal being triggered on
+        """
+
+        source = kwargs.get('source', self.get_trigger_source())
+
+        read_cmd = f'C{int(source)}:TRLV'
         response = self.instrument.query(f'{read_cmd}?')
 
-        value = response.lstrip(read_cmd).split()[0]
-        return float(value)
+        return float(response.lstrip(read_cmd).split()[0])
 
     def set_trigger_slope(self, slope, source=None):
         """
@@ -494,9 +489,9 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         response = self.instrument.query('TRDL?')
         return float(response.split()[1].lower())
 
-    def get_image(self, image_title, **kwargs):
+    def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
         """
-        get_image(image_title)
+        get_image(image_title, **kwargs)
 
         Saves the screen image to the location specified by "image_title".
         "image_title" can contain path information to the desired save
@@ -504,75 +499,68 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         will be automatically be added based on the image format used (default:
         PNG)
 
-        Args: image_title (str): path to save the image to, you do not need to
-              include file extension it will be added automatically
-
+        Args:
+            image_title (Union[str, Path]): Path name of image, file extension
+                will be added automatically
         Kwargs:
-            img_format (str): file extention to save the image with, valid
-                       options are 'png', and 'tiff'
-                       (default: 'png').
-
-            img_orient (str): orientation of the image, valid options are
-                       'portrait' and 'landscape' (default: 'landscape').
-
-            bg_color (str): grid background color to use for saving the image,
-                     valid options are 'black' and 'white' (default: 'black').
-
-            screen_area (str): area of the screen to capture as an image, valid
-                        options are 'dsowindow', 'gridareaonly', and
-                        'fullscreen' (default: 'dsowindow').
-
-            None of the keyword arguements are case-sensitive.
-
-        Returns: None
+            image_format (str, optional): File extention to save the image
+                with, valid options are png, and 'tiff'. Defaults to png.
+            image_orientation (str, optional): Orientation of the resulting
+                image, valid options are 'portrait' and 'landscape'. Defaults
+                to landscape'.
+            bg_color (str, optional): Grid background color to use for saving
+                the image, valid options are 'black' and 'white'. Defaults to
+                black.
+            screen_area (str, optional): Area of the screen to capture as an
+                image, valid options are 'dsowindow', 'gridareaonly', and
+                'fullscreen'. Defaults to dsowindow.
         """
+        # valid image settings
+        valid_formats = ('BMP', 'JPEG', 'PNG', 'TIFF')
+        valid_orientations = ('PORTRAIT', 'LANDSCAPE')
+        valid_bg_colors = ('BLACK', 'WHITE')
+        valid_screen_areas = ('DSOWINDOW', 'GRIDAREAONLY', 'FULLSCREEN')
 
-        # setup hardcopy
-        write_cmd = "HARDCOPY_SETUP "
-
-        # get optional arguements
-        img_format = kwargs.get('img_format', 'PNG').upper()
-        if img_format not in ['BMP', 'JPEG', 'PNG', 'TIFF']:
-            raise ValueError('Invalid option for kwarg "img_format"')
-        else:
-            write_cmd += f'DEV, {img_format}, '
-
-        if img_format == 'JPEG':
-            img_format = 'jpg'  # lecroy was dumb in naming their option
-            # need to correct it here for the file extension
-
-        img_orient = kwargs.get('img_orient', 'LANDSCAPE').upper()
-        if img_orient not in ['PORTRAIT', 'LANDSCAPE']:
-            raise ValueError('Invalid option for kwarg "img_orient"')
-        else:
-            write_cmd += f'FORMAT, {img_orient}, '
-
+        # handle kwargs
+        xfer_ext = str(kwargs.get('image_format', 'PNG')).upper()
+        image_orient = kwargs.get('image_orientation', 'LANDSCAPE').upper()
         bg_color = kwargs.get('bg_color', 'BLACK').upper()
-        if bg_color not in ['BLACK', 'WHITE']:
-            raise ValueError('Invalid option for kwarg "bg_color"')
-        else:
-            write_cmd += f'BCKG, {bg_color}, '
-
         screen_area = kwargs.get('screen_area', 'DSOWINDOW').upper()
-        if screen_area not in ['DSOWINDOW', 'GRIDAREAONLY', 'FULLSCREEN']:
-            raise ValueError('Invalid option for kwarg "screen_area"')
-        else:
-            write_cmd += f'AREA, {screen_area}, '
+        port = 'NET'  # no support for others atm
 
-        write_cmd += 'PORT, NET'
-        self.instrument.write(write_cmd)
+        if xfer_ext not in valid_formats:
+            raise ValueError('Invalid option for kwarg "image_format"')
+        elif image_orient not in valid_orientations:
+            raise ValueError('Invalid option for kwarg "image_orientation"')
+        elif bg_color not in valid_bg_colors:
+            raise ValueError('Invalid option for kwarg "bg_color"')
+        elif screen_area not in valid_screen_areas:
+            raise ValueError('Invalid option for kwarg "screen_area"')
+
+        # add file extension to final filepath
+        write_ext = xfer_ext.lower() if xfer_ext != 'JPEG' else 'jpg'
+        if isinstance(image_title, Path):
+            f_name = f'{image_title.name}.{write_ext}'
+            file_path = image_title.parent.joinpath(f_name)
+        elif isinstance(image_title, str):
+            file_path = f"{image_title}.{write_ext}"
+        else:
+            raise ValueError('image_title must be a str or path-like object')
 
         # initiate transfer
+        template = (r'HARDCOPY_SETUP DEV, {}, FORMAT, {}, '
+                    r'BCKG, {}, AREA, {}, PORT, {}')
+        write_cmd = template.format(xfer_ext, image_orient, bg_color,
+                                    screen_area, port)
+        self.instrument.write(write_cmd)
         self.instrument.write('SCREEN_DUMP')
 
         # read back raw image data
         screen_data = self.instrument.read_raw()
 
         # save to file
-        with open(f'{image_title}.{img_format.lower()}', 'wb+') as file:
+        with open(file_path, 'wb+') as file:
             file.write(screen_data)
-
-        return None
 
     def get_waveform_description(self, channel):
         response = self.instrument.query(f'C{channel}:INSP? "WAVEDESC"')
@@ -600,8 +588,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         Args:
             *channels: (int, Iterable[int]) or sequence of ints, channel
-                number(s) of the waveform(s) to be transferred. valid options
-                are 1-4
+                number(s) of the waveform(s) to be transferred.
 
         Kwargs:
             sparsing (int, optional): sparsing factor, every n-th point of the
@@ -645,19 +632,18 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             # decode into measured value using waveform metadata
             wave = data*y_scale - y_offset
             waves.append(wave.astype(dtype))
+
+        if kwargs.get('return_time', True):
+            t_div, t_off = desc['horiz_interval'], desc['horiz_offset']
+
+            # all waveforms assumed to have same duration (just use last)
+            t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
+
+            return (t, *waves)
         else:
-            if kwargs.get('return_time', True):
-                t_div = desc['horiz_interval']
-                t_off = desc['horiz_offset']
-
-                # all waveforms assumed to have same duration (just use last)
-                t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
-
-                return t, *waves
-            else:
-                if len(waves) == 1:
-                    return waves[0]
-                return waves
+            if len(waves) == 1:
+                return waves[0]
+            return tuple(waves)
 
     def set_channel_label(self, channel: int, label: str) -> None:
         """
