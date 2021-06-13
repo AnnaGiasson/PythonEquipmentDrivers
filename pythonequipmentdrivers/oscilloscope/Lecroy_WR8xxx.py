@@ -125,7 +125,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
     def get_channel_coupling(self, channel):
         coupling_map = {'D1M': 'dc_1meg', 'D50': 'dc_50',
                         'A1M': 'ac_1meg', 'gnd': 'gnd'}
-        response = self.instrument.query("C1:COUPLING?")
+        response = self.instrument.query(f"C{int(channel)}:COUPLING?")
         coupling = response.split()[-1]
         return coupling_map[coupling]
 
@@ -142,16 +142,15 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         """
 
         self.instrument.write(f'TIME_DIV {float(scale)}')
-        return None
 
     def get_horizontal_scale(self) -> float:
         """
         get_horizontal_scale()
 
-        retrieves the scale of horizontal divisons in seconds.
+        Retrieves the horizontal scale used to accquire waveform data.
 
         Returns:
-            (float): horizontal scale
+            float: horizontal scale in seconds per division.
         """
 
         response = self.instrument.query('TIME_DIV?')
@@ -183,18 +182,37 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         resp_fields = ['index', 'type', 'source', 'status']
         return {k: v for k, v in zip(resp_fields, info.split(','))}
 
-    def get_measure_data(self, *meas_idx):
+    def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
+        """
+        get_measure_data(*meas_idx)
+
+        Returns the current value of the requesed measurement(s) reference by
+        the provided index(s).
+
+        Args:
+            meas_idx (int): measurement index(s) for the measurement(s) to
+                query. Can be a signal index or an arbitrary sequence of
+                indices.
+
+        Returns:
+            float: Current value of the requested measurement. If no value as
+                been assigned to the measurement yet the returned value is nan.
+        """
+
         data = []
         for idx in meas_idx:
-            q_str = f"VBS? 'return=app.Measure.P{idx}.Out.Result.Value' "
+
+            q_str = f"VBS? 'return=app.Measure.P{int(idx)}.Out.Result.Value' "
             response = self.instrument.query(q_str)
+
             try:
                 data.append(float(response.split()[-1]))
             except ValueError:
                 data.append(float('nan'))
+
         if len(data) == 1:
             return data[0]
-        return data
+        return tuple(data)
 
     def get_measure_statistics(self, meas_idx, stat_filter=''):
 
@@ -252,7 +270,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         self.instrument.write('PACL')
         return None
 
-    def trigger_run(self):
+    def trigger_run(self) -> None:
         """
         trigger_run()
 
@@ -262,7 +280,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD NORM")
-        return None
 
     def trigger_single(self) -> None:
         """
@@ -293,30 +310,38 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         self.instrument.write("ARM")
         self.instrument.write("FRTR")
 
-    def trigger_auto(self):
+    def trigger_auto(self) -> None:
         """
         trigger_auto()
 
-        sets the state of the oscilloscopes acquision mode to acquire new
+        Sets the state of the oscilloscopes acquision mode to acquire new
         data automatically.
         """
 
         self.instrument.write("ARM")
         self.instrument.write("TRMD AUTO")
-        return None
 
-    def get_trigger_mode(self):
+    def get_trigger_mode(self) -> str:
+        """
+        get_trigger_mode()
+
+        Gets the mode of the trigger used for data acquisition.
+
+        Returns:
+            str: trigger mode.
+        """
+
         response = self.instrument.query('TRMD?')
         return response.split()[-1].lower()
 
-    def set_trigger_source(self, channel):
+    def set_trigger_source(self, channel: int) -> None:
         """
         set_trigger_source(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1-8
+        Sets the trigger source to the indicated source channel
 
-        sets the trigger source to the indicated channel number
+        Args:
+            channel (int): channel number to configure
         """
 
         response = self.instrument.query('TRSE?')  # get current trigger config
@@ -326,20 +351,17 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         i_end = response.index(',', i_start)
 
         # replace source with new source, send to device
-        write_cmd = f'{response[:i_start]}C{channel}{response[i_end:]}'
+        write_cmd = f'{response[:i_start]}C{int(channel)}{response[i_end:]}'
         self.instrument.write(write_cmd)
-        return None
 
-    def get_trigger_source(self):
+    def get_trigger_source(self) -> int:
         """
         get_trigger_source()
 
+        Gets the channel number for the trigger source
 
-        returns:
-        channel: int, channel number of channel
-                    valid options are 1-8
-
-        gets the channel number for the trigger source
+        Returns:
+            int: channel number used for the trigger source
         """
 
         response = self.instrument.query('TRSE?')  # get current trigger config
@@ -479,13 +501,43 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return slope
 
-    def set_trigger_position(self, offset, use_divisions=False):
-        if use_divisions:
-            offset *= self.get_horizontal_scale()
-        self.instrument.write(f'TRDL {offset}')
-        return None
+    def set_trigger_position(self, offset: float, **kwargs) -> None:
+        """
+        set_trigger_position(offset)
 
-    def get_trigger_position(self):
+        Sets the horizontal position of the trigger point which represents the
+        t=0 point of the data capture.
+
+        Args:
+            offset (float): Horizontal position of the trigger. Represents a
+                time offset in seconds. If use_divisions=True then it can be
+                interpreted a number of horizontal divisions in the capture
+                window.
+        Kwargs:
+            use_divisions (bool, optional): Whether to interpret offset as a
+                time (False) or a number of horizontal division (True).
+                Defaults to False.
+        """
+
+        if kwargs.get('use_divisions', False):
+            scale = self.get_horizontal_scale()
+        else:
+            scale = 1
+
+        self.instrument.write(f'TRDL {float(offset)*scale}')
+
+    def get_trigger_position(self) -> float:
+        """
+        get_trigger_position()
+
+        Retrives the horizontal position of the trigger point which
+        representing the t=0 point of the data capture.
+
+        Returns:
+            float: Horizontal position of the trigger. Represents a time offset
+                in seconds
+        """
+
         response = self.instrument.query('TRDL?')
         return float(response.split()[1].lower())
 
@@ -724,7 +776,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             return float(dur)
         return 'inf'
 
-    def set_comm_header(self, header):
+    def set_comm_header(self, header: str) -> None:
         """
         set_comm_header(header)
 
@@ -744,22 +796,19 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         format may result in issues with other commands.
 
 
-        Args: header (str): query header format name. valid values are 'long',
-            'short', and 'off'
-
-        Returns: None
+        Args:
+            header (str): query header format name. valid values are 'long',
+                'short', and 'off'
         """
 
-        header = header.upper()
+        header = str(header).upper()
 
         if header not in ('OFF', 'SHORT', 'LONG'):
             raise ValueError('Invalid option for arg "header"')
 
         self.instrument.write(f'CHDR {header}')
 
-        return None
-
-    def get_comm_header(self):
+    def get_comm_header(self) -> str:
         """
         get_comm_header()
 
@@ -775,7 +824,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         Returns:
             header (str): query header format name. valid values are 'long',
-            'short', and 'off'
+                'short', and 'off'
         """
 
         response = self.instrument.query('CHDR?')

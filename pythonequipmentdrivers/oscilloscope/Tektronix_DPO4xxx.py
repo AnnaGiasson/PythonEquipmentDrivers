@@ -17,9 +17,7 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
     """
 
     # todo:
-    #   write further documentation on class methods
     #   add additional functionality for setting / getting scope measurements
-    #   look into different encoding schemes to speed up
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
@@ -39,7 +37,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
 
-    # investigate using faster data encoding scheme
     def get_channel_data(self, *channels: int, **kwargs) -> tuple:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
@@ -290,9 +287,15 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         response = self.instrument.query(f"CH{int(channel)}:POS?")
         return float(response)
 
-    def trigger_run_stop(self):
+    def trigger_run_stop(self) -> None:
+        """
+        trigger_run_stop()
+
+        Toggle the state of the oscilloscopes acquision mode in regards to
+        whether or not it is acquiring new data.
+        """
+
         self.instrument.write("FPANEL:PRESS RUnstop")
-        return None
 
     def trigger_force(self) -> None:
         """
@@ -310,11 +313,34 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
         self.instrument.write("FPANEL:PRESS SING")
 
-    def set_trigger_position(self, percent):
-        self.instrument.write(f"HOR:POS {percent}")
-        return None
+    def set_trigger_position(self, offset: float) -> None:
+        """
+        set_trigger_position(offset)
 
-    def get_trigger_position(self):  # returns percent of record len
+        Sets the horizontal position of the trigger point which represents the
+        t=0 point of the data capture.
+
+        Args:
+            offset (float): Horizontal position of the trigger as a percentage
+                of the horizontal capture window. Should be between 0-100.
+        """
+
+        if not (0 <= float(offset) <= 100):
+            raise ValueError('offset out of the valid range [0-100]')
+
+        self.instrument.write(f"HOR:POS {float(offset)}")
+
+    def get_trigger_position(self) -> float:
+        """
+        get_trigger_position()
+
+        Retrieves the horizontal position of the trigger point which represents
+        the t=0 point of the data capture.
+
+        Returns:
+            float: Horizontal position of the trigger as a percentage of the
+                horizontal capture window.
+        """
         return float(self.instrument.query("HOR:POS?"))
 
     def set_trigger_mode(self, mode: str) -> None:
@@ -380,37 +406,125 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         response = self.instrument.query("TRIG:A:LEV?")
         return float(response)
 
-    def set_zoom_mode(self, state):
-        if state:
-            self.instrument.write("ZOO:MODE ON")
-        else:
-            self.instrument.write("ZOO:MODE OFF")
-        return None
+    def set_zoom_mode(self, state: bool) -> None:
+        """
+        set_zoom_mode(state)
 
-    def get_zoom_mode(self):
+        Enables/Disables the Zoom mode used to observe waveforms in greater
+        horizontal detail on the front display.
+
+        Args:
+            state (bool): If True, Zoom mode is activated. Otherwise Zoom mode
+                is disabled.
+        """
+
+        self.instrument.write(f"ZOO:MODE {'ON' if state else 'OFF'}")
+
+    def get_zoom_mode(self) -> bool:
+        """
+        get_zoom_mode()
+
+        Queires the state of Zoom mode on the front display.
+
+        Returns:
+            bool: If True, Zoom mode is activated. Otherwise Zoom mode is
+                disabled.
+        """
+        on_keywords = ('on', 'true', '1')
+
         response = self.instrument.query("ZOO:MODE?")
-        return response.rstrip("\n")
+        response = response.lower()
 
-    def set_zoom_position(self, position):
-        # position is a % of the record length
-        self.instrument.write(f"ZOO:ZOOM:POS {position}")
-        return None
+        return any(key in response for key in on_keywords)
 
-    def get_zoom_position(self):
+    def set_zoom_position(self, position: float) -> None:
+        """
+        set_zoom_position(position)
+
+        Sets the horizontal position of the zoom window as a percentage of the
+        record length of the captured waveforms. Only has a visable effect if
+        Zoom mode is active.
+
+        Args:
+            position (float): horizontal zoom position as a percentage of the
+                record length.
+        """
+
+        self.instrument.write(f"ZOO:ZOOM:POS {float(position)}")
+
+    def get_zoom_position(self) -> float:
+        """
+        get_zoom_position()
+
+        Returns the horizontal position of the zoom window as a percentage of
+        the record length of the captured waveforms.
+
+        Returns:
+            float: horizontal zoom position as a percentage of the record
+                length.
+        """
+
         response = self.instrument.query("ZOO:ZOOM:POS?")
         return float(response)
 
-    def set_zoom_scale(self, scale):  # scale is the time/div
-        self.instrument.write(f"ZOO:ZOOM:SCA {scale}")
-        return None
+    def set_zoom_scale(self, scale: float) -> None:
+        """
+        set_zoom_scale(scale)
 
-    def get_zoom_scale(self):
+        Sets the horizontal scale used to display the waveform capture when
+        Zoom mode is activated.
+
+        Args:
+            scale (float): horizontal scale for Zoom Mode in seconds per
+                division.
+        """
+
+        self.instrument.write(f"ZOO:ZOOM:SCA {float(scale)}")
+
+    def get_zoom_scale(self) -> float:
+        """
+        get_zoom_scale()
+
+        Retrives the horizontal scale used to display the waveform capture when
+        Zoom mode is activated.
+
+        Returns:
+            float: horizontal scale for Zoom Mode in seconds per division.
+        """
         response = self.instrument.query("ZOO:ZOOM:SCA?")
         return float(response)
 
-    def get_measure_data(self, index):
-        response = self.instrument.query(f"MEASU:MEAS{index}:VAL?")
-        return float(response)
+    def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
+        """
+        get_measure_data(*meas_idx)
+
+        Returns the current value of the requesed measurement(s) reference by
+        the provided index(s).
+
+        Args:
+            meas_idx (int): measurement index(s) for the measurement(s) to
+                query. Can be a signal index or an arbitrary sequence of
+                indices.
+
+        Returns:
+            float: Current value of the requested measurement. If no value as
+                been assigned to the measurement yet the returned value is nan.
+        """
+
+        data = []
+        for idx in meas_idx:
+
+            query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
+            response = self.instrument.query(query_cmd)
+
+            try:
+                data.append(float(response))
+            except ValueError:
+                data.append(float('nan'))
+
+        if len(data) == 1:
+            return data[0]
+        return tuple(data)
 
     def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
         """
@@ -550,10 +664,10 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
         get_horizontal_scale()
 
-        retrieves the scale of horizontal divisons in seconds.
+        Retrieves the horizontal scale used to accquire waveform data.
 
         Returns:
-            (float): horizontal scale
+            float: horizontal scale in seconds per division.
         """
 
         response = self.instrument.query('HOR:SCA?')

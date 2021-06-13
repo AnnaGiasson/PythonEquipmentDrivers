@@ -362,45 +362,44 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         resp = self.instrument.query(f"CH{channel}:COUP?")
         return resp.strip()
 
-    def set_trigger_acquire_state(self, state):
+    def set_trigger_acquire_state(self, state: bool) -> None:
         """
         set_trigger_acquire_state(state)
 
-        state: (int) acquire state, valid arguements are 0 (stop) and
-                1 (run/acquire)
-
         sets the state of the oscilloscopes acquision mode, whether its
-        currently acquiring new data (run / 1) or not (stop / 0).
+        currently acquiring new data.
+
+        Args:
+            state (bool): acquisition state, valid arguements are False (stop)
+                and True (run/acquire)
         """
 
-        self.instrument.write(f"ACQ:STATE {state}")
-        return None
+        self.instrument.write(f"ACQ:STATE {1 if state else 0}")
 
-    def get_trigger_acquire_state(self):
+    def get_trigger_acquire_state(self) -> bool:
         """
         get_trigger_acquire_state()
 
-        returns:
-        state: (int) acquire state, valid arguements are 0 (stop) and
-                1 (run/acquire)
+        Gets the state of the oscilloscopes acquision mode/whether its
+        currently acquiring new data.
 
-        gets the state of the oscilloscopes acquision mode, whether its
-        currently acquiring new data (run / 1) or not (stop / 0).
+        Returns:
+            bool: Acquisition state, valid arguements are False (stop) and
+                True (run/acquire)
         """
 
-        resp = self.instrument.query("ACQ:STATE?")
-        return int(resp)
+        response = self.instrument.query("ACQ:STATE?")
+        return bool(response)
 
-    def trigger_run(self):
+    def trigger_run(self) -> None:
         """
         trigger_run()
 
         sets the state of the oscilloscopes acquision mode to acquire new
-        data. equivalent to set_trigger_acquire_state(1).
+        data. equivalent to set_trigger_acquire_state(True).
         """
 
-        self.set_trigger_acquire_state(1)
-        return None
+        self.set_trigger_acquire_state(True)
 
     def trigger_stop(self) -> None:
         """
@@ -430,59 +429,58 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.set_trigger_acquire_state(1)
         self.instrument.write("ACQ:STOPA SEQ")
 
-    def set_trigger_source(self, channel):
+    def set_trigger_source(self, channel: int) -> None:
         """
         set_trigger_source(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Sets the trigger source to the indicated source channel
 
-        sets the trigger source to the indicated channel number
+        Args:
+            channel (int): channel number to configure
         """
 
-        self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{channel}')
-        return None
+        self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{int(channel)}')
 
-    def get_trigger_source(self):
+    def get_trigger_source(self) -> int:
         """
         get_trigger_source()
 
+        Gets the channel number for the trigger source
 
-        returns:
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
-
-        gets the channel number for the trigger source
+        Returns:
+            int: channel number used for the trigger source
         """
 
-        resp = self.instrument.query('TRIGger:A:EDGE:SOUrce?')
-        channel = int(resp.replace('CH', ''))
-        return channel
+        response = self.instrument.query('TRIGger:A:EDGE:SOUrce?')
+        return int(response.replace('CH', ''))
 
-    def set_trigger_position(self, percent):
+    def set_trigger_position(self, offset: float) -> None:
         """
-        set_trigger_position(percent)
+        set_trigger_position(offset)
 
-        percent: (int) percent of the horizontal capture window valid
-                    values are between 0-100
+        Sets the horizontal position of the trigger point which represents the
+        t=0 point of the data capture.
 
-        Sets the horizontal position of the trigger point as a percentage
-        of the capture window.
+        Args:
+            offset (float): Horizontal position of the trigger as a percentage
+                of the horizontal capture window. Should be between 0-100.
         """
 
-        self.instrument.write(f"HOR:POS {percent}")
-        return None
+        if not (0 <= float(offset) <= 100):
+            raise ValueError('offset out of the valid range [0-100]')
 
-    def get_trigger_position(self):
+        self.instrument.write(f"HOR:POS {float(offset)}")
+
+    def get_trigger_position(self) -> float:
         """
         get_trigger_position()
 
-        returns:
-        percent: (int) percent of the horizontal capture window valid
-                    values are between 0-100
+        Retrieves the horizontal position of the trigger point which represents
+        the t=0 point of the data capture.
 
-        gets the horizontal position of the trigger point as a percentage
-        of the capture window.
+        Returns:
+            float: Horizontal position of the trigger as a percentage of the
+                horizontal capture window.
         """
 
         return float(self.instrument.query("HOR:POS?"))
@@ -701,29 +699,29 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
     def set_measure_config(self, channel, meas_type, meas_idx):
         """
-            set_measure_config(channel, meas_type, meas_idx)
+        set_measure_config(channel, meas_type, meas_idx)
 
-            channel: (int) channel to provide the source of the measurement
-                        Should be 1-4.
-            meas_type: (str) the type of measurement to perform.
+        channel: (int) channel to provide the source of the measurement
+                    Should be 1-4.
+        meas_type: (str) the type of measurement to perform.
 
-            meas_idx: (int) measurement number to assign to the
-                        measurement described by the above parameters.
-                        Can be 1-8.
+        meas_idx: (int) measurement number to assign to the
+                    measurement described by the above parameters.
+                    Can be 1-8.
 
-            valid measurements are:
-            AMPLITUDE, AREA, BURST, CAREA, CMEAN, CRMS, DELAY, FALL,
-            FREQUENCY, HIGH, HITS, LOW, MAXIMUM, MEAN, MEDIAN, MINIMUM,
-            NDUTY, NOVERSHOOT, NWIDTH, PDUTY, PEAKHITS, PERIOD, PHASE,
-            PK2PK, POVERSHOOT, PTOP, PWIDTH, QFACTOR, RISE, RMS, SIGMA1,
-            SIGMA2, SIGMA3, SNRATIO, STDDEV, UNDEFINED
+        valid measurements are:
+        AMPLITUDE, AREA, BURST, CAREA, CMEAN, CRMS, DELAY, FALL,
+        FREQUENCY, HIGH, HITS, LOW, MAXIMUM, MEAN, MEDIAN, MINIMUM,
+        NDUTY, NOVERSHOOT, NWIDTH, PDUTY, PEAKHITS, PERIOD, PHASE,
+        PK2PK, POVERSHOOT, PTOP, PWIDTH, QFACTOR, RISE, RMS, SIGMA1,
+        SIGMA2, SIGMA3, SNRATIO, STDDEV, UNDEFINED
 
-            Arguement is not case-sensitive
+        Arguement is not case-sensitive
 
-            Sets up a measurement on the desired channel.
+        Sets up a measurement on the desired channel.
         """
 
-        measurement_types = ['AMPLITUDE', 'AREA', 'BURST', 'CAREA',
+        measurement_types = ('AMPLITUDE', 'AREA', 'BURST', 'CAREA',
                              'CMEAN', 'CRMS', 'DELAY', 'DISTDUTY',
                              'EXTINCTDB', 'EXTINCTPCT', 'EXTINCTRATIO',
                              'EYEHEIGHT', 'EYEWIDTH', 'FALL', 'FREQUENCY',
@@ -735,7 +733,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                              'POVERSHOOT', 'PTOP', 'PWIDTH', 'QFACTOR',
                              'RISE', 'RMS', 'RMSJITTER', 'RMSNOISE',
                              'SIGMA1', 'SIGMA2', 'SIGMA3', 'SIXSIGMAJIT',
-                             'SNRATIO', 'STDDEV', 'UNDEFINED', 'WAVEFORMS']
+                             'SNRATIO', 'STDDEV', 'UNDEFINED', 'WAVEFORMS')
 
         meas_type = meas_type.upper()
         if meas_type not in measurement_types:
@@ -788,18 +786,37 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
         return None
 
-    def get_measure_data(self, meas_idx):
+    def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
         """
-        get_measure_data(meas_idx)
+        get_measure_data(*meas_idx)
 
-        meas_idx: (int) measurement number to assign to the measurement
-                    described by the above parameters. Can be 1-8.
+        Returns the current value of the requesed measurement(s) reference by
+        the provided index(s).
 
-        Returns the value of the measurement 'meas_idx' as a float.
+        Args:
+            meas_idx (int): measurement index(s) for the measurement(s) to
+                query. Can be a signal index or an arbitrary sequence of
+                indices.
+
+        Returns:
+            float: Current value of the requested measurement. If no value as
+                been assigned to the measurement yet the returned value is nan.
         """
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:VAL?')
-        return float(resp)
+        data = []
+        for idx in meas_idx:
+
+            query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
+            response = self.instrument.query(query_cmd)
+
+            try:
+                data.append(float(response))
+            except ValueError:
+                data.append(float('nan'))
+
+        if len(data) == 1:
+            return data[0]
+        return tuple(data)
 
     def get_measure_statistics(self, meas_idx):
         """
@@ -954,17 +971,16 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 display in seconds.
         """
 
-        self.instrument.write(f'HOR:SCA {scale}')
-        return None
+        self.instrument.write(f'HOR:SCA {float(scale)}')
 
     def get_horizontal_scale(self) -> float:
         """
         get_horizontal_scale()
 
-        retrieves the scale of horizontal divisons in seconds.
+        Retrieves the horizontal scale used to accquire waveform data.
 
         Returns:
-            (float): horizontal scale
+            float: horizontal scale in seconds per division.
         """
 
         response = self.instrument.query('HOR:SCA?')
