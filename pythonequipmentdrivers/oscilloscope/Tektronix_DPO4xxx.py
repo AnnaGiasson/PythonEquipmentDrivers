@@ -2,6 +2,7 @@ from pythonequipmentdrivers import Scpi_Instrument
 import struct
 import numpy as np
 from time import sleep
+from pathlib import Path
 from typing import Union
 
 
@@ -16,32 +17,26 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
     """
 
     # todo:
-    #   write further documentation on class methods
     #   add additional functionality for setting / getting scope measurements
-    #   look into different encoding schemes to speed up
-    #   self.channel.get_data() method
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
-        select_channel(channel)
+        select_channel(channel, state)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Selects the specified channel on the front panel display. This is allow
+        the specified channel to be seen on top of the others in the display.
+        With a given channel selected any cursor measurements will then
+        correspond to the selected channel.
 
-        state: bool, whether or not the respective channel is
+        Args:
+            channel (int): Channel number to select
+            state (bool): Whether or not the respective channel is
                 selected/visable on the screen.
-
-        selects the specified channel. This is allow the specified channel
-        to be seen on top of the others in the display. With a given
-        channel selected any cursor measurements will then correspond to
-        the selected channel.
         """
 
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
-        return None
 
-    # investigate using faster data encoding scheme
     def get_channel_data(self, *channels: int, **kwargs) -> tuple:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
@@ -55,8 +50,7 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
 
         Args:
             *channels: (int, Iterable[int]) or sequence of ints, channel
-                number(s) of the waveform(s) to be transferred. valid options
-                are 1-4
+                number(s) of the waveform(s) to be transferred.
 
         Kwargs:
             start_percent (int, optional): point in time to begin the waveform
@@ -91,7 +85,7 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         waves = []
         for channel in channels:
             # set up scope for data transfer
-            self.instrument.write(f'DATA:SOU CH{channel}')  # Set data source
+            self.instrument.write(f'DATA:SOU CH{int(channel)}')  # Set source
             self.instrument.write('DATA:WIDTH 1')  # ?? used in example
             self.instrument.write('DATA:ENC RPB')  # Set data encoding type
             self.instrument.write(f'DATA:START {int(start_idx)}')
@@ -117,19 +111,18 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
             # decode into measured value using waveform metadata
             wave = (data - y_offset)*y_scale + adc_offset
             waves.append(wave)
+
+        if kwargs.get('return_time', True):
+            # generate time vector / account for trigger position
+            # all waveforms assumed to have same duration (just use last)
+            t = np.arange(0, dt*len(wave), dt, dtype=dtype)
+            t -= (x_offset - min([start_idx, stop_idx]))*dt
+
+            return (t, *waves)
         else:
-            if kwargs.get('return_time', True):
-                # generate time vector / account for trigger position
-                # all waveforms assumed to have same duration (just use last)
-
-                t = np.arange(0, dt*len(wave), dt, dtype=dtype)
-                t -= (x_offset - min([start_idx, stop_idx]))*dt
-
-                return (t, *waves)
-            else:
-                if len(waves) == 1:
-                    return waves[0]
-                return waves
+            if len(waves) == 1:
+                return waves[0]
+            return tuple(waves)
 
     def set_channel_label(self, channel: int, label: str) -> None:
         """
@@ -162,41 +155,37 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         response = self.instrument.query(f'CH{int(channel)}:LAB?')
         return response.rstrip('\n')
 
-    def set_channel_bandwidth(self, channel, bandwidth):
+    def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
         """
         set_channel_bandwidth(channel, bandwidth)
 
-        channel: int, channel number of channel whose bandwidth setting
-                    will be adjusted. valid options are 1, 2, 3, and 4.
-        bandwidth: int or float, desired bandwidth setting for "channel"
-                    in Hz
-
-        sets the bandwidth limiting of "channel" to the value specified by
-        "bandwidth".
-
-        Note: different probes have different possible bandwidth settings,
-        if the value specified in this function isn't availible on the
-        probe connected to the specified input it will likely round UP to
+        Sets the bandwidth limiting of "channel" to the value specified by
+        "bandwidth". Note: different probes have different possible bandwidth
+        settings, if the value specified in this function isn't availible on
+        the probe connected to the specified input it will likely round UP to
         the nearest availible setting
+
+        Args:
+            channel (int): channel number to configure
+            bandwidth (float): desired bandwidth setting for "channel" in Hz
         """
 
-        self.instrument.write(f"CH{channel}:BAN {bandwidth}")
-        return None
+        self.instrument.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
 
-    def get_channel_bandwidth(self, channel):
+    def get_channel_bandwidth(self, channel: int) -> float:
         """
         get_channel_bandwidth(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrives the bandwidth setting used by the specified channel in Hz.
 
-        retrived bandwidth limiting setting used by the specified channel
-        in Hz.
+        Args:
+            channel (int): channel number to query information on
 
-        returns float
+        Returns:
+            float: channel bandwidth setting
         """
 
-        response = self.instrument.query(f"CH{channel}:BAN?")
+        response = self.instrument.query(f"CH{int(channel)}:BAN?")
         return float(response)
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
@@ -231,195 +220,378 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         response = self.instrument.query(f'CH{int(channel)}:SCA?')
         return float(response)
 
-    def set_channel_offset(self, channel, offset):
+    def set_channel_offset(self, channel: int, off: float) -> None:
         """
-        set_channel_offset(channel, offset)
+        set_channel_offset(channel, off)
 
-        channel: int, channel number of channel
-            valid options are 1,2,3, and 4
+        Sets the vertical offset for the display of the specified channel.
 
-        offset: int/float, offset added to the channels waveform on the
-                display.
-
-        sets the vertical offset for the display of the specified channel.
+        Args:
+            channel (int): Channel number to query
+            off (float): vertical/amplitude offset
         """
 
-        self.instrument.write(f"CH{channel}:OFFS {offset}")
-        return None
+        self.instrument.write(f"CH{int(channel)}:OFFS {float(off)}")
 
-    def get_channel_offset(self, channel):
+    def get_channel_offset(self, channel: int) -> float:
         """
         get_channel_offset(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrives the vertical offset for the display of the specified channel.
 
-        retrives the vertical offset for the display of the specified
-        channel.
+        Args:
+            channel (int): Channel number to query
 
-        returns: float
+        Returns:
+            float: vertical/amplitude offset
         """
 
-        response = self.instrument.query(f"CH{channel}:OFFS?")
+        response = self.instrument.query(f"CH{int(channel)}:OFFS?")
         return float(response)
 
-    def set_channel_position(self, channel, position):
+    def set_channel_position(self, channel: int, position: float) -> None:
         """
         set_channel_position(channel, position)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Sets the vertical postion of the 0 amplitude line in the display of the
+        specified channel's waveform. The veritcal position is represented a
+        number of vertical division on the display (from the center). Can be
+        positive negative or fractional.
 
-        position: int/float, vertical postion of the 0 point for 'channel'
-
-        sets the vertical postion for the 0 point of the waveform
-        specified by 'channel'
-        position is represented by +/- number of division from the middle
-        of the screen.
+        Args:
+            channel (int): Channel number to query
+            position (float): vertical postion of the 0 amplitude position in
+                the display of the specified channel waveform.
         """
 
-        self.instrument.write(f"CH{channel}:POS {position}")
-        return None
+        self.instrument.write(f"CH{int(channel)}:POS {float(position)}")
 
-    def get_channel_position(self, channel):
+    def get_channel_position(self, channel: int) -> float:
         """
         get_channel_position(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrieves the vertical postion of the 0 amplitude line used in the
+        display of the specified channel's waveform. The veritcal position is
+        represented a number of vertical division on the display (from the
+        center). Can be positive negative or fractional.
 
-        retrieves the vertical postion for the 0 point of the waveform
-        specified by 'channel' position is represented by +/- number of
-        division from the middle of the screen.
+        Args:
+            channel (int): Channel number to query
 
-        returns: float
+        Returns:
+            float: vertical postion of the 0 amplitude position in the display
+                of the specified channel waveform.
         """
 
-        response = self.instrument.query(f"CH{channel}:POS?")
+        response = self.instrument.query(f"CH{int(channel)}:POS?")
         return float(response)
 
-    def trigger_run_stop(self):
+    def trigger_run_stop(self) -> None:
+        """
+        trigger_run_stop()
+
+        Toggle the state of the oscilloscopes acquision mode in regards to
+        whether or not it is acquiring new data.
+        """
+
         self.instrument.write("FPANEL:PRESS RUnstop")
-        return None
 
-    def trigger_force(self):
+    def trigger_force(self) -> None:
+        """
+        trigger_force()
+
+        forces a trigger event to occur
+        """
         self.instrument.write("TRIG FORC")
-        return None
 
-    def trigger_single(self):
+    def trigger_single(self) -> None:
+        """
+        trigger_single()
+
+        arms the oscilloscope to capture a single trigger event.
+        """
         self.instrument.write("FPANEL:PRESS SING")
-        return None
 
-    def set_trigger_position(self, percent):
-        self.instrument.write(f"HOR:POS {percent}")
-        return None
+    def set_trigger_position(self, offset: float) -> None:
+        """
+        set_trigger_position(offset)
 
-    def get_trigger_position(self):  # returns percent of record len
+        Sets the horizontal position of the trigger point which represents the
+        t=0 point of the data capture.
+
+        Args:
+            offset (float): Horizontal position of the trigger as a percentage
+                of the horizontal capture window. Should be between 0-100.
+        """
+
+        if not (0 <= float(offset) <= 100):
+            raise ValueError('offset out of the valid range [0-100]')
+
+        self.instrument.write(f"HOR:POS {float(offset)}")
+
+    def get_trigger_position(self) -> float:
+        """
+        get_trigger_position()
+
+        Retrieves the horizontal position of the trigger point which represents
+        the t=0 point of the data capture.
+
+        Returns:
+            float: Horizontal position of the trigger as a percentage of the
+                horizontal capture window.
+        """
         return float(self.instrument.query("HOR:POS?"))
 
-    def set_trigger_mode(self, mode):
-        """Valid modes are "AUTO" and "NORM" """
-        if not(mode in ["AUTO", "NORM"]):
-            self.instrument.write("TRIG:A:MOD NORM")
+    def set_trigger_mode(self, mode: str) -> None:
+        """
+        set_trigger_mode(mode)
+
+        Sets the mode of the trigger used for data acquisition. In the "AUTO"
+        mode the scope will periodically trigger automatically to update the
+        waveform buffers. In the "NORM" mode the trigger needs to be actively
+        asserted by some control signal for this to occur.
+
+        Args:
+            mode (str): trigger mode. Valid modes are "AUTO" and "NORM"
+        """
+
+        mode = str(mode).upper()
+        if mode not in ["AUTO", "NORM", "NORMAL"]:
+            raise ValueError(f"Invalid mode: {mode}")
         self.instrument.write(f"TRIG:A:MOD {mode}")
-        return None
 
-    def get_trigger_mode(self):
+    def get_trigger_mode(self) -> str:
+        """
+        get_trigger_mode()
+
+        Gets the mode of the trigger used for data acquisition. In the "AUTO"
+        mode the scope will periodically trigger automatically to update the
+        waveform buffers. In the "NORM" mode the trigger needs to be actively
+        asserted by some control signal for this to occur.
+
+        Returns:
+            str: trigger mode. Valid modes are "AUTO" and "NORM"
+        """
+
         response = self.instrument.query("TRIG:A:MOD?")
-        return response.rstrip("\n")
+        return response.rstrip("\n").lower()
 
-    def set_trigger_level(self, level):
-        self.instrument.write(f"TRIG:A:LEV {level}")
-        return None
+    def set_trigger_level(self, level: float) -> None:
+        """
+        set_trigger_level(level)
 
-    def get_trigger_level(self):
-        return float(self.instrument.query("TRIG:A:LEV?"))
+        Sets the vertical position of the trigger level in the units of the
+        triggering waveform
 
-    def set_zoom_mode(self, state):
-        if state:
-            self.instrument.write("ZOO:MODE ON")
-        else:
-            self.instrument.write("ZOO:MODE OFF")
-        return None
+        Args:
+            level (float): vertical position of the trigger, units depend on
+                the signal being triggered on.
+        """
 
-    def get_zoom_mode(self):
+        self.instrument.write(f"TRIG:A:LEV {float(level)}")
+
+    def get_trigger_level(self) -> float:
+        """
+        get_trigger_level()
+
+        Returns the vertical position of the trigger level in the units of the
+        triggering waveform
+
+        Returns:
+            float: vertical position of the trigger, units depend on the signal
+                being triggered on.
+        """
+
+        response = self.instrument.query("TRIG:A:LEV?")
+        return float(response)
+
+    def set_zoom_mode(self, state: bool) -> None:
+        """
+        set_zoom_mode(state)
+
+        Enables/Disables the Zoom mode used to observe waveforms in greater
+        horizontal detail on the front display.
+
+        Args:
+            state (bool): If True, Zoom mode is activated. Otherwise Zoom mode
+                is disabled.
+        """
+
+        self.instrument.write(f"ZOO:MODE {'ON' if state else 'OFF'}")
+
+    def get_zoom_mode(self) -> bool:
+        """
+        get_zoom_mode()
+
+        Queires the state of Zoom mode on the front display.
+
+        Returns:
+            bool: If True, Zoom mode is activated. Otherwise Zoom mode is
+                disabled.
+        """
+        on_keywords = ('on', 'true', '1')
+
         response = self.instrument.query("ZOO:MODE?")
-        return response.rstrip("\n")
+        response = response.lower()
 
-    def set_zoom_position(self, position):
-        # position is a % of the record length
-        self.instrument.write(f"ZOO:ZOOM:POS {position}")
-        return None
+        return any(key in response for key in on_keywords)
 
-    def get_zoom_position(self):
+    def set_zoom_position(self, position: float) -> None:
+        """
+        set_zoom_position(position)
+
+        Sets the horizontal position of the zoom window as a percentage of the
+        record length of the captured waveforms. Only has a visable effect if
+        Zoom mode is active.
+
+        Args:
+            position (float): horizontal zoom position as a percentage of the
+                record length.
+        """
+
+        self.instrument.write(f"ZOO:ZOOM:POS {float(position)}")
+
+    def get_zoom_position(self) -> float:
+        """
+        get_zoom_position()
+
+        Returns the horizontal position of the zoom window as a percentage of
+        the record length of the captured waveforms.
+
+        Returns:
+            float: horizontal zoom position as a percentage of the record
+                length.
+        """
+
         response = self.instrument.query("ZOO:ZOOM:POS?")
         return float(response)
 
-    def set_zoom_scale(self, scale):  # scale is the time/div
-        self.instrument.write(f"ZOO:ZOOM:SCA {scale}")
-        return None
+    def set_zoom_scale(self, scale: float) -> None:
+        """
+        set_zoom_scale(scale)
 
-    def get_zoom_scale(self):
+        Sets the horizontal scale used to display the waveform capture when
+        Zoom mode is activated.
+
+        Args:
+            scale (float): horizontal scale for Zoom Mode in seconds per
+                division.
+        """
+
+        self.instrument.write(f"ZOO:ZOOM:SCA {float(scale)}")
+
+    def get_zoom_scale(self) -> float:
+        """
+        get_zoom_scale()
+
+        Retrives the horizontal scale used to display the waveform capture when
+        Zoom mode is activated.
+
+        Returns:
+            float: horizontal scale for Zoom Mode in seconds per division.
+        """
         response = self.instrument.query("ZOO:ZOOM:SCA?")
         return float(response)
 
-    def get_measure_data(self, index):
-        response = self.instrument.query(f"MEASU:MEAS{index}:VAL?")
-        return float(response)
-
-    def get_image(self, image_title, buffering_delay=0):
+    def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
         """
-        get_image(image_title, buffering_delay=0)
+        get_measure_data(*meas_idx)
 
-        image_title: str, path name of image
-        buffering_delay (optional): int/float, delay before reading back image
-        data in seconds (default is 0s). Depending on the oscilloscope
-            settings conversion of the data to an image may take longer than
-            expected, this delay gives the scope more time to buffer the image.
-        saves current oscillocope image to file at the path specified by
-        image_title. image will be saved as .png. If no path information is
-        included in image_title the image will be saved in the current
-        execution directory
+        Returns the current value of the requesed measurement(s) reference by
+        the provided index(s).
+
+        Args:
+            meas_idx (int): measurement index(s) for the measurement(s) to
+                query. Can be a signal index or an arbitrary sequence of
+                indices.
+
+        Returns:
+            float: Current value of the requested measurement. If no value as
+                been assigned to the measurement yet the returned value is nan.
         """
 
-        self.instrument.write("SAVE:IMAG:FILEF PNG")
-        self.instrument.write("HARDCOPY START")
-        self.instrument.write('*OPC?')
-        sleep(buffering_delay)
+        data = []
+        for idx in meas_idx:
+
+            query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
+            response = self.instrument.query(query_cmd)
+
+            try:
+                data.append(float(response))
+            except ValueError:
+                data.append(float('nan'))
+
+        if len(data) == 1:
+            return data[0]
+        return tuple(data)
+
+    def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
+        """
+        get_image(image_title, **kwargs)
+
+        Saves current oscillocope image to file at the path specified by
+        "image_title". The Image will be saved as .png. If no path information
+        is included in "image_title" the image will be saved in the current
+        execution directory.
+
+        Args:
+            image_title (Union[str, Path]): path name of image, file extension
+                will be added automatically
+        Kwargs:
+            buffering_delay (float): delay before reading back image data in
+                seconds. Depending on the oscilloscope settings, conversion of
+                the data to an image may take longer than the timeout of the
+                resource connection; this delay gives the scope more time to
+                buffer the image. Defaults to 0.
+        """
+
+        # add file extension
+        if isinstance(image_title, Path):
+            file_path = image_title.parent.joinpath(image_title.name + '.png')
+        elif isinstance(image_title, str):
+            file_path = f"{image_title}.png"
+        else:
+            raise ValueError('image_title must be a str or path-like object')
+
+        # initiate transfer
+        self.instrument.write("SAVE:IMAG:FILEF PNG")  # set filetype
+        self.instrument.write("HARDCOPY START")  # start converting to image
+        self.instrument.write('*OPC?')  # done yet?
+        sleep(kwargs.get('buffering_delay', 0))
 
         raw_data = self.instrument.read_raw()
 
-        fid = open(f"{image_title}.png", 'wb')
-        fid.write(raw_data)
-        fid.close()
-        return None
+        # save image
+        with open(file_path, 'wb') as file:
+            file.write(raw_data)
 
-    def set_record_length(self, length):
+    def set_record_length(self, length: int) -> None:
         """
         set_record_length(length)
 
-        length: int, number of points to capture in the waveform buffer per
-                scope trigger
-
-        changes the length of the waveform buffer to the value specified by
+        Changes the length of the waveform buffer to the value specified by
         'length'. Note: different scopes have different possible record length
         options, if the value specified in this function isn't availible on the
         scope connected round to the nearest availible setting.
+
+        Args:
+            length (int): number of points to capture in the waveform buffer
+                per scope trigger
         """
 
-        self.instrument.write(f"HOR:RECO {length}")
-        return None
+        self.instrument.write(f"HOR:RECO {int(length)}")
 
-    def get_record_length(self):
+    def get_record_length(self) -> int:
         """
         get_record_length()
 
         retrives the current length of the waveform buffer.
 
-        returns: float
+        Returns:
+            int: len of the waveform buffer
         """
 
-        return float(self.instrument.query("HOR:RECO?"))
+        return int(self.instrument.query("HOR:RECO?"))
 
     def set_persistence_time(self, duration: Union[float, str]) -> None:
         """
@@ -458,17 +630,19 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         response = self.instrument.query('DIS:PERS?')
         return max([float(response), 0.0])
 
-    def set_cursor_vertical_position(self, cursor, position):
-        # """
-        # set_cursor_vertical_position(cursor, position)
+    def set_cursor_vertical_level(self, cursor: int, level: float) -> None:
+        """
+        set_cursor_vertical_level(cursor, level)
 
-        # cursor: int, cursor number to adjust
-        # \tvalid options are 1 or 2
-        # position: vertical position
-        # """
+        Set the veritcal position of the oscilloscope trigger on the front
+        panel display
 
-        self.instrument.write(f"CURS:HBA:POSITION{cursor} {position}")
-        return None
+        Args:
+            cursor (int): Cursor number to adjust. Valid options are 1 or 2
+            level (float): Vertical position in units of the selected waveform
+        """
+
+        self.instrument.write(f"CURS:HBA:POSITION{int(cursor)} {float(level)}")
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -489,10 +663,10 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
         get_horizontal_scale()
 
-        retrieves the scale of horizontal divisons in seconds.
+        Retrieves the horizontal scale used to accquire waveform data.
 
         Returns:
-            (float): horizontal scale
+            float: horizontal scale in seconds per division.
         """
 
         response = self.instrument.query('HOR:SCA?')

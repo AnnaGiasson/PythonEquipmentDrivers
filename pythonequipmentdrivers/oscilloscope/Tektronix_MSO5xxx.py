@@ -1,6 +1,8 @@
 from pythonequipmentdrivers import Scpi_Instrument
 import struct
 import numpy as np
+from pathlib import Path
+from typing import Union
 
 
 class Tektronix_MSO5xxx(Scpi_Instrument):
@@ -13,7 +15,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
     Family of Oscilloscopes
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
 
         # get image formatting
@@ -22,7 +24,6 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write('HARDC:PALE COLOR')  # color image (alt INKS)
         self.instrument.write('HARDC:LAY LAN')  # landscape image
         self.instrument.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
-        return None
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
@@ -58,8 +59,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         Args:
             *channels: (int, Iterable[int]) or sequence of ints, channel
-                number(s) of the waveform(s) to be transferred. valid options
-                are 1-4
+                number(s) of the waveform(s) to be transferred.
 
         Kwargs:
             start_percent (int, optional): point in time to begin the waveform
@@ -120,19 +120,18 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             # decode into measured value using waveform metadata
             wave = (data - y_offset)*y_scale + adc_offset
             waves.append(wave)
+
+        if kwargs.get('return_time', True):
+            # generate time vector / account for trigger position
+            # all waveforms assumed to have same duration (just use last)
+            t = np.arange(0, dt*len(wave), dt, dtype=dtype)
+            t -= (x_offset - min([start_idx, stop_idx]))*dt
+
+            return (t, *waves)
         else:
-            if kwargs.get('return_time', True):
-                # generate time vector / account for trigger position
-                # all waveforms assumed to have same duration (just use last)
-
-                t = np.arange(0, dt*len(wave), dt, dtype=dtype)
-                t -= (x_offset - min([start_idx, stop_idx]))*dt
-
-                return (t, *waves)
-            else:
-                if len(waves) == 1:
-                    return waves[0]
-                return waves
+            if len(waves) == 1:
+                return waves[0]
+            return tuple(waves)
 
     def set_channel_label(self, channel: int, label: str) -> None:
         """
@@ -194,44 +193,40 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         y_coord = float(self.instrument.query(f'CH{channel}:LAB:YPOS?'))
         return x_coord, y_coord
 
-    def set_channel_bandwidth(self, channel, bandwidth):
+    def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
         """
         set_channel_bandwidth(channel, bandwidth)
 
-        channel: int, channel number of channel whose bandwidth setting
-                    will be adjusted. valid options are 1, 2, 3, and 4.
-        bandwidth: int or float, desired bandwidth setting for "channel"
-                    in Hz
-
-        sets the bandwidth limiting of "channel" to the value specified by
-        "bandwidth".
-
-        Note: different probes have different possible bandwidth settings,
-        if the value specified in this function isn't availible on the
-        probe connected to the specified input it will likely round UP to
+        Sets the bandwidth limiting of "channel" to the value specified by
+        "bandwidth". Note: different probes have different possible bandwidth
+        settings, if the value specified in this function isn't availible on
+        the probe connected to the specified input it will likely round UP to
         the nearest availible setting
-        """
-        if type(bandwidth) == str:
-            if bandwidth.upper() == 'FULL':
-                self.instrument.write(f"CH{channel}:BAN FULL")
-        else:
-            self.instrument.write(f"CH{channel}:BAN {bandwidth}")
-        return None
 
-    def get_channel_bandwidth(self, channel):
+        Args:
+            channel (int): channel number to configure
+            bandwidth (float): desired bandwidth setting for "channel" in Hz
+        """
+
+        if isinstance(bandwidth, str) and (bandwidth.upper() == 'FULL'):
+            self.instrument.write(f"CH{int(channel)}:BAN FULL")
+        else:
+            self.instrument.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
+
+    def get_channel_bandwidth(self, channel: int) -> float:
         """
         get_channel_bandwidth(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrives the bandwidth setting used by the specified channel in Hz.
 
-        retrived bandwidth limiting setting used by the specified channel
-        in Hz.
+        Args:
+            channel (int): channel number to query information on
 
-        returns float
+        Returns:
+            float: channel bandwidth setting
         """
 
-        response = self.instrument.query(f"CH{channel}:BAN?")
+        response = self.instrument.query(f"CH{int(channel)}:BAN?")
         return float(response)
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
@@ -265,71 +260,70 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         response = self.instrument.query(f'CH{int(channel)}:SCA?')
         return float(response)
 
-    def set_channel_offset(self, channel, offset):
+    def set_channel_offset(self, channel: int, off: float) -> None:
         """
-        set_channel_offset(channel, offset)
+        set_channel_offset(channel, off)
 
-        channel: int, channel number of channel
-            valid options are 1,2,3, and 4
+        Sets the vertical offset for the display of the specified channel.
 
-        offset: int/float, offset added to the channels waveform on the
-                display.
-
-        sets the vertical offset for the display of the specified channel.
+        Args:
+            channel (int): Channel number to query
+            off (float): vertical/amplitude offset
         """
 
-        self.instrument.write(f"CH{channel}:OFFS {offset}")
-        return None
+        self.instrument.write(f"CH{int(channel)}:OFFS {float(off)}")
 
-    def get_channel_offset(self, channel):
+    def get_channel_offset(self, channel: int) -> float:
         """
         get_channel_offset(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrives the vertical offset for the display of the specified channel.
 
-        retrives the vertical offset for the display of the specified
-        channel.
+        Args:
+            channel (int): Channel number to query
 
-        returns: float
+        Returns:
+            float: vertical/amplitude offset
         """
 
-        response = self.instrument.query(f"CH{channel}:OFFS?")
+        response = self.instrument.query(f"CH{int(channel)}:OFFS?")
         return float(response)
 
-    def set_channel_position(self, channel, position):
+    def set_channel_position(self, channel: int, position: float) -> None:
         """
         set_channel_position(channel, position)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Sets the vertical postion of the 0 amplitude line in the display of the
+        specified channel's waveform. The veritcal position is represented a
+        number of vertical division on the display (from the center). Can be
+        positive negative or fractional.
 
-        position: int/float, vertical postion of the 0 point for 'channel'
-
-        sets the vertical postion for the 0 point of the waveform
-        specified by 'channel'
-        position is represented by +/- number of division from the middle
-        of the screen.
+        Args:
+            channel (int): Channel number to query
+            position (float): vertical postion of the 0 amplitude position in
+                the display of the specified channel waveform.
         """
 
-        self.instrument.write(f"CH{channel}:POS {position}")
-        return None
+        self.instrument.write(f"CH{int(channel)}:POS {float(position)}")
 
-    def get_channel_position(self, channel):
+    def get_channel_position(self, channel: int) -> float:
         """
         get_channel_position(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retrieves the vertical postion of the 0 amplitude line used in the
+        display of the specified channel's waveform. The veritcal position is
+        represented a number of vertical division on the display (from the
+        center). Can be positive negative or fractional.
 
-        retrieves the vertical postion for the 0 point of the waveform
-        specified by 'channel' position is represented by +/- number of
-        division from the middle of the screen.
+        Args:
+            channel (int): Channel number to query
 
-        returns: float
+        Returns:
+            float: vertical postion of the 0 amplitude position in the display
+                of the specified channel waveform.
         """
 
-        response = self.instrument.query(f"CH{channel}:POS?")
+        response = self.instrument.query(f"CH{int(channel)}:POS?")
         return float(response)
 
     def set_channel_coupling(self, channel, coupling):
@@ -367,47 +361,46 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         resp = self.instrument.query(f"CH{channel}:COUP?")
         return resp.strip()
 
-    def set_trigger_acquire_state(self, state):
+    def set_trigger_acquire_state(self, state: bool) -> None:
         """
         set_trigger_acquire_state(state)
 
-        state: (int) acquire state, valid arguements are 0 (stop) and
-                1 (run/acquire)
-
         sets the state of the oscilloscopes acquision mode, whether its
-        currently acquiring new data (run / 1) or not (stop / 0).
+        currently acquiring new data.
+
+        Args:
+            state (bool): acquisition state, valid arguements are False (stop)
+                and True (run/acquire)
         """
 
-        self.instrument.write(f"ACQ:STATE {state}")
-        return None
+        self.instrument.write(f"ACQ:STATE {1 if state else 0}")
 
-    def get_trigger_acquire_state(self):
+    def get_trigger_acquire_state(self) -> bool:
         """
         get_trigger_acquire_state()
 
-        returns:
-        state: (int) acquire state, valid arguements are 0 (stop) and
-                1 (run/acquire)
+        Gets the state of the oscilloscopes acquision mode/whether its
+        currently acquiring new data.
 
-        gets the state of the oscilloscopes acquision mode, whether its
-        currently acquiring new data (run / 1) or not (stop / 0).
+        Returns:
+            bool: Acquisition state, valid arguements are False (stop) and
+                True (run/acquire)
         """
 
-        resp = self.instrument.query("ACQ:STATE?")
-        return int(resp)
+        response = self.instrument.query("ACQ:STATE?")
+        return bool(response)
 
-    def trigger_run(self):
+    def trigger_run(self) -> None:
         """
         trigger_run()
 
         sets the state of the oscilloscopes acquision mode to acquire new
-        data. equivalent to set_trigger_acquire_state(1).
+        data. equivalent to set_trigger_acquire_state(True).
         """
 
-        self.set_trigger_acquire_state(1)
-        return None
+        self.set_trigger_acquire_state(True)
 
-    def trigger_stop(self):
+    def trigger_stop(self) -> None:
         """
         trigger_stop()
 
@@ -415,9 +408,8 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         acquiring new data. equivalent to set_trigger_acquire_state(0).
         """
         self.set_trigger_acquire_state(0)
-        return None
 
-    def trigger_force(self):
+    def trigger_force(self) -> None:
         """
         trigger_force()
 
@@ -425,9 +417,8 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         """
 
         self.instrument.write("TRIG FORC")
-        return None
 
-    def trigger_single(self):
+    def trigger_single(self) -> None:
         """
         trigger_single()
 
@@ -436,61 +427,59 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         self.set_trigger_acquire_state(1)
         self.instrument.write("ACQ:STOPA SEQ")
-        return None
 
-    def set_trigger_source(self, channel):
+    def set_trigger_source(self, channel: int) -> None:
         """
         set_trigger_source(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Sets the trigger source to the indicated source channel
 
-        sets the trigger source to the indicated channel number
+        Args:
+            channel (int): channel number to configure
         """
 
-        self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{channel}')
-        return None
+        self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{int(channel)}')
 
-    def get_trigger_source(self):
+    def get_trigger_source(self) -> int:
         """
         get_trigger_source()
 
+        Gets the channel number for the trigger source
 
-        returns:
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
-
-        gets the channel number for the trigger source
+        Returns:
+            int: channel number used for the trigger source
         """
 
-        resp = self.instrument.query('TRIGger:A:EDGE:SOUrce?')
-        channel = int(resp.replace('CH', ''))
-        return channel
+        response = self.instrument.query('TRIGger:A:EDGE:SOUrce?')
+        return int(response.replace('CH', ''))
 
-    def set_trigger_position(self, percent):
+    def set_trigger_position(self, offset: float) -> None:
         """
-        set_trigger_position(percent)
+        set_trigger_position(offset)
 
-        percent: (int) percent of the horizontal capture window valid
-                    values are between 0-100
+        Sets the horizontal position of the trigger point which represents the
+        t=0 point of the data capture.
 
-        Sets the horizontal position of the trigger point as a percentage
-        of the capture window.
+        Args:
+            offset (float): Horizontal position of the trigger as a percentage
+                of the horizontal capture window. Should be between 0-100.
         """
 
-        self.instrument.write(f"HOR:POS {percent}")
-        return None
+        if not (0 <= float(offset) <= 100):
+            raise ValueError('offset out of the valid range [0-100]')
 
-    def get_trigger_position(self):
+        self.instrument.write(f"HOR:POS {float(offset)}")
+
+    def get_trigger_position(self) -> float:
         """
         get_trigger_position()
 
-        returns:
-        percent: (int) percent of the horizontal capture window valid
-                    values are between 0-100
+        Retrieves the horizontal position of the trigger point which represents
+        the t=0 point of the data capture.
 
-        gets the horizontal position of the trigger point as a percentage
-        of the capture window.
+        Returns:
+            float: Horizontal position of the trigger as a percentage of the
+                horizontal capture window.
         """
 
         return float(self.instrument.query("HOR:POS?"))
@@ -525,67 +514,68 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         return slope
 
-    def set_trigger_mode(self, mode):
+    def set_trigger_mode(self, mode: str) -> None:
         """
         set_trigger_mode(mode)
 
-        mode: (str) trigger mode. Valid modes are "AUTO" and "NORM"
+        Sets the mode of the trigger used for data acquisition. In the "AUTO"
+        mode the scope will periodically trigger automatically to update the
+        waveform buffers. In the "NORM" mode the trigger needs to be actively
+        asserted by some control signal for this to occur.
 
-        sets the mode of the trigger in the oscilloscopes acquisition. In
-        the AUTO mode the scope will periodically automatically trigger and
-        the waveform buffers will update. In the NORM mode the trigger
-        needs to be actively asserted for this to take place.
+        Args:
+            mode (str): trigger mode. Valid modes are "AUTO" and "NORM"
         """
 
-        mode = mode.upper()
+        mode = str(mode).upper()
         if mode not in ["AUTO", "NORM", "NORMAL"]:
             raise ValueError(f"Invalid mode: {mode}")
         self.instrument.write(f"TRIG:A:MOD {mode}")
-        return None
 
-    def get_trigger_mode(self):
+    def get_trigger_mode(self) -> str:
         """
         get_trigger_mode()
 
-        returns:
-        mode: (str) trigger mode. Valid modes are "AUTO" and "NORM"
+        Gets the mode of the trigger used for data acquisition. In the "AUTO"
+        mode the scope will periodically trigger automatically to update the
+        waveform buffers. In the "NORM" mode the trigger needs to be actively
+        asserted by some control signal for this to occur.
 
-        Gets the mode of the trigger in the oscilloscopes acquisition. In
-        the AUTO mode the scope will periodically automatically trigger and
-        the waveform buffers will update. In the NORM mode the trigger
-        needs to be actively asserted for this to take place.
+        Returns:
+            str: trigger mode. Valid modes are "AUTO" and "NORM"
         """
 
         response = self.instrument.query("TRIG:A:MOD?")
-        return response.rstrip("\n")
+        return response.rstrip("\n").lower()
 
-    def set_trigger_level(self, level):
+    def set_trigger_level(self, level: float) -> None:
         """
         set_trigger_level(level)
 
-        level: (float) vertical position of the trigger, units depend on
-                the signal being triggered on.
-
-        Sets the vertical position of the trigger point in the units of the
+        Sets the vertical position of the trigger level in the units of the
         triggering waveform
+
+        Args:
+            level (float): vertical position of the trigger, units depend on
+                the signal being triggered on.
         """
 
-        self.instrument.write(f"TRIG:A:LEV {level}")
-        return None
+        self.instrument.write(f"TRIG:A:LEV {float(level)}")
 
-    def get_trigger_level(self):
+    def get_trigger_level(self) -> float:
         """
         get_trigger_level()
 
-        returns
-        level: (float) vertical position of the trigger, units depend on
-                the signal being triggered on.
-
-        Gets the vertical position of the trigger point in the units of the
+        Returns the vertical position of the trigger level in the units of the
         triggering waveform
+
+        Returns:
+            float: vertical position of the trigger, units depend on the signal
+                being triggered on.
         """
 
-        return float(self.instrument.query("TRIG:A:LEV?"))
+        response = self.instrument.query("TRIG:A:LEV?")
+        return float(response)
 
     def set_measure_method(self, method):
         """
@@ -708,29 +698,29 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
     def set_measure_config(self, channel, meas_type, meas_idx):
         """
-            set_measure_config(channel, meas_type, meas_idx)
+        set_measure_config(channel, meas_type, meas_idx)
 
-            channel: (int) channel to provide the source of the measurement
-                        Should be 1-4.
-            meas_type: (str) the type of measurement to perform.
+        channel: (int) channel to provide the source of the measurement
+                    Should be 1-4.
+        meas_type: (str) the type of measurement to perform.
 
-            meas_idx: (int) measurement number to assign to the
-                        measurement described by the above parameters.
-                        Can be 1-8.
+        meas_idx: (int) measurement number to assign to the
+                    measurement described by the above parameters.
+                    Can be 1-8.
 
-            valid measurements are:
-            AMPLITUDE, AREA, BURST, CAREA, CMEAN, CRMS, DELAY, FALL,
-            FREQUENCY, HIGH, HITS, LOW, MAXIMUM, MEAN, MEDIAN, MINIMUM,
-            NDUTY, NOVERSHOOT, NWIDTH, PDUTY, PEAKHITS, PERIOD, PHASE,
-            PK2PK, POVERSHOOT, PTOP, PWIDTH, QFACTOR, RISE, RMS, SIGMA1,
-            SIGMA2, SIGMA3, SNRATIO, STDDEV, UNDEFINED
+        valid measurements are:
+        AMPLITUDE, AREA, BURST, CAREA, CMEAN, CRMS, DELAY, FALL,
+        FREQUENCY, HIGH, HITS, LOW, MAXIMUM, MEAN, MEDIAN, MINIMUM,
+        NDUTY, NOVERSHOOT, NWIDTH, PDUTY, PEAKHITS, PERIOD, PHASE,
+        PK2PK, POVERSHOOT, PTOP, PWIDTH, QFACTOR, RISE, RMS, SIGMA1,
+        SIGMA2, SIGMA3, SNRATIO, STDDEV, UNDEFINED
 
-            Arguement is not case-sensitive
+        Arguement is not case-sensitive
 
-            Sets up a measurement on the desired channel.
+        Sets up a measurement on the desired channel.
         """
 
-        measurement_types = ['AMPLITUDE', 'AREA', 'BURST', 'CAREA',
+        measurement_types = ('AMPLITUDE', 'AREA', 'BURST', 'CAREA',
                              'CMEAN', 'CRMS', 'DELAY', 'DISTDUTY',
                              'EXTINCTDB', 'EXTINCTPCT', 'EXTINCTRATIO',
                              'EYEHEIGHT', 'EYEWIDTH', 'FALL', 'FREQUENCY',
@@ -742,7 +732,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                              'POVERSHOOT', 'PTOP', 'PWIDTH', 'QFACTOR',
                              'RISE', 'RMS', 'RMSJITTER', 'RMSNOISE',
                              'SIGMA1', 'SIGMA2', 'SIGMA3', 'SIXSIGMAJIT',
-                             'SNRATIO', 'STDDEV', 'UNDEFINED', 'WAVEFORMS']
+                             'SNRATIO', 'STDDEV', 'UNDEFINED', 'WAVEFORMS')
 
         meas_type = meas_type.upper()
         if meas_type not in measurement_types:
@@ -795,18 +785,37 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
         return None
 
-    def get_measure_data(self, meas_idx):
+    def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
         """
-        get_measure_data(meas_idx)
+        get_measure_data(*meas_idx)
 
-        meas_idx: (int) measurement number to assign to the measurement
-                    described by the above parameters. Can be 1-8.
+        Returns the current value of the requesed measurement(s) reference by
+        the provided index(s).
 
-        Returns the value of the measurement 'meas_idx' as a float.
+        Args:
+            meas_idx (int): measurement index(s) for the measurement(s) to
+                query. Can be a signal index or an arbitrary sequence of
+                indices.
+
+        Returns:
+            float: Current value of the requested measurement. If no value as
+                been assigned to the measurement yet the returned value is nan.
         """
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:VAL?')
-        return float(resp)
+        data = []
+        for idx in meas_idx:
+
+            query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
+            response = self.instrument.query(query_cmd)
+
+            try:
+                data.append(float(response))
+            except ValueError:
+                data.append(float('nan'))
+
+        if len(data) == 1:
+            return data[0]
+        return tuple(data)
 
     def get_measure_statistics(self, meas_idx):
         """
@@ -871,66 +880,83 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write('MEASU:STATI:MODE OFF')
         return None
 
-    def get_image(self, image_title):
+    def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
         """
-        This scope does not have a function to directly stream the image data
-        from the screen buffer to a remote connection, however there are
-        commands to save to internal memory and transfer saved files over the
-        remote connection. This function saves the scope image to a temporary
-        file on the scope, transfers the file over the remote connection, then
-        deletes the copy in the scopes internal memory.
+        get_image(image_title, **kwargs)
 
-        automatically adds .png to the end of image_title
+        Saves current oscillocope image to file at the path specified by
+        "image_title". The Image will be saved as .png. If no path information
+        is included in "image_title" the image will be saved in the current
+        execution directory.
+
+        Args:
+            image_title (Union[str, Path]): path name of image, file extension
+                will be added automatically
+        Kwargs:
+            save_to_device (bool): Determines which computer the image is
+                stored on. If True "image_title" is assumed to be a path on the
+                oscilloscope itself and the image will be stroed there.
+                Otherwise if False the image is transfered to the remote
+                machine and it is stored there at "image_title".
+                Defaults to False.
         """
 
-        image_buffer_path = r'C:\TekScope\Screen Captures\temp.png'
+        # add file extension
+        if isinstance(image_title, Path):
+            file_path = image_title.parent.joinpath(image_title.name + '.png')
+        elif isinstance(image_title, str):
+            file_path = f"{image_title}.png"
+        else:
+            raise ValueError('image_title must be a str or path-like object')
 
-        self.instrument.write(f'HARDCopy:FILEName "{image_buffer_path}"')
-        self.instrument.write('HARDCopy STARt')
+        if kwargs.get('save_to_device', False):
+            # save to location on scope
+            self.instrument.write(f'HARDCopy:FILEName "{file_path}"')
+            self.instrument.write('HARDCopy STARt')
+        else:
 
-        # SAVE:IMAGE is an OPC generating command. Wait for instrument to
-        # finish writing the screenshot to disk by querying *OPC?
-        self.instrument.write('*OPC?')
+            # save to temp location on scope
+            buffer_path = r'C:\TekScope\Screen Captures\temp.png'
 
-        self.instrument.write(f'FILESystem:READFile "{image_buffer_path}"')
+            self.instrument.write(f'HARDCopy:FILEName "{buffer_path}"')
+            self.instrument.write('HARDCopy STARt')
+            self.instrument.write('*OPC?')  # done yet?
 
-        # Read back the data sent from the instrument and write the data
-        # (un-altered) it to a .png file on your local system.
-        raw_data = self.instrument.read_raw()
+            # transfer file to computer
+            self.instrument.write(f'FILESystem:READFile "{buffer_path}"')
+            raw_data = self.instrument.read_raw()
 
-        fid = open(f"{image_title}.png", 'wb')
-        fid.write(raw_data)
-        fid.close()
+            # save image
+            with open(file_path, 'wb') as file:
+                file.write(raw_data)
 
-        self.instrument.write(f'FILESystem:DELEte "{image_buffer_path}"')
-        return None
-
-    def set_record_length(self, length):
+    def set_record_length(self, length: int) -> None:
         """
         set_record_length(length)
 
-        length: int, number of points to capture in the waveform buffer per
-                scope trigger
-
-        changes the length of the waveform buffer to the value specified by
+        Changes the length of the waveform buffer to the value specified by
         'length'. Note: different scopes have different possible record length
         options, if the value specified in this function isn't availible on the
         scope connected round to the nearest availible setting.
+
+        Args:
+            length (int): number of points to capture in the waveform buffer
+                per scope trigger
         """
 
-        self.instrument.write(f"HOR:RECO {length}")
-        return None
+        self.instrument.write(f"HOR:RECO {int(length)}")
 
-    def get_record_length(self):
+    def get_record_length(self) -> int:
         """
         get_record_length()
 
         retrives the current length of the waveform buffer.
 
-        returns: float
+        Returns:
+            int: len of the waveform buffer
         """
 
-        return float(self.instrument.query("HOR:RECO?"))
+        return int(self.instrument.query("HOR:RECO?"))
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -944,17 +970,16 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 display in seconds.
         """
 
-        self.instrument.write(f'HOR:SCA {scale}')
-        return None
+        self.instrument.write(f'HOR:SCA {float(scale)}')
 
     def get_horizontal_scale(self) -> float:
         """
         get_horizontal_scale()
 
-        retrieves the scale of horizontal divisons in seconds.
+        Retrieves the horizontal scale used to accquire waveform data.
 
         Returns:
-            (float): horizontal scale
+            float: horizontal scale in seconds per division.
         """
 
         response = self.instrument.query('HOR:SCA?')
