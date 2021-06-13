@@ -687,7 +687,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         if kwargs.get('return_time', True):
             t_div, t_off = desc['horiz_interval'], desc['horiz_offset']
-
             # all waveforms assumed to have same duration (just use last)
             t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
 

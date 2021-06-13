@@ -187,7 +187,7 @@ class Scpi_Instrument():
 
         return not self.__eq__(obj)
 
-    def send_raw_scpi(self, command_str):
+    def send_raw_scpi(self, command_str, **kwargs):
         """
         send_raw_scpi(command_str)
 
@@ -204,10 +204,10 @@ class Scpi_Instrument():
             None
         """
 
-        self.instrument.write(command_str)
+        self.instrument.write(command_str, **kwargs)
         return None
 
-    def query_raw_scpi(self, query_str):
+    def query_raw_scpi(self, query_str, **kwargs):
         """
         query_raw_scpi(query)
 
@@ -221,7 +221,19 @@ class Scpi_Instrument():
 
         """
 
-        return self.instrument.query(query_str)
+        return self.instrument.query(query_str, **kwargs)
+
+    def read_raw_scpi(self, **kwargs):
+        """
+        read_raw_scpi()
+
+        Pass-through function which reads the device, returning the response
+        without any processing. This function is intended to be used for API
+        calls for functionally that is not currently supported.
+        Only to be used for read.
+        """
+
+        return self.instrument.read(**kwargs)
 
 
 class EnvironmentSetup():
@@ -403,6 +415,10 @@ class EnvironmentSetup():
                     raise ConnectionError(f"Failed connection: {device_name}")
         return None
 
+    # def __del__(self):
+    #     # something to consider... when python exits, should equipment
+    #     # be automatically released? (mode to local etc)
+    #     return None
 
 def get_callable_methods(instance):
     """
@@ -460,6 +476,42 @@ def initiaize_device(inst, initialization_sequence):
                 print(f"\tError with initialization command\t{error}")
 
     return None
+
+
+def get_equip(ped, jsonfile, equipment, init_devices=False, errors=True):
+    """get_equip(ped, jsonfile, equipment)
+
+    Args:
+        ped : pythonequipmentdrivers instance
+        jsonfile (file): setup file for pythonequipmentdrivers listing the
+                         equipment available to connect with
+        equipment (list or tuple): equipment to make connection to
+        init_devices (bool, optional): Send init commands to equipment.
+                                       Defaults to False. False leaves the
+                                       present settings in the equipment
+        errors (bool, optional): if False, ignore errors and return None
+    Returns:
+        env: instance of ped with your equipment ready for commands
+    Example:
+        import pythonequipmentdrivers as ped
+        jsonfile = 'bench.json'
+        equipment = ['multimeter_01', 'dac_01']
+        env = ped.get_equip(ped, jsonfile, equipment)
+        env.multimeter_01.measure_voltage()
+    """
+    if equipment is None:
+        print("warning, no equipment requested!")
+    try:
+        env = ped.EnvironmentSetup(jsonfile,
+                                   object_mask=equipment,
+                                   init_devices=False)
+    except ConnectionError:
+        if errors:
+            raise
+        else:
+            print("no equipment found, running without!")
+            return None
+    return env
 
 
 # Testing Errors
