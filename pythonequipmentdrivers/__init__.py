@@ -1,12 +1,12 @@
 from .__core import (get_devices_addresses, identify_devices, Scpi_Instrument,
                      VisaIOError, EnvironmentSetup,
-                     initiaize_device, get_equip)
+                     initiaize_device)
 
 
 from . import source
 from . import sink
 from . import multimeter
-from . import dataaquisition
+from . import daq
 
 from . import powermeter
 from . import oscilloscope
@@ -20,8 +20,6 @@ __all__ = ['Scpi_Instrument', 'EnvironmentSetup',
            'get_devices_addresses', 'identify_devices',
 
            'initiaize_device',
-           'get_equip',
-
            'VisaIOError',
 
            'utility',
@@ -33,4 +31,4 @@ __all__ = ['Scpi_Instrument', 'EnvironmentSetup',
            'oscilloscope',
            'networkanalyzer',
            'functiongenerator',
-           'dataaquisition']
+           'daq']

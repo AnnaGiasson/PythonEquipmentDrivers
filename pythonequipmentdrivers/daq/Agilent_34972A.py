@@ -1,11 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument as _Scpi_Instrument
-import time
-from pyvisa import VisaIOError
+from pythonequipmentdrivers import (Scpi_Instrument, VisaIOError)
+from time import sleep
 
 
-class AG_34972A(_Scpi_Instrument):
+class Agilent_34972A(Scpi_Instrument):
     """
-    AG_34972A()
+    Agilent_34972A()
 
     address: str, address of the connected data aquisition dac
     ch_change_time, optional: mux switching time
@@ -285,7 +284,7 @@ class AG_34972A(_Scpi_Instrument):
         return
 
     def get_trigger_timer(self, **kwargs):
-        return self.resp_format(self.instrument.query(f"TRIG:TIM?",
+        return self.resp_format(self.instrument.query("TRIG:TIM?",
                                                       **kwargs), float)
 
     def trigger(self, wait=True, **kwargs):
@@ -307,7 +306,7 @@ class AG_34972A(_Scpi_Instrument):
                   f" should be {self.valid_trigger['BUS']}")
             pass
         if wait:
-            time.sleep(self.measure_time)  # should work most of the time.
+            sleep(self.measure_time)  # should work most of the time.
             # it should also wait nplc time per channel
             # need to make a function to track nplc time
             # if nplc is longer than 1, then this will fail, if shorter
@@ -414,7 +413,6 @@ class AG_34972A(_Scpi_Instrument):
             return float(0)
 
         return response
-
 
     def read(self, chan=None, **kwargs):
         """
@@ -619,7 +617,7 @@ class AG_34972A(_Scpi_Instrument):
         """
         if self.ch_change_time != ch_change_time:
             self.ch_change_time = ch_change_time
-        time.sleep(n * self.ch_change_time)
+        sleep(n * self.ch_change_time)
         return
 
     def monitor(self, chan: int = None, verbose: bool = False, **kwargs):

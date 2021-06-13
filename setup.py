@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 
 setup(name='pythonequipmentdrivers',
-      version='1.7.0',
+      version='1.7.1',
       description="""
                   A library of software drivers to interface with various
                   pieces of test instrumentation
                   """,
       url='https://github.com/AnnaGiasson/PythonEquipmentDrivers',
       author='Anna Giasson',
-      author_email='agiasson@vicr.com', license='None',
+      author_email='AnnaGraceGiasson@GMail.com', license='MIT',
       packages=find_packages(), zip_safe=False,
       classifiers=[
                    'Development Status :: 4 - Beta',
