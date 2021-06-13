@@ -115,7 +115,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         if kwargs.get('return_time', True):
             # generate time vector / account for trigger position
             # all waveforms assumed to have same duration (just use last)
-
             t = np.arange(0, dt*len(wave), dt, dtype=dtype)
             t -= (x_offset - min([start_idx, stop_idx]))*dt
 
