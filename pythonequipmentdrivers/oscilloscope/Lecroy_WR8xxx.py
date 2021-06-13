@@ -19,8 +19,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
     """
 
     valid_trigger_states = ['AUTO', 'NORM', 'SINGLE', 'STOP']
-    valid_trigger_slopes = {'POS': 'POS', 'RISE': 'POS',
-                            'NEG': 'NEG', 'FALL': 'NEG'}
 
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
@@ -110,24 +108,51 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         val = response.split()[1]
         return float(val)
 
-    def set_channel_coupling(self, channel, coupling):
+    def set_channel_coupling(self, channel: int, coupling: str) -> None:
         """
-        valid options are 'dc_1meg' == 'dc', 'dc_50', 'ac_1meg' == 'ac', 'gnd'
+        set_channel_coupling(channel, coupling)
+
+        Sets the coupling used on a the specified channel. For this
+        oscilloscope the following coupling options are supported:
+        "dc" == "dc_1meg", "dc_50", "ac" == "ac_1meg", and "gnd".
+
+        Args:
+            channel (int): channel number to adjust
+            coupling (str): coupling mode
         """
+
         coupling_map = {'dc_1meg': 'D1M', "dc": 'D1M',
                         'dc_50': 'D50',
                         'ac_1meg': 'A1M', 'ac': 'A1M',
                         'gnd': 'gnd'}
-        coupling = coupling_map[coupling.lower()]
-        self.instrument.write(f"C{channel}:COUPLING {coupling}")
-        return None
 
-    def get_channel_coupling(self, channel):
-        coupling_map = {'D1M': 'dc_1meg', 'D50': 'dc_50',
-                        'A1M': 'ac_1meg', 'gnd': 'gnd'}
+        coupling = coupling_map[coupling.lower()]
+        if coupling not in coupling_map.keys():
+            raise ValueError(f"Invalid Coupling option: {coupling}. "
+                             f"Suuport options are: {coupling_map.keys()}")
+
+        self.instrument.write(f"C{int(channel)}:COUPLING {coupling}")
+
+    def get_channel_coupling(self, channel: int) -> str:
+        """
+        get_channel_coupling(channel)
+
+        Retirives the coupling used on a the specified channel. For this
+        oscilloscope the following coupling options are supported:
+        "dc", "dc_50", "ac", and "gnd".
+
+        Args:
+            channel (int): channel number to query
+
+        Returns:
+            str: coupling mode
+        """
+
+        coupling_map = {'D1M': 'dc', 'D50': 'dc_50',
+                        'A1M': 'ac', 'gnd': 'gnd'}
+
         response = self.instrument.query(f"C{int(channel)}:COUPLING?")
-        coupling = response.split()[-1]
-        return coupling_map[coupling]
+        return coupling_map[response.split()[-1]]
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -412,7 +437,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
     def set_trigger_level(self, level: float, **kwargs) -> None:
         """
-        set_trigger_level(self, level, **kwargs)
+        set_trigger_level(level, **kwargs)
 
         Sets the vertical position of the trigger point in the units of the
         triggering waveform
@@ -453,53 +478,53 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return float(response.lstrip(read_cmd).split()[0])
 
-    def set_trigger_slope(self, slope, source=None):
+    def set_trigger_slope(self, slope: str, **kwargs) -> None:
         """
-        set_trigger_slope(slope)
+        set_trigger_slope(slope, **kwargs)
 
-        slope: (str) trigger edge polarity. Valid options are 'rise'/'pos' or
-               'fall'/'neg'.
+        Sets the edge polarity of the acquistion trigger. Valid options for
+        this oscilloscope are 'rise'/'pos' or 'fall'/'neg'.
 
-        source: (int, or None) channel number to set the trigger slope for. If
-                None the channel currently used for triggering will be used
-                (default = None)
-
-        sets the edge polarity of the acquistion trigger
+        Args:
+            slope (str): trigger edge polarity.
+        Kwargs:
+            source (int): channel number to set the trigger level for. If not
+                provided the default behavior is to use whichever channel is
+                currently being used for triggering.
         """
 
-        if source is None:
-            source = self.get_trigger_source()
+        valid_options = {'POS': 'POS', 'RISE': 'POS',
+                         'NEG': 'NEG', 'FALL': 'NEG'}
+
+        source = kwargs.get('source', self.get_trigger_source())
 
         slope = slope.upper()
-        if slope in self.valid_trigger_slopes:
-            slope = self.valid_trigger_slopes[slope]
-            self.instrument.write(f'C{source}:TRSL {slope}')
-        else:
-            raise ValueError("invalid option for arg 'slope'")
-        return None
+        if slope not in valid_options.keys():
+            raise ValueError('Invalid option for Arg "slope".'
+                             f' Valid option are {valid_options.keys()}')
 
-    def get_trigger_slope(self, source=None):
+        self.instrument.write(f'C{int(source)}:TRSL {valid_options[slope]}')
+
+    def get_trigger_slope(self, **kwargs) -> str:
         """
-        get_trigger_slope()
+        get_trigger_slope(**kwargs)
 
-        source: (int, or None) channel number to get the trigger slope for. If
-                None the channel currently used for triggering will be used
-                (default = None)
+        Retrives the edge polarity of the acquistion trigger. Valid options for
+        this oscilloscope are 'rise'/'pos' or 'fall'/'neg'.
 
-        returns:
-        slope: (str) trigger edge polarity. Valid options are 'POS' or
-               'NEG'.
+        Kwargs:
+            source (int): channel number to set the trigger level for. If not
+                provided the default behavior is to use whichever channel is
+                currently being used for triggering.
 
-        gets the edge polarity of the acquistion trigger
+        Returns:
+            str: trigger edge polarity
         """
 
-        if source is None:
-            source = self.get_trigger_source()
+        source = kwargs.get('source', self.get_trigger_source())
 
         response = self.instrument.query(f'C{source}:TRSL?')
-        slope = response.split()[-1]
-
-        return slope
+        return response.split()[-1].lower()
 
     def set_trigger_position(self, offset: float, **kwargs) -> None:
         """

@@ -45,7 +45,6 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         self.instrument.write(cmd_str)
         return None
 
-    # investigate using faster data encoding scheme     # check
     def get_channel_data(self, *channels: int, **kwargs) -> tuple:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
@@ -165,34 +164,47 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         response = self.instrument.query(f'CH{channel}:LAB:NAM?')
         return response.strip().replace('"', '')
 
-    def set_channel_label_position(self, channel, rel_coords):
+    def set_channel_label_position(self, channel: int, pos: tuple) -> None:
         """
-        set_channel_label_position(channel, rel_coords)
+        set_channel_label_position(channel, pos)
 
-        channel: int, channel number of channel whose bandwidth setting
-                    will be adjusted. valid options are 1, 2, 3, and 4.
+        Configures the placement of label text relative to the 0 amplitude
+        point on the display for a given channel.
 
-        re_coords is a tuple (float, float) of the relative x,y positon of
-        the channel label w.r.t. the numerical label in # of divisions
+        Args:
+            channel (int): channel number to adjust
+            pos (tuple[float, float]): the relative x, y positon of
+                the channel label with respect to the waveform as number of
+                divisions.
         """
-        x_coord, y_coord = rel_coords
-        self.instrument.write(f'CH{channel}:LAB:XPOS {x_coord}')
-        self.instrument.write(f'CH{channel}:LAB:YPOS {y_coord}')
-        return None
 
-    def get_channel_label_position(self, channel):
+        if (not isinstance(pos, (tuple, list))) or (len(pos) != 2):
+            raise ValueError('Arg "pos" must be an iterable of length 2')
+
+        x_coord, y_coord = pos
+
+        self.instrument.write(f'CH{int(channel)}:LAB:XPOS {float(x_coord)}')
+        self.instrument.write(f'CH{int(channel)}:LAB:YPOS {float(y_coord)}')
+
+    def get_channel_label_position(self, channel: int) -> tuple[float, float]:
         """
         get_channel_label_position(channel)
 
-        channel: int, channel number of channel whose bandwidth setting
-                    will be adjusted. valid options are 1, 2, 3, and 4.
+        Retrivies the configuration of the placement of label text relative to
+        the 0 amplitude point on the display for a given channel.
 
-        returns a tuple (float, float) of the relative x,y positon of the
-        channel label w.r.t. the numerical label in # of divisions
+        Args:
+            channel (int): hannel number to query
+
+        Returns:
+            tuple[float, float]: the relative x, y positon of the channel label
+                with respect to the waveform as a number of divisions.
         """
-        x_coord = float(self.instrument.query(f'CH{channel}:LAB:XPOS?'))
-        y_coord = float(self.instrument.query(f'CH{channel}:LAB:YPOS?'))
-        return x_coord, y_coord
+
+        x_coord = float(self.instrument.query(f'CH{int(channel)}:LAB:XPOS?'))
+        y_coord = float(self.instrument.query(f'CH{int(channel)}:LAB:YPOS?'))
+
+        return (x_coord, y_coord)
 
     def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
         """
@@ -327,39 +339,44 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         response = self.instrument.query(f"CH{int(channel)}:POS?")
         return float(response)
 
-    def set_channel_coupling(self, channel, coupling):
+    def set_channel_coupling(self, channel: int, coupling: str) -> None:
         """
         set_channel_coupling(channel, coupling)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
-        coupling: (str) coupling mode, valid options are "DC", "AC", "GND",
-                    and "DC REJ". (not case-sensitive)
+        Sets the coupling used on a the specified channel. For this
+        oscilloscope the following coupling options are supported: "DC", "AC",
+        "GND", and "DC REJ"
 
-        sets the coupling used on a the specified channel.
+        Args:
+            channel (int): channel number to adjust
+            coupling (str): coupling mode
         """
 
-        coupling = coupling.upper()
-        if coupling not in ["DC", "AC", "GND", "DCREJ"]:
-            raise ValueError(f"Invalid Coupling option: {coupling}")
-        self.instrument.write(f"CH{channel}:COUP {coupling}")
-        return None
+        valid_modes = ("DC", "AC", "GND", "DCREJ")
 
-    def get_channel_coupling(self, channel):
+        coupling = str(coupling).upper()
+        if coupling not in valid_modes:
+            raise ValueError(f"Invalid Coupling option: {coupling}. "
+                             f"Suuport options are: {valid_modes}")
+
+        self.instrument.write(f"CH{int(channel)}:COUP {coupling}")
+
+    def get_channel_coupling(self, channel: int) -> str:
         """
         get_channel_coupling(channel)
 
-        channel: int, channel number of channel
-                    valid options are 1,2,3, and 4
+        Retirives the coupling used on a the specified channel. For this
+        oscilloscope the following coupling options are supported: "DC", "AC",
+        "GND", and "DC REJ"
 
-        returns:
-        coupling: (str) coupling mode, valid options are "DC", "AC", "GND",
-                    and "DC REJ". (not case-sensitive)
+        Args:
+            channel (int): channel number to query
 
-        gets the coupling used on a the specified channel.
+        Returns:
+            str: coupling mode
         """
 
-        resp = self.instrument.query(f"CH{channel}:COUP?")
+        resp = self.instrument.query(f"CH{int(channel)}:COUP?")
         return resp.strip()
 
     def set_trigger_acquire_state(self, state: bool) -> None:
@@ -485,35 +502,39 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         return float(self.instrument.query("HOR:POS?"))
 
-    def set_trigger_slope(self, slope):
+    def set_trigger_slope(self, slope: str) -> None:
         """
         set_trigger_slope(slope)
 
-        slope: str, trigger edge polarity. Valid options are 'rise', 'fall', or
-        'either'
+        Sets the edge polarity of the acquistion trigger. Valid options for
+        this oscilloscope are 'rise', 'fall', or 'either'.
 
-        sets the edge polarity of the acquistion trigger
+        Args:
+            slope (str): trigger edge polarity.
         """
 
-        slope = slope.upper()
-        self.instrument.write(f'TRIGger:A:EDGE:SLOpe {slope}')
-        return None
+        valid_options = ('RISE', 'FALL', 'EITHER')
 
-    def get_trigger_slope(self):
+        slope = str(slope).upper()
+        if slope not in valid_options:
+            raise ValueError('Invalid option for Arg "slope".'
+                             f' Valid option are {valid_options}')
+
+        self.instrument.write(f'TRIGger:A:EDGE:SLOpe {slope}')
+
+    def get_trigger_slope(self) -> str:
         """
         get_trigger_slope()
 
-        returns:
-        slope: str, trigger edge polarity. Valid options are 'rise', 'fall', or
-        'either'
+        Retrives the edge polarity of the acquistion trigger. Valid options for
+        this oscilloscope are 'rise', 'fall', or 'either'.
 
-        gets the edge polarity of the acquistion trigger
+        Returns:
+            str: trigger edge polarity.
         """
 
-        resp = self.instrument.query('TRIGger:A:EDGE:SLOpe?')
-        slope = resp.rstrip('\n').lower()
-
-        return slope
+        response = self.instrument.query('TRIGger:A:EDGE:SLOpe?')
+        return response.rstrip('\n').lower()
 
     def set_trigger_mode(self, mode: str) -> None:
         """
