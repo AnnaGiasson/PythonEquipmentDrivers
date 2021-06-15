@@ -1,6 +1,6 @@
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
-from typing import Union
+from typing import Union, Tuple
 from pathlib import Path
 
 
@@ -53,7 +53,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         """
 
         self.instrument.write(f'C{int(channel)}:VDIV {float(scale)}')
-        return None
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -655,7 +654,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             description[key] = value
         return description
 
-    def get_channel_data(self, *channels: int, **kwargs) -> tuple:
+    def get_channel_data(self, *channels: int, **kwargs) -> Tuple:
         """
         get_channel_data(*channels, return_time=True, dtype=np.float32)
 
@@ -735,7 +734,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         q_str = f"""vbs 'app.acquisition.C{channel}.LabelsText = "{label}" '"""
         self.instrument.write(q_str)
-        return None
 
     def set_channel_display(self, channel, mode):
         # mode = "true" or "false"
@@ -781,7 +779,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         else:
             raise ValueError('Invalid duration, valid times (s): ' +
                              ', '.join(map(str, valid_durs)))
-        return None
 
     def get_persistence_time(self) -> Union[float, str]:
         """

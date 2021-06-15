@@ -3,7 +3,7 @@ import struct
 import numpy as np
 from time import sleep
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 
 class Tektronix_DPO4xxx(Scpi_Instrument):
@@ -37,7 +37,7 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
 
-    def get_channel_data(self, *channels: int, **kwargs) -> tuple:
+    def get_channel_data(self, *channels: int, **kwargs) -> Tuple:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
                          return_time=True, dtype=np.float32)
@@ -137,7 +137,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
 
         self.instrument.write(f'CH{int(channel)}:LAB "{label}"')
-        return None
 
     def get_channel_label(self, channel: int) -> str:
         """
@@ -201,7 +200,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
 
         self.instrument.write(f'CH{int(channel)}:SCA {float(scale)}')
-        return None
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -615,8 +613,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
 
         self.instrument.write(f'DIS:PERS {val}')
 
-        return None
-
     def get_persistence_time(self) -> float:
         """
         get_persistence_time()
@@ -657,7 +653,6 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         """
 
         self.instrument.write(f'HOR:SCA {float(scale)}')
-        return None
 
     def get_horizontal_scale(self) -> float:
         """
