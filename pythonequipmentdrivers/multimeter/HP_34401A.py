@@ -1,5 +1,5 @@
 from pythonequipmentdrivers import Scpi_Instrument
-import time
+from time import sleep
 
 
 class HP_34401A(Scpi_Instrument):
@@ -37,73 +37,20 @@ class HP_34401A(Scpi_Instrument):
                    'DIOD': "DIOD",
                    'D': 'DIOD',
                    'CONT': "CONT",
-                   'CONT': 'CONT',
                    'PER': "PER",
                    'P': 'PER'}
-    acdc = {'DC': ':DC',
-            'AC': ':AC'}
-    valid_ranges = {'AUTO': '',
-                    'MIN': 'MIN,',
-                    'MAX': 'MAX,',
-                    'DEF': 'DEF,',
-                    0.1: '0.1,',
-                    1: '1,',
-                    10: '10,',
-                    100: '100,',
-                    300: '300,',
-                    '0.1': '0.1,',
-                    '1': '1,',
-                    '10': '10,',
-                    '100': '100,',
-                    '300': '300,'}
-    valid_cranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     0.01: '0.01,',
-                     0.1: '0.1,',
-                     1: '1,',
-                     3: '3,',
-                     '0.01': '0.01,',
-                     '0.1': '0.1,',
-                     '1': '1,',
-                     '3': '3,'}
-    valid_Rranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     100: '100,',
-                     1E3: '1E3,',
-                     10E3: '10E3,',
-                     100E3: '100E3,',
-                     1E6: '1E6,',
-                     10E6: '10E6,',
-                     100E6: '100E6,',
-                     '100': '100,',
-                     '1E3': '1E3,',
-                     '10E3': '10E3,',
-                     '100E3': '100E3,',
-                     '1E6': '1E6,',
-                     '10E6': '10E6,',
-                     '100E6': '100E6,'}
-    nplc = {'0.02': '0.02,',
-            '0.2': '0.2,',
-            '1': '1,',
-            '2': '2,',
-            '10': '10,',
-            '20': '20,',
-            '100': '100,',
-            '200': '200,',
-            'MIN': 'MIN,',
-            'MAX': 'MAX,',
-            0.02: '0.02,',
-            0.2: '0.2,',
-            1: '1,',
-            2: '2,',
-            10: '10,',
-            20: '20,',
-            100: '100,',
-            200: '200,'}
+
+    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                    '0.1', '1', '10', '100', '300'}
+
+    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '0.01', '0.1', '1', '3'}
+
+    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+
+    nplc = {'0.02', '0.2', '1', '2', '10', '20', '100', '200', 'MIN', 'MAX'}
+
     valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
                          '0.2': 0.00001,  # this * range = resolution
                          '1': 0.000003,
@@ -113,15 +60,8 @@ class HP_34401A(Scpi_Instrument):
                          '100': 0.0000003,
                          '200': 0.00000022,
                          'MIN': 0.0001,
-                         'MAX': 0.00000022,
-                         0.02: 0.0001,
-                         0.2: 0.00001,
-                         1: 0.000003,
-                         2: 0.0000022,
-                         10: 0.000001,
-                         20: 0.0000008,
-                         100: 0.0000003,
-                         200: 0.00000022}
+                         'MAX': 0.00000022}
+
     valid_trigger = {'BUS': 'BUS',
                      'IMMEDIATE': 'IMMediate',
                      'IMM': 'IMMediate',
@@ -135,7 +75,7 @@ class HP_34401A(Scpi_Instrument):
                      'TIME': 'TIMer',
                      'TIM': 'TIMer'}
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.factor = kwargs.get('factor', 1.0)
         self.nplc_default = 1  # power line cycles to average
@@ -143,9 +83,12 @@ class HP_34401A(Scpi_Instrument):
         self.sample_count = self.get_sample_count()
         self.measure_time = self.set_measure_time()
         self.trigger_mode = self.get_trigger_source()
-        return None
 
-    def set_mode(self, mode):
+    def __del__(self) -> None:
+        self.set_local()
+        super().__del__()
+
+    def set_mode(self, mode: str) -> None:
         """
         set_mode(mode)
 
@@ -159,14 +102,13 @@ class HP_34401A(Scpi_Instrument):
         Configures the multimeter to perform the specified measurement
         """
 
-        mode = mode.upper()
-        if mode in self.valid_modes:
-            self.instrument.write(f"CONF:{self.valid_modes[mode]}")
-        else:
+        mode = str(mode).upper()
+        if not (mode in self.valid_modes):
             raise ValueError("Invalid mode option")
-        return None
 
-    def get_mode(self):
+        self.instrument.write(f"CONF:{self.valid_modes[mode]}")
+
+    def get_mode(self) -> str:
         """
         get_mode()
 
@@ -175,12 +117,13 @@ class HP_34401A(Scpi_Instrument):
 
         returns: str
         """
-        response = self.instrument.query("FUNC?")
-        response = response.rstrip().replace('"', '')
-        return response
 
-    def get_error(self, **kwargs):
-        """get_error
+        response = self.instrument.query("FUNC?")
+        return response.rstrip().replace('"', '')
+
+    def get_error(self, **kwargs) -> str:
+        """
+        get_error
 
         Returns:
             [list]: last error in the buffer
@@ -188,14 +131,9 @@ class HP_34401A(Scpi_Instrument):
         response = self.instrument.query('SYSTem:ERRor?', **kwargs)
         return self.resp_format(response, str)
 
-    def set_trigger(self, trigger, **kwargs):
+    def set_trigger(self, trigger: str, **kwargs) -> None:
         """
         set_trigger(trigger)
-
-        trigger: str, type of trigger to be done
-            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'
-            which correspond to 'BUS', 'IMMEDIATE', 'EXTERNAL'
-            respectively (not case sensitive)
 
         Configures the multimeter to trigger as specified
         The TRIGger subsystem configures the triggering that controls
@@ -205,80 +143,98 @@ class HP_34401A(Scpi_Instrument):
         ([SENSe:]<function>:RANGe:AUTO OFF) or set a fixed range using the
         [SENSe:]<function>:RANGe, CONFigure, or MEASure command.
 
+        trigger: str, type of trigger to be done
+            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'.
         """
-        if 'delay' in kwargs:
-            delay = kwargs['delay'].upper()
+
+        valid_delay = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM'}
+        valid_count = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM', 'INF', 'INFINITE'}
+
+        if kwargs.get('delay', False):
+
+            if isinstance(kwargs['delay'], str):
+                delay = kwargs['delay'].upper()
+            else:
+                delay = kwargs['delay']
+
+            if not ((delay in valid_delay) or isinstance(delay, (int, float))):
+                raise ValueError(f"Invalid trigger delay. Use: {valid_delay}")
+
             self.instrument.write(f"TRIG:DELay {delay}")
-        else:
-            raise ValueError("Invalid trigger option")
-        if 'count' in kwargs:
-            count = kwargs['count'].upper()
+
+        if kwargs.get('count', False):
+
+            if isinstance(kwargs['count'], str):
+                count = kwargs['count'].upper()
+            else:
+                count = kwargs['count']
+
+            if not ((count in valid_count) or isinstance(count, int)):
+                # note: if count is not an int the 2nd condition wont execute
+                if isinstance(count, int) and (1 <= count <= 50000):
+                    pass
+                else:
+                    raise ValueError('Invalid trigger count.'
+                                     f' Use: {valid_count} or an int within'
+                                     ' the range [1, 50000]')
+
             self.instrument.write(f"TRIG:COUNt {count}")
-        else:
-            raise ValueError("Invalid trigger option")
-        if 'level' in kwargs:
-            level = kwargs['level'].upper()
-            self.instrument.write(f"TRIG:LEVel {level}")
-        else:
-            raise ValueError("Invalid trigger option")
-        if 'slope' in kwargs:
-            slope = kwargs['slope'].upper()
-            self.instrument.write(f"TRIG:SLOPe {slope}")
-        else:
-            raise ValueError("Invalid trigger option")
 
-        trigger = trigger.upper()
-        if trigger in self.valid_trigger:
-            self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
-        else:
+        trigger = str(trigger).upper()
+        if not (trigger in self.valid_trigger):
             raise ValueError("Invalid trigger option")
+        self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
 
-        return
-
-    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs):
+    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs) -> None:
         """
         set_trigger(trigger)
 
-        trigger: str, type of trigger to be done
-            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'
-            which correspond to 'BUS', 'IMMEDIATE', 'EXTERNAL'
-            respectively (not case sensitive)
-
         Configures the multimeter to trigger as specified
-        """
-        trigger = trigger.upper()
-        if trigger in self.valid_trigger:
-            self.trigger_mode = self.valid_trigger[trigger]
-            self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
-        else:
-            raise ValueError("Invalid trigger option")
-        return
 
-    def get_trigger_source(self, **kwargs):
-        self.trigger_mode = self.valid_trigger[self.resp_format(
-            self.instrument.query("TRIG:SOUR?", **kwargs), str)]
+        trigger: str, type of trigger to be done
+            valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'.
+        """
+
+        trigger = str(trigger).upper()
+        if trigger not in self.valid_trigger:
+            raise ValueError("Invalid trigger option")
+
+        self.trigger_mode = self.valid_trigger[trigger]
+        self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
+
+    def get_trigger_source(self, **kwargs) -> str:
+
+        response = self.instrument.query("TRIG:SOUR?", **kwargs)
+        fmt_resp = self.resp_format(response, str)
+
+        self.trigger_mode = self.valid_trigger[fmt_resp]
         return self.trigger_mode
 
-    def set_trigger_count(self, count: int = None, **kwargs):
-        """set_trigger_count(count)
+    def set_trigger_count(self, count: int, **kwargs) -> None:
+        """
+        set_trigger_count(count)
 
         Args:
-            count ([int]): how many readings to take when triggered
-
-        Raises:
-            ValueError: [description]
+            count (int): how many readings to take when triggered
         """
-        if count is None:
-            return self.get_trigger_count()
-        elif isinstance(count, int):
-            self.instrument.write(f"TRIG:COUN {count}", **kwargs)
-        else:
-            raise ValueError("Invalid trigger count number type, use int")
-        return
+        valid_count = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM', 'INF', 'INFINITE'}
 
-    def get_trigger_count(self, **kwargs):
-        return int(self.resp_format(self.instrument.query(f"TRIG:COUN?",
-                                                          **kwargs), float))
+        count = count.upper() if isinstance(count, str) else count
+
+        if not ((count in valid_count) or isinstance(count, int)):
+            # note: if count is not an int the 2nd condition wont execute
+            if isinstance(count, int) and (1 <= count <= 50000):
+                pass
+            else:
+                raise ValueError('Invalid trigger count.'
+                                 f' Use: {valid_count} or an int within'
+                                 ' the range [1, 50000]')
+
+        self.instrument.write(f"TRIG:COUNt {count}", **kwargs)
+
+    def get_trigger_count(self, **kwargs) -> int:
+        response = self.instrument.query("TRIG:COUN?", **kwargs)
+        return int(self.resp_format(response, float))
 
     def measure_voltage(self):
         """
@@ -388,18 +344,19 @@ class HP_34401A(Scpi_Instrument):
             response = self.instrument.query("MEAS:FREQ?")
             return float(response)
 
-    def init(self, **kwargs):
+    def init(self, **kwargs) -> None:
         """
+        init(**kwargs)
+
         Initialize the meter, used with BUS trigger typically
         Use fetch_data (FETCh) to get the data.
-        Returns:
-            None
         """
-        self.instrument.write('INITiate', **kwargs)
-        return None
 
-    def fetch_data(self, **kwargs):
-        """fetch_data
+        self.instrument.write('INITiate', **kwargs)
+
+    def fetch_data(self, **kwargs) -> float:
+        """
+        fetch_data(**kwargs)
 
         Returns:
             [list, float]: data in meter memory resulting from all scans
@@ -407,35 +364,18 @@ class HP_34401A(Scpi_Instrument):
         response = self.instrument.query('FETC?', **kwargs)
         return self.resp_format(response, float)
 
-    def cls(self, **kwargs):
-        """cls()
-        Send VISA *CLS, clear visa bus
-        Returns:
-            None
+    def abort(self, **kwargs) -> None:
         """
-        self.instrument.write('*CLS', **kwargs)
-        return None
+        abort()
 
-    def abort(self, **kwargs):
-        """abort()
         Send VISA ABORt, stop the scan!!
-        Returns:
-            None
         """
         self.instrument.write('ABORt', **kwargs)
-        return None
 
-    def rst(self, **kwargs):
-        """rst()
-        Send VISA *RST, reset the instrument
-        Returns:
-            None
+    def trigger(self, wait: bool = True, **kwargs) -> None:
         """
-        self.instrument.write('*RST', **kwargs)
-        return None
+        trigger(wait=True)
 
-    def trigger(self, wait=True, **kwargs):
-        """trigger(wait)
         If the unit is setup to BUS trigger, sends trigger, otherwise pass
         If the unit is not setup to BUS trigger, it will log an error
 
@@ -446,35 +386,31 @@ class HP_34401A(Scpi_Instrument):
         Returns:
             None
         """
+
         if self.trigger_mode == self.valid_trigger['BUS']:
             self.instrument.write('*TRG', **kwargs)
         else:
             print(f"Trigger not configured, set as: {self.trigger_mode}"
                   f" should be {self.valid_trigger['BUS']}")
-            pass
+
         if wait:
-            time.sleep(self.measure_time)  # should work most of the time.
+            sleep(self.measure_time)  # should work most of the time.
             # it should also wait nplc time per channel
             # need to make a function to track nplc time
             # if nplc is longer than 1, then this will fail, if shorter
             # then this will take way too long
-        return None
 
-    def set_sample_count(self, count: int = None, **kwargs):
-        if count is None:
-            return self.get_sample_count()
-        else:
-            self.instrument.write(f"SAMP:COUN {count}", **kwargs)
-        return
+    def set_sample_count(self, count: int, **kwargs) -> None:
+        self.instrument.write(f"SAMP:COUN {int(count)}", **kwargs)
 
     def get_sample_count(self, **kwargs):
-        self.sample_count = int(self.resp_format(
-            self.instrument.query("SAMP:COUN?", **kwargs), float))
+        response = self.instrument.query("SAMP:COUN?", **kwargs)
+        self.sample_count = int(self.resp_format(response, float))
         return self.sample_count
 
     def config(self, mode='volt', acdc='dc',
                signal_range='auto', resolution=None,
-               nplc=0.02, verbose: bool = False, **kwargs):
+               nplc=0.02, **kwargs) -> None:
         """config_chan(#)
 
         Args:
@@ -488,100 +424,70 @@ class HP_34401A(Scpi_Instrument):
                                         Defaults to None.
             nplc (float, optional): power line cycles to average.
                                     Defaults to 0.02.
-        Raises:
-            ValueError: if a parameter isn't allowed
-        Returns:
-            None
+        Kwargs:
+            verbose (bool, optional): Whether or not the command message sent
+                to the device is also printed to stdio.out, for debugging
+                purposes. Defaults to False.
         """
 
-        mode = mode.upper()
-        if mode in self.valid_modes:
-            mode = self.valid_modes[mode]
-        else:
+        valid_acdc = {'DC': ':DC',
+                      'AC': ':AC'}
+
+        mode = str(mode).upper()
+        if mode not in self.valid_modes:
             raise ValueError("Invalid mode option")
+        mode = self.valid_modes[mode]
 
-        usefreq = mode == self.valid_modes['FREQ']
-        usecurrent = mode == self.valid_modes['CURR']
-        useres = mode == self.valid_modes['RES']
+        usefreq = (mode == self.valid_modes['FREQ'])
+        usecurrent = (mode == self.valid_modes['CURR'])
+        useres = (mode == self.valid_modes['RES'])
 
-        acdc = acdc.upper()
-        if usefreq:
-            acdc = ''  # frequency doesn't use this
-        elif acdc in self.acdc:
-            acdc = self.acdc[acdc]
-        else:
+        acdc = str(acdc).upper()
+        if not (acdc in valid_acdc):
             raise ValueError("Invalid acdc option")
+        acdc = valid_acdc[acdc] if not usefreq else ''
 
         # if range is not provided, cannot use nplc in CONF command
-        try:
-            signal_range = signal_range.upper()
-            if signal_range.upper() == 'AUTO':  # if not str, doesn't run this
-                signal_range = False
-        except AttributeError:
-            pass
-        try:
-            signal_range = (self.valid_cranges[signal_range] if usecurrent
-                            else self.valid_Rranges[signal_range] if useres
-                            else self.valid_ranges[signal_range])
-        except (ValueError, KeyError):
-            if verbose:
-                print("signal_range not in list, using max")
-            signal_range = self.valid_ranges['MAX']  # same as MAX for current
+        signal_range = str(signal_range).upper()
+        if signal_range == 'AUTO':
+            signal_range = False
 
         try:
-            nplc = nplc.upper()
-        except AttributeError:
-            pass
-        if nplc in self.nplc:
-            nplc = self.nplc[nplc]
-            if usefreq:
-                # if resolution is not None:
-                #     pass
-                # else:
-                #     # TypeError: can't multiply sequence by
-                #     # non-int of type 'float'
-                #     # didn't finish, had to abandon this special case due to
-                #     # complexity and time constraints
-                #     resolution = (self.valid_resolutions[nplc] *
-                #                   signal_range if signal_range else 300)
-                nplc = ''  # frequency doens't use this either
-        else:
-            raise ValueError("Invalid nplc option")
+            if usecurrent and signal_range not in self.valid_cranges:
+                raise ValueError('Invalid Current Range option')
+            elif useres and signal_range not in self.valid_Rranges:
+                raise ValueError('Invalid Resistance Range option')
+            elif signal_range not in self.valid_ranges:
+                raise ValueError('Invalid Range option')
 
-        if resolution and signal_range:
-            string = (f"CONF:{mode}"
-                      f"{acdc} "
-                      f"{signal_range}"
-                      f"{resolution}")
+        except ValueError:
             if kwargs.get('verbose', False):
-                print(string)
-            self.instrument.write(string, **kwargs)
+                print("signal_range not in list, using max")
+            signal_range = 'MAX'  # same as MAX for current
+
+        nplc = str(nplc).upper()
+        if not (nplc in self.nplc):
+            raise ValueError("Invalid nplc option")
+        nplc = nplc if not usefreq else ''
+
+        cmds = []
+        if resolution and signal_range:
+            cmds.append(f"CONF:{mode}{acdc} {signal_range},{resolution}")
         else:
             if signal_range:
-                string = (f"CONF:{mode}"
-                          f"{acdc} "
-                          f"{signal_range}")
-                if verbose:
-                    print(string)
-                self.instrument.write(string, **kwargs)
+                cmds.append(f"CONF:{mode}{acdc} {signal_range}")
             else:
-                string2 = (f"CONF:{mode}"
-                           f"{acdc}")
-                self.instrument.write(string2, **kwargs)
-                if verbose:
-                    print(string2)
-            if resolution or nplc:
-                if not usefreq:
-                    x = ':RES ' if resolution else ':NPLC '
-                    string3 = (f"SENS:{mode}"
-                               f"{acdc}"
-                               f"{x}"
-                               f"{resolution if resolution else nplc}")
-                    self.instrument.write(string3, **kwargs)
-                    if verbose:
-                        print(string3)
+                cmds.append(f"CONF:{mode}{acdc}")
 
-        return
+            if (resolution or nplc) and (not usefreq):
+                cmds.append(f"SENS:{mode}{acdc}"
+                            f"{':RES ' if resolution else ':NPLC '}"
+                            f"{resolution if resolution else nplc}")
+
+        for cmd_str in cmds:
+            if kwargs.get('verbose', False):
+                print(cmd_str)
+            self.instrument.write(cmd_str, **kwargs)
 
     def resp_format(self, response, resp_type: type = int):
         """resp_format(response(str data), type(int/float/etc))
@@ -620,6 +526,5 @@ class HP_34401A(Scpi_Instrument):
             self.measure_time = measure_time
         return self.measure_time
 
-    def set_local(self, **kwargs):
+    def set_local(self, **kwargs) -> None:
         self.instrument.write("SYSTem:LOCal", **kwargs)
-        return

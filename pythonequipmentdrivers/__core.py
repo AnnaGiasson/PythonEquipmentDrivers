@@ -81,9 +81,9 @@ class Scpi_Instrument():
         """
         return self.instrument.query('*IDN?')
 
-    def cls(self):
+    def cls(self, **kwargs) -> None:
         """
-        cls()
+        cls(**kwargs)
 
         Clear Status Command
 
@@ -97,10 +97,9 @@ class Scpi_Instrument():
             None
         """
 
-        self.instrument.write('*CLS')
-        return None
+        self.instrument.write('*CLS', **kwargs)
 
-    def rst(self):
+    def rst(self, **kwargs) -> None:
         """
         rst()
 
@@ -109,13 +108,9 @@ class Scpi_Instrument():
         Executes a device reset and cancels any pending *OPC command or query.
         The RST command sent to the instrument is one of the IEEE 488.2 Common
         Commands and should be supported by all SCPI compatible instruments.
-
-        Returns:
-            None
         """
 
-        self.instrument.write('*RST')
-        return None
+        self.instrument.write('*RST', **kwargs)
 
     @property
     def timeout(self):

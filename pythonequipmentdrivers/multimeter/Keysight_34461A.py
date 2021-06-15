@@ -1,12 +1,12 @@
-from .HP_34401A import HP_34401A as _HP_34401A
+from .HP_34401A import HP_34401A
 
 
-# TOdO: Add in additional measurement functionallity not written in the
+# TODO: Add in additional measurement functionallity not written in the
 # original HP_34401A Class. Look into adding functionallity for adjusting the
 # triggering settings
 
 
-class Keysight_34461A(_HP_34401A):
+class Keysight_34461A(HP_34401A):
     """
     Keysight_34461A()
 
@@ -23,101 +23,59 @@ class Keysight_34461A(_HP_34401A):
     Additional Information:
     https://literature.cdn.keysight.com/litweb/pdf/34460-90901.pdf
     """
-    valid_ranges = {'AUTO': '',
-                    'MIN': 'MIN,',
-                    'MAX': 'MAX,',
-                    'DEF': 'DEF,',
-                    0.1: '0.1,',
-                    1: '1,',
-                    10: '10,',
-                    100: '100,',
-                    1000: '1000,',
-                    '0.1': '0.1,',
-                    '1': '1,',
-                    '10': '10,',
-                    '100': '100,',
-                    '1000': '1000,'}
-    valid_cranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     0.0001: '0.0001,',
-                     0.001: '0.001,',
-                     0.01: '0.01,',
-                     0.1: '0.1,',
-                     1: '1,',
-                     3: '3,',
-                     '0.0001': '0.0001,',
-                     '0.001': '0.001,',
-                     '0.01': '0.01,',
-                     '0.1': '0.1,',
-                     '1': '1,',
-                     '3': '3,'}
-    valid_Rranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     100: '100,',
-                     1E3: '1E3,',
-                     10E3: '10E3,',
-                     100E3: '100E3,',
-                     1E6: '1E6,',
-                     10E6: '10E6,',
-                     100E6: '100E6,',
-                     '100': '100,',
-                     '1E3': '1E3,',
-                     '10E3': '10E3,',
-                     '100E3': '100E3,',
-                     '1E6': '1E6,',
-                     '10E6': '10E6,',
-                     '100E6': '100E6,'}
 
-    def set_display_text(self, text: str):
+    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                    '0.1', '1', '10', '100', '1000'}
+
+    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '0.0001', '0.001', '0.01', '0.1', '1', '3'}
+
+    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+
+    def set_display_text(self, text: str) -> None:
         self.instrument.write(f'DISP:TEXT "{text}"')
-        return None
 
-    def get_display_text(self):
+    def get_display_text(self) -> str:
         response = self.instrument.query('DISP:TEXT?')
         text = response.strip().replace('"', '')
         return text
 
-    def clear_display_text(self):
-        return self.set_display_text("")
+    def clear_display_text(self) -> None:
+        self.set_display_text("")
 
-    def set_display_state(self, state: int):
+    def set_display_state(self, state: bool) -> None:
         if state:
             self.instrument.write('DISP ON')
         else:
             self.instrument.write('DISP OFF')
-        return None
 
-    def get_display_state(self):
+    def get_display_state(self) -> bool:
         response = self.instrument.query('DISP?')
-        return int(response)
+        return bool(int(response))
 
-    def set_display_mode(self, mode: str):
-        mode = mode.upper()
+    def set_display_mode(self, mode: str) -> None:
+
+        mode = str(mode).upper()
         if mode not in ['NUM', 'HIST', 'TCH', 'MET']:
             raise ValueError(f'Invalid mode for arg "mode" ({mode})')
-        self.instrument.write(f'DISP:VIEW {mode}')
-        return None
 
-    def get_display_mode(self):
+        self.instrument.write(f'DISP:VIEW {mode}')
+
+    def get_display_mode(self) -> str:
         response = self.instrument.query('DISP:VIEW?')
         return response.strip()
 
-    def set_label_text(self, label: str):
+    def set_label_text(self, label: str) -> None:
         self.instrument.write(f'SYSTEM:LABEL "{label}"')
-        return None
 
-    def get_label_text(self):
+    def get_label_text(self) -> str:
         response = self.instrument.query('SYSTEM:LABEL?')
         label = response.strip().replace('"', '')
         return label
 
-    def clear_label_text(self):
+    def clear_label_text(self) -> None:
         self.set_label_text('')
-        return None
 
 
 if __name__ == '__main__':

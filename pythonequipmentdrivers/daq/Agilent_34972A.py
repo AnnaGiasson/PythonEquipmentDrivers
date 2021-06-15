@@ -36,68 +36,18 @@ class Agilent_34972A(Scpi_Instrument):
                    'PER': 'PER',
                    'P': 'PER'
                    }
-    acdc = {'DC': ':DC',
-            'AC': ':AC'}
-    valid_ranges = {'AUTO': '',
-                    'MIN': 'MIN,',
-                    'MAX': 'MAX,',
-                    'DEF': 'DEF,',
-                    0.1: '0.1,',
-                    1: '1,',
-                    10: '10,',
-                    100: '100,',
-                    300: '300,',
-                    '0.1': '0.1,',
-                    '1': '1,',
-                    '10': '10,',
-                    '100': '100,',
-                    '300': '300,'}
-    valid_cranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     0.01: '0.01,',
-                     0.1: '0.1,',
-                     1: '1,',
-                     '0.01': '0.01,',
-                     '0.1': '0.1,',
-                     '1': '1,'}
-    valid_Rranges = {'AUTO': '',
-                     'MIN': 'MIN,',
-                     'MAX': 'MAX,',
-                     'DEF': 'DEF,',
-                     100: '100,',
-                     1E3: '1E3,',
-                     10E3: '10E3,',
-                     100E3: '100E3,',
-                     1E6: '1E6,',
-                     10E6: '10E6,',
-                     100E6: '100E6,',
-                     '100': '100,',
-                     '1E3': '1E3,',
-                     '10E3': '10E3,',
-                     '100E3': '100E3,',
-                     '1E6': '1E6,',
-                     '10E6': '10E6,',
-                     '100E6': '100E6,'}
-    nplc = {'MIN': 'MIN,',
-            'MAX': 'MAX,',
-            0.02: '0.02,',
-            0.2: '0.2,',
-            1: '1,',
-            2: '2,',
-            10: '10,',
-            20: '20,',
-            100: '100,',
-            200: '200,',
-            '0.02': '0.02,',
-            '0.2': '0.2,',
-            '1': '1,',
-            '2': '2,',
-            '10': '10,',
-            '20': '20,',
-            '100': '100,',
-            '200': '200,'}
+
+    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                    '0.1', '1', '10', '100', '300'}
+
+    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '0.01', '0.1', '1'}
+
+    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+
+    nplc = {'0.02', '0.2', '1', '2', '10', '20', '100', '200', 'MIN', 'MAX'}
+
     valid_resolutions = {'MIN': 0.0001,  # lookup based on nplc
                          'MAX': 0.00000022,  # this * range = resolution
                          '0.02': 0.0001,
@@ -107,15 +57,7 @@ class Agilent_34972A(Scpi_Instrument):
                          '10': 0.000001,
                          '20': 0.0000008,
                          '100': 0.0000003,
-                         '200': 0.00000022,
-                         0.02: 0.0001,
-                         0.2: 0.00001,
-                         1: 0.000003,
-                         2: 0.0000022,
-                         10: 0.000001,
-                         20: 0.0000008,
-                         100: 0.0000003,
-                         200: 0.00000022}
+                         '200': 0.00000022}
     valid_trigger = {'BUS': 'BUS',
                      'IMMEDIATE': 'IMMediate',
                      'IMM': 'IMMediate',
@@ -129,7 +71,7 @@ class Agilent_34972A(Scpi_Instrument):
                      'TIME': 'TIMer',
                      'TIM': 'TIMer'}
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, **kwargs) -> None:
         super().__init__(address)
         if kwargs.get('reset', False):
             self.cls()
@@ -140,7 +82,6 @@ class Agilent_34972A(Scpi_Instrument):
         self.scanlist = self.get_scan_list()
         self.measure_time = self.set_measure_time()
         self.trigger_mode = self.get_trigger_source()
-        return None
 
     def resp_format(self, response, resp_type: type = int):
         """resp_format(response(str data), type(int/float/etc))
@@ -287,7 +228,7 @@ class Agilent_34972A(Scpi_Instrument):
         return self.resp_format(self.instrument.query("TRIG:TIM?",
                                                       **kwargs), float)
 
-    def trigger(self, wait=True, **kwargs):
+    def trigger(self, wait: bool = True, **kwargs) -> None:
         """trigger(wait)
         If the unit is setup to BUS trigger, sends trigger, otherwise pass
         If the unit is not setup to BUS trigger, it will log an error
@@ -304,14 +245,13 @@ class Agilent_34972A(Scpi_Instrument):
         else:
             print(f"Trigger not configured, set as: {self.trigger_mode}"
                   f" should be {self.valid_trigger['BUS']}")
-            pass
+
         if wait:
             sleep(self.measure_time)  # should work most of the time.
             # it should also wait nplc time per channel
             # need to make a function to track nplc time
             # if nplc is longer than 1, then this will fail, if shorter
             # then this will take way too long
-        return None
 
     def get_scan_list(self, **kwargs):
         """
@@ -367,7 +307,7 @@ class Agilent_34972A(Scpi_Instrument):
             chanlist = [chan]
         return chanstr, chanlist
 
-    def set_scan_list(self, chan, relaytime: bool = False, **kwargs):
+    def set_scan_list(self, chan, relaytime: bool = False, **kwargs) -> None:
         """set_scan_list(chan)
         sets the list of channels to scan, the meter will scan them once
         immediately!
@@ -385,7 +325,6 @@ class Agilent_34972A(Scpi_Instrument):
         self.instrument.write(f'ROUT:SCAN (@{chanstr})', **kwargs)
         if relaytime:
             self.relay_delay(n=len(self.scanlist))
-        return None
 
     def measure(self, chan, **kwargs):
         """
@@ -438,7 +377,7 @@ class Agilent_34972A(Scpi_Instrument):
         # response = list(map(int, response[start+1:-1].split(',')))
         return self.resp_format(response, float)
 
-    def init(self, **kwargs):
+    def init(self, **kwargs) -> None:
         """
         Initialize the meter, used with BUS trigger typically
         Use fetch_data (FETCh) to get the data.
@@ -446,20 +385,21 @@ class Agilent_34972A(Scpi_Instrument):
             None
         """
         self.instrument.write('INITiate', **kwargs)
-        return None
 
-    def fetch_data(self, **kwargs):
-        """fetch_data
+    def fetch_data(self, **kwargs) -> float:
+        """
+        fetch_data
 
         Returns:
             [list, float]: data in meter memory resulting from all scans
         """
+
         response = self.instrument.query('FETC?', **kwargs)
         return self.resp_format(response, float)
 
     def config_chan(self, chan, mode='volt', acdc='dc',
                     signal_range='auto', resolution=None,
-                    nplc=0.02, verbose: bool = False, **kwargs):
+                    nplc=0.02, **kwargs):
         """config_chan(#)
 
         Args:
@@ -480,107 +420,75 @@ class Agilent_34972A(Scpi_Instrument):
                                         Defaults to None.
             nplc (float, optional): power line cycles to average.
                                     Defaults to 0.02.
-        Raises:
-            ValueError: if a parameter isn't allowed
-        Returns:
-            None
+        Kwargs:
+            verbose (bool, optional): Whether or not the command message sent
+                to the device is also printed to stdio.out, for debugging
+                purposes. Defaults to False.
         """
 
+        valid_acdc = {'DC': ':DC',
+                      'AC': ':AC'}
+
         chanstr, chanlist = self.format_channel_list(chan)
-        mode = mode.upper()
-        if mode in self.valid_modes:
-            mode = self.valid_modes[mode]
-        else:
+
+        mode = str(mode).upper()
+        if mode not in self.valid_modes:
             raise ValueError("Invalid mode option")
+        mode = self.valid_modes[mode]
 
         usefreq = mode == self.valid_modes['FREQ']
         usecurrent = mode == self.valid_modes['CURR']
         useres = mode == self.valid_modes['RES']
 
-        acdc = acdc.upper()
-        if usefreq:
-            acdc = ''  # frequency doesn't use this
-        elif acdc in self.acdc:
-            acdc = self.acdc[acdc]
-        else:
+        acdc = str(acdc).upper()
+        if not (acdc in valid_acdc):
             raise ValueError("Invalid acdc option")
+        acdc = valid_acdc[acdc] if not usefreq else ''
 
         # if range is not provided, cannot use nplc in CONF command
+        signal_range = str(signal_range).upper()
+        if signal_range == 'AUTO':
+            signal_range = False
 
         try:
-            signal_range = signal_range.upper()
-            if signal_range.upper() == 'AUTO':  # if not str, doesn't run this
-                signal_range = False
-        except AttributeError:
-            pass
-        try:
-            signal_range = (self.valid_cranges[signal_range] if usecurrent
-                            else self.valid_Rranges[signal_range] if useres
-                            else self.valid_ranges[signal_range])
-        except (ValueError, KeyError):
-            if verbose:
-                print("signal_range not in list, using max")
-            signal_range = self.valid_ranges['MAX']
+            if usecurrent and signal_range not in self.valid_cranges:
+                raise ValueError('Invalid Current Range option')
+            elif useres and signal_range not in self.valid_Rranges:
+                raise ValueError('Invalid Resistance Range option')
+            elif signal_range not in self.valid_ranges:
+                raise ValueError('Invalid Range option')
 
-        try:
-            nplc = nplc.upper()
-        except AttributeError:
-            pass
-        if nplc in self.nplc:
-            nplc = self.nplc[nplc]
-            if usefreq:
-                # if resolution is not None:
-                #     pass
-                # else:
-                #     # TypeError: can't multiply sequence by
-                #     # non-int of type 'float'
-                #     # didn't finish, had to abandon this special case due to
-                #     # complexity and time constraints
-                #     resolution = (self.valid_resolutions[nplc] *
-                #                   signal_range if signal_range else 300)
-                nplc = ''  # frequency doens't use this either
-        else:
-            raise ValueError("Invalid nplc option")
-
-        if resolution and signal_range:
-            string = (f"CONF:{mode}"
-                      f"{acdc} "
-                      f"{signal_range}"
-                      f"{resolution}"
-                      f"(@{chanstr})")
+        except ValueError:
             if kwargs.get('verbose', False):
-                print(string)
-            self.instrument.write(string, **kwargs)
+                print("signal_range not in list, using max")
+            signal_range = 'MAX'  # same as MAX for current
+
+        nplc = str(nplc).upper()
+        if not (nplc in self.nplc):
+            raise ValueError("Invalid nplc option")
+        nplc = nplc if not usefreq else ''
+
+        cmds = []
+        if resolution and signal_range:
+            cmds.append(f"CONF:{mode}{acdc} {signal_range},{resolution}"
+                        f"(@{chanstr})")
         else:
             if signal_range:
-                string = (f"CONF:{mode}"
-                          f"{acdc} "
-                          f"{signal_range}"
-                          f"(@{chanstr})")
-                if verbose:
-                    print(string)
-                self.instrument.write(string, **kwargs)
+                cmds.append(f"CONF:{mode}{acdc} {signal_range}(@{chanstr})")
             else:
-                string2 = (f"CONF:{mode}"
-                           f"{acdc} "
-                           f"(@{chanstr})")
-                self.instrument.write(string2, **kwargs)
-                if verbose:
-                    print(string2)
-            if resolution or nplc:
-                if not usefreq:
-                    x = ':RES ' if resolution else ':NPLC '
-                    for i in range(len(chanlist)):
-                        string3 = (f"SENS:{mode}"
-                                   f"{acdc}"
-                                   f"{x}"
-                                   f"{resolution if resolution else nplc}"
-                                   f"(@{chanlist[i]})")
-                        self.instrument.write(string3, **kwargs)
-                        if verbose:
-                            print(string3)
+                cmds.append(f"CONF:{mode}{acdc} (@{chanstr})")
 
-        return
+            if (resolution or nplc) and (not usefreq):
+                for i in range(len(chanlist)):
+                    cmds.append(f"SENS:{mode}{acdc}"
+                                f"{':RES ' if resolution else ':NPLC '}"
+                                f"{resolution if resolution else nplc}"
+                                f"(@{chanlist[i]})")
+
+        for cmd_str in cmds:
+            if kwargs.get('verbose', False):
+                print(cmd_str)
+            self.instrument.write(cmd_str, **kwargs)
 
     def close_chan(self, chan, **kwargs):
         """Close relay on channel #
@@ -598,15 +506,16 @@ class Agilent_34972A(Scpi_Instrument):
             self.instrument.write(f"ROUT:CLOS (@{chanstr})", **kwargs)
         return
 
-    def open_chan(self, chan, **kwargs):
-        """Open relay on channel #
+    def open_chan(self, chan, **kwargs) -> None:
+        """
+        Open relay on channel #
+
         Args:
             chan (int): Channel to Open
         """
         self.instrument.write(f"ROUT:OPEN (@{chan})", **kwargs)
-        return
 
-    def relay_delay(self, n: int = 1, ch_change_time=0.05):
+    def relay_delay(self, n: int = 1, ch_change_time=0.05) -> None:
         """relay_delay(n)
         relays need time to switch, this provides that time.
 
@@ -618,7 +527,6 @@ class Agilent_34972A(Scpi_Instrument):
         if self.ch_change_time != ch_change_time:
             self.ch_change_time = ch_change_time
         sleep(n * self.ch_change_time)
-        return
 
     def monitor(self, chan: int = None, verbose: bool = False, **kwargs):
         """
@@ -792,314 +700,16 @@ class Agilent_34972A(Scpi_Instrument):
                                              **kwargs)
             return self.resp_format(response, float)
 
-        """Agilent 34970A/72A Command Reference
-        Keysight 34970A/34972A
-        Table of contents
-        Keysight 34970A/72A Command Reference
-        Command Language Introduction
-        Syntax Conventions
-        Command Separators
-        Querying Parameter Settings
-        Command Terminators
-        IEEE-488.2 Common Commands
-        Parameter Types
-        Using Device Clear
-        LAN Port Usage
-        Commands by Subsystem
-        ABORt
-        FETCh?
-        INITiate
-        INPut:IMPedance:AUTO
-        R?
-        READ?
-        UNIT:TEMPerature
-        CALCulate_Subsystem
-        CALCulate:AVERage:AVERage?
-        CALCulate:AVERage:CLEar
-        CALCulate:AVERage:COUNt?
-        CALCulate:AVERage:MAXimum?
-        CALCulate:AVERage:MAXimum:TIME?
-        CALCulate:AVERage:MINimum?
-        CALCulate:AVERage:MINimum:TIME?
-        CALCulate:AVERage:PTPeak?
-        CALCulate:COMPare:DATA
-        CALCulate:COMPare:MASK
-        CALCulate:COMPare:STATe
-        CALCulate:COMPare:TYPE
-        CALCulate:LIMit:LOWer
-        CALCulate:LIMit:LOWer:STATe
-        CALCulate:LIMit:UPPer
-        CALCulate:LIMit:UPPer:STATe
-        CALCulate:SCALe:GAIN
-        CALCulate:SCALe:OFFSet
-        CALCulate:SCALe:OFFSet:NULL
-        CALCulate:SCALe:STATe
-        CALCulate:SCALe:UNIT
-        CALibration_Subsystem
-        CALibration?
-        CALibration:COUNt?
-        CALibration:SECure:CODE
-        CALibration:SECure:STATe
-        CALibration:STRing
-        CALibration:VALue
-        CONFigure_Subsystem
-        CONFigure?
-        CONFigure:CURRent:AC
-        CONFigure:CURRent:DC
-        CONFigure:DIGital:BYTE
-        CONFigure:FREQuency
-        CONFigure:FRESistance
-        CONFigure:PERiod
-        CONFigure:RESistance
-        CONFigure:TEMPerature
-        CONFigure:TOTalize
-        CONFigure:VOLTage:AC
-        CONFigure:VOLTage:DC
-        DATA_Subsystem
-        DATA:LAST?
-        DATA:POINts?
-        DATA:POINts:EVENt:THReshold
-        DATA:REMove?
-        DIAGnostic_Subsystem
-        DIAGnostic:DMM:CYCLes?
-        DIAGnostic:DMM:CYCLes:CLEar
-        DIAGnostic:PEEK:SLOT:DATA?
-        DIAGnostic:POKE:SLOT:DATA
-        DIAGnostic:RELay:CYCLes?
-        DIAGnostic:RELay:CYCLes:CLEar
-        DISPlay_Subsystem
-        DISPlay
-        DISPlay:TEXT
-        DISPlay:TEXT:CLEar
-        FORMat_Subsystem
-        FORMat:READing:ALARm
-        FORMat:READing:CHANnel
-        FORMat:READing:TIME
-        FORMat:READing:TIME:TYPE
-        FORMat:READing:UNIT
-        IEEE-488_Commands
-        *CLS
-        *ESE
-        *ESR?
-        *IDN?
-        *OPC
-        *OPC?
-        *PSC
-        *RCL
-        *RST
-        *SAV
-        *SRE
-        *STB?
-        *TRG
-        *TST?
-        *WAI
-        INSTrument_Subsystem
-        INSTrument:DMM
-        INSTrument:DMM:INSTalled?
-        LXI_Subsystem
-        LXI:IDENtify[:STATe]
-        LXI:RESet
-        LXI:RESTart
-        MEASure_Subsystem
-        MEASure:CURRent:AC?
-        MEASure:CURRent:DC?
-        MEASure:DIGital:BYTE?
-        MEASure:FREQuency?
-        MEASure:FRESistance?
-        MEASure:PERiod?
-        MEASure:RESistance?
-        MEASure:TEMPerature?
-        MEASure:TOTalize?
-        MEASure:VOLTage:AC?
-        MEASure:VOLTage:DC?
-        MEMory_Subsystem
-        MEMory:NSTates?
-        MEMory:STATe:DELete
-        MEMory:STATe:NAME
-        MEMory:STATe:RECall:AUTO
-        MEMory:STATe:VALid?
-        MMEMory_Subsytem
-        MMEMory:EXPort?
-        MMEMory:FORMat:READing:CSEParator
-        MMEMory:FORMat:READing:RLIMit
-        MMEMory:IMPort:CATalog?
-        MMEMory:IMPort:CONFig?
-        MMEMory:LOG[:ENABle]
-        OUTPut_Subsystem
-        OUTPut:ALARm:CLEar:ALL
-        OUTPut:ALARm:MODE
-        OUTPut:ALARm:SLOPe
-        OUTPut:ALARm{1|2|3|4}:CLEar
-        OUTPut:ALARm{1|2|3|4}:SOURce
-        ROUTe_Subsystem
-        ROUTe:CHANnel:ADVance:SOURce
-        ROUTe:CHANnel:DELay
-        ROUTe:CHANnel:DELay:AUTO
-        ROUTe:CHANnel:FWIRe
-        ROUTe:CLOSe
-        ROUTe:CLOSe:EXCLusive
-        ROUTe:DONE?
-        ROUTe:MONItor
-        ROUTe:MONItor:DATA?
-        ROUTe:MONItor:STATe
-        ROUTe:OPEN
-        ROUTe:SCAN
-        ROUTe:SCAN:SIZE?
-        SENSe_Subsystem
-        [SENSe:]CURRent:AC:BANDwidth
-        [SENSe:]CURRent:AC:RANGe
-        [SENSe:]CURRent:AC:RANGe:AUTO
-        [SENSe:]CURRent:AC:RESolution
-        [SENSe:]CURRent:DC:APERture
-        [SENSe:]CURRent:DC:NPLC
-        [SENSe:]CURRent:DC:RANGe
-        [SENSe:]CURRent:DC:RANGe:AUTO
-        [SENSe:]CURRent:DC:RESolution
-        [SENSe:]DIGital:DATA:{BYTE|WORD}?
-        [SENSe:]FREQuency:APERture
-        [SENSe:]FREQuency:RANGe:LOWer
-        [SENSe:]FREQuency:VOLTage:RANGe
-        [SENSe:]FREQuency:VOLTage:RANGe:AUTO
-        [SENSe:]FRESistance:APERture
-        [SENSe:]FRESistance:NPLC
-        [SENSe:]FRESistance:OCOMpensated
-        [SENSe:]FRESistance:RANGe
-        [SENSe:]FRESistance:RANGe:AUTO
-        [SENSe:]FRESistance:RESolution
-        [SENSe:]FUNCtion
-        [SENSe:]PERiod:APERture
-        [SENSe:]PERiod:VOLTage:RANGe
-        [SENSe:]PERiod:VOLTage:RANGe:AUTO
-        [SENSe:]RESistance:APERture
-        [SENSe:]RESistance:NPLC
-        [SENSe:]RESistance:OCOMpensated
-        [SENSe:]RESistance:RANGe
-        [SENSe:]RESistance:RANGe:AUTO
-        [SENSe:]RESistance:RESolution
-        [SENSe:]TEMPerature:APERture
-        [SENSe:]TEMPerature:NPLC
-        [SENSe:]TEMPerature:RJUNction?
-        [SENSe:]TEMPerature:TRANsducer:FRTD:OCOMpensated
-        [SENSe:]TEMPerature:TRANsducer:FRTD:RESistance[:REFerence]
-        [SENSe:]TEMPerature:TRANsducer:FRTD:TYPE
-        [SENSe:]TEMPerature:TRANsducer:RTD:OCOMpensated
-        [SENSe:]TEMPerature:TRANsducer:RTD:RESistance[:REFerence]
-        [SENSe:]TEMPerature:TRANsducer:RTD:TYPE
-        [SENSe:]TEMPerature:TRANsducer:TCouple:CHECk
-        [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction
-        [SENSe:]TEMPerature:TRANsducer:TCouple:RJUNction:TYPE
-        [SENSe:]TEMPerature:TRANsducer:TCouple:TYPE
-        [SENSe:]TEMPerature:TRANsducer:THERmistor:TYPE
-        [SENSe:]TEMPerature:TRANsducer:TYPE
-        [SENSe:]TOTalize:CLEar:IMMediate
-        [SENSe:]TOTalize:DATA?
-        [SENSe:]TOTalize:SLOPe
-        [SENSe:]TOTalize:STARt[:IMMediate]
-        [SENSe:]TOTalize:STOP[:IMMediate]
-        [SENSe:]TOTalize:TYPE
-        [SENSe:]VOLTage:AC:BANDwidth
-        [SENSe:]VOLTage:AC:RANGe
-        [SENSe:]VOLTage:AC:RANGe:AUTO
-        [SENSe:]VOLTage:DC:APERture
-        [SENSe:]VOLTage:DC:NPLC
-        [SENSe:]VOLTage:DC:RANGe
-        [SENSe:]VOLTage:DC:RANGe:AUTO
-        [SENSe:]VOLTage:DC:RESolution
-        [SENSe:]ZERO:AUTO
-        SOURce_Subsystem
-        SOURce:DIGital:DATA[:{BYTE|WORD}]
-        SOURce:DIGital:STATe?
-        SOURce:VOLTage
-        STATus_Subsystem
-        STATus:ALARm:CONDition?
-        STATus:ALARm:ENABle
-        STATus:ALARm[:EVENt]?
-        STATus:OPERation:CONDition?
-        STATus:OPERation:ENABle
-        STATus:OPERation[:EVENt]?
-        STATus:PRESet
-        STATus:QUEStionable:CONDition?
-        STATus:QUEStionable:ENABle
-        STATus:QUEStionable[:EVENt]?
-        STATus Subsystem Introduction
-        SYSTem_Subsystem
-        LAN_Config
-        SYSTem:COMMunicate:LAN:CONTrol?
-        SYSTem:COMMunicate:LAN:DHCP
-        SYSTem:COMMunicate:LAN:DNS
-        SYSTem:COMMunicate:LAN:DOMain
-        SYSTem:COMMunicate:LAN:GATEway
-        SYSTem:COMMunicate:LAN:HOSTname
-        SYSTem:COMMunicate:LAN:IPADdress
-        SYSTem:COMMunicate:LAN:MAC?
-        SYSTem:COMMunicate:LAN:SMASk
-        SYSTem:COMMunicate:LAN:TELNet:PROMpt
-        SYSTem:COMMunicate:LAN:TELNet:WMESsage
-        SYSTem:COMMunicate:LAN:UPDate
-        SYSTem:ALARm?
-        SYSTem:CPON
-        SYSTem:CTYPe?
-        SYSTem:DATE
-        SYSTem:ERRor?
-        SYSTem:INTerface
-        SYSTem:LANGuage
-        SYSTem:LFRequency?
-        SYSTem:LOCal
-        SYSTem:LOCK:NAME?
-        SYSTem:LOCK:OWNer?
-        SYSTem:LOCK:RELease
-        SYSTem:LOCK:REQuest?
-        SYSTem:PRESet
-        SYSTem:RWLock
-        SYSTem:SECurity[:IMMediate]
-        SYSTem:TIME
-        SYSTem:TIME:SCAN?
-        SYSTem:VERSion?
-        TRIGger_Subsystem
-        TRIGger:COUNt
-        TRIGger:SOURce
-        TRIGger:TIMer
-        Commands A-Z
-        Command Quick Reference
-        Error Messages
-        Factory Reset State
-        Instrument Preset State
-        Plug-in Module Reference Information
-        34901A Module
-        34902A Module
-        34903A Module
-        34904A Module Summary
-        34905A/34906A Modules
-        34907A Module
-        34908A Module
+    def abort(self, **kwargs) -> None:
         """
+        abort()
 
-    def cls(self, **kwargs):
-        """cls()
-        Send VISA *CLS, clear visa bus
-        Returns:
-            None
-        """
-        self.instrument.write('*CLS', **kwargs)
-        return None
-
-    def abort(self, **kwargs):
-        """abort()
         Send VISA ABORt, stop the scan!!
         Returns:
             None
         """
-        self.instrument.write('ABORt', **kwargs)
-        return None
 
-    def rst(self, **kwargs):
-        """rst()
-        Send VISA *RST, reset the instrument
-        Returns:
-            None
-        """
-        self.instrument.write('*RST', **kwargs)
-        return None
+        self.instrument.write('ABORt', **kwargs)
 
     def set_source(self, chan, voltage: float = None, **kwargs):
         """set_source(chan, voltage)
@@ -1143,9 +753,12 @@ class Agilent_34972A(Scpi_Instrument):
             self.measure_time = measure_time
         return self.measure_time
 
-    def set_local(self, **kwargs):
+    def set_local(self, **kwargs) -> None:
         self.instrument.write("SYSTem:LOCal", **kwargs)
-        return
+
+
+if __name__ == '__main__':
+    pass
 
     # Agilent 34970A/72A Command Reference
     # Keysight 34970A/34972A

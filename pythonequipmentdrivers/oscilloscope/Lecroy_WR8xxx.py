@@ -498,7 +498,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         source = kwargs.get('source', self.get_trigger_source())
 
-        slope = slope.upper()
+        slope = str(slope).upper()
         if slope not in valid_options.keys():
             raise ValueError('Invalid option for Arg "slope".'
                              f' Valid option are {valid_options.keys()}')
