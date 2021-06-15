@@ -87,8 +87,8 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         """
 
         if kwargs.get('use_divisions', False):
-            offset = float(off)*self.get_channel_scale(int(channel))
-        self.instrument.write(f"C{int(channel)}:OFFSET {float(offset)}")
+            off = float(off)*self.get_channel_scale(int(channel))
+        self.instrument.write(f"C{int(channel)}:OFFSET {float(off)}")
 
     def get_channel_offset(self, channel: int) -> float:
         """
@@ -125,12 +125,13 @@ class Lecroy_WR8xxx(Scpi_Instrument):
                         'ac_1meg': 'A1M', 'ac': 'A1M',
                         'gnd': 'gnd'}
 
-        coupling = coupling_map[coupling.lower()]
+        coupling = str(coupling).lower()
         if coupling not in coupling_map.keys():
             raise ValueError(f"Invalid Coupling option: {coupling}. "
                              f"Suuport options are: {coupling_map.keys()}")
 
-        self.instrument.write(f"C{int(channel)}:COUPLING {coupling}")
+        cmd_str = f"C{int(channel)}:COUPLING {coupling_map[coupling]}"
+        self.instrument.write(cmd_str)
 
     def get_channel_coupling(self, channel: int) -> str:
         """
