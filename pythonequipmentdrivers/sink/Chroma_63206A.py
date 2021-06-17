@@ -5,7 +5,7 @@ from typing import Union, Tuple
 
 
 # custom type, either one float or a tuple of two floats
-OneOrMoreFloat = Union[float, Tuple[float, float]]
+OneOrTwoFloats = Union[float, Tuple[float, float]]
 
 
 class Chroma_63206A(Scpi_Instrument):  # 6 kW
@@ -114,28 +114,29 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
 
         response = self.instrument.query("LOAD:SHOR?")
-        if int(response) == 1:
-            return True
-        return False
+        return (int(response) == 1)
 
     def set_mode(self, mode: str, range_setting: Union[int, str] = 2) -> None:
         """
-        set_mode(mode, range_setting=0)
+        set_mode(mode, range_setting=2)
 
-        range_setting (optional): int, range of the desired mode setting
-            valid options are 0, 1, and 2 for low, medium, and high
-            respectively. Default is 0
+        Sets the desired load configuration. Currently supported modes using
+        this library are "CC", "CR", "CP", and "CCD". Additionally the range of
+        the mode used (interpretation is mode dependant) can be adjusted with
+        the "range_setting" arguement.
 
-        Sets the desired load configuration. Currently supported options in
-        this library are
-        "CC", "CR", "CP", and "CCD".
+        Args:
+            mode (str): Mode to operate the load in, currently only "CC", "CR",
+                "CP", and "CCD" are supported with this library.
+            range_setting (Union[int, str], optional): index or name of the
+                range to use for the given mode, 0/"L" for Low, 1/"M" for
+                Medium and 2/"H" for High. Defaults to 2.
         """
 
-        valid_modes = ("CC", "CR", "CP", "CCD")
         valid_ranges = ("L", "M", "H")
 
         # check arguements
-        if str(mode).upper() not in valid_modes:
+        if str(mode).upper() not in self.supported_modes:
             raise ValueError('Invalid option for arguement "mode"')
 
         if isinstance(range_setting, int):
@@ -153,9 +154,15 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
 
     def get_mode(self) -> Tuple[str, str]:
         """
-        get_mode(self)
+        set_mode(mode, range_setting=2)
 
-        Returns the current configuration of the electronic load
+        Retrives the current load configuration, two strings representing the
+        mode and range current in use.
+
+        Returns:
+            Tuple[str, str]: description of the mode and range curreently in
+                use. Currently supported modes using this library are "CC",
+                "CR", "CP", and "CCD".
         """
 
         response = self.instrument.query("MODE?")
@@ -176,8 +183,9 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
 
         Args:
             current (float): Desired current setpoint
-            channel (int, optional): Load Channel to adjust. For this load,
-                valid channels are 1, 2, and 0. Defaults to 0.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
         if int(channel) == 0:
@@ -187,7 +195,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f'CURR:STAT:L{int(channel)} {float(current)}'
             self.instrument.write(cmd_str)
 
-    def get_current(self, channel: int) -> OneOrMoreFloat:
+    def get_current(self, channel: int) -> OneOrTwoFloats:
         """
         get_current(channel)
 
@@ -196,13 +204,13 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         channels will be returned.
 
         Args:
-            channel (int): Channel to query. For this load, valid channels are
-                1, 2, and 0.
+            channel (int): Channel number to query or 0 to query both signals.
+                For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrMoreFloat: Desired current setpoint. If channel == 0 then the
-                setpoints for both channels will be returned in a tuple ordered
-                by channel number.
+            OneOrTwoFloats: Current setpoint in Amps DC. If channel == 0 then
+                the setpoints for both channels will be returned in a tuple
+                ordered by channel number.
         """
 
         if int(channel) == 0:
@@ -223,9 +231,10 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         value specified.
 
         Args:
-            current (float): Desired current setpoint
-            channel (int, optional): Load Channel to adjust. For this load,
-                valid channels are 1, 2, and 0. Defaults to 0.
+            current (float): Desired current setpoint in Amps DC.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
         if int(channel) == 0:
@@ -234,7 +243,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         else:
             self.instrument.write(f'CURR:DYN:L{int(channel)} {float(current)}')
 
-    def get_dynamic_current(self, channel: int) -> OneOrMoreFloat:
+    def get_dynamic_current(self, channel: int) -> OneOrTwoFloats:
         """
         get_dynamic_current(channel)
 
@@ -243,13 +252,13 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         channels will be returned.
 
         Args:
-            channel (int): Channel to query. For this load, valid channels are
-                1, 2, and 0.
+            channel (int): Channel number to query or 0 to query both signals.
+                For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrMoreFloat: Desired current setpoint. If channel == 0 then the
-                setpoints for both channels will be returned in a tuple ordered
-                by channel number.
+            OneOrTwoFloats: Desired current setpoint in Amps DC. If
+                channel == 0 then the setpoints for both channels will be
+                returned in a tuple ordered by channel number.
         """
 
         if int(channel) == 0:
@@ -261,33 +270,43 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             response = self.instrument.query(f'CURR:DYN:L{int(channel)}?')
             return float(response)
 
-    def set_dynamic_current_time(self, t: float, channel: int) -> None:
+    def set_dynamic_current_time(self, t: float, channel: int = 0) -> None:
         """
         set_dynamic_current_time(t, channel=0)
-
-        t: float, desired duration of dynamic setpoint in seconds.
-        channel (optional): int, channel to change setpoint of.
-            valid options are 0,1,2 (default is 0)
 
         changes the duration of the dynamic current setpoint of the load for
         the specified channel in dynamic current mode.
         if channel = 0 both channels will be set to the value specified
+
+        Args:
+            t (float): Desired duration of dynamic setpoint in seconds.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
+
         if int(channel) == 0:
             self.instrument.write(f'CURR:DYN:T1 {float(t)}')
             self.instrument.write(f'CURR:DYN:T2 {float(t)}')
         else:
             self.instrument.write(f'CURR:DYN:T{int(channel)} {float(t)}')
 
-    def get_dynamic_current_time(self, channel: int) -> OneOrMoreFloat:
+    def get_dynamic_current_time(self, channel: int) -> OneOrTwoFloats:
         """
         get_dynamic_current_time(channel)
 
-        channel: int, channel to get duration of.
-            valid options are 1,2
-
-        reads the duration of the dynamic current setpoint of the load for the
+        Reads the duration of the current setpoint of the load for the
         specified channel in dynamic current mode.
+
+        Args:
+            channel (int): Channel number to query or 0 to query both signals.
+                For this load, valid channels are 1, and 2.
+
+        Returns:
+            OneOrTwoFloats: The duration of one or more of the dynamic current
+                setpoints in seconds. If channel == 0 then the setpoints for
+                both channels will be returned in a tuple ordered by channel
+                number.
         """
 
         if int(channel) == 0:
@@ -302,14 +321,14 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
         set_dynamic_current_repeat(n)
 
-        n: int, desired number of cycles to repeat the two dyanmic current
-        setpoints.
-
-        changes the number of cycles to alternate between the two dynamic
+        Changes the number of cycles to alternate between the two dynamic
         current setpoints before turning off. Cycles begin when the output of
         the load is enabled, after completion load will automatically turn
         itself off. if n = 0 the load will indefinately cycle between the two
         setpoints.
+
+        Args:
+            n (int): Desired number of periods of the dynamic current waveform.
         """
 
         self.instrument.write(f"CURR:DYN:REP {int(n)}")
@@ -318,11 +337,14 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
         get_dynamic_current_repeat()
 
-        returns the number of cycles to alternate between the two dynamic
+        Returns the number of cycles to alternate between the two dynamic
         current setpoints before turning off. Cycles begin when the output of
         the load is enabled, after completion load will automatically turn
         itself off. if n = 0 the load will indefinately cycle between the two
         setpoints.
+
+        Returns:
+            int: Number of periods of the dynamic current waveform.
         """
 
         response = self.instrument.query("CURR:DYN:REP?")
@@ -332,58 +354,77 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
         set_dynamic_current_rise_rate(slew_rate)
 
-        slew_rate: float, slew rate of the rising edge of current setpoint
-                   transitions, A/us
-
-        sets the slew rate for the rising edge between the two dynamic current
+        Sets the slew-rate for the rising edge between the two dynamic current
         setpoint in dynamic current mode.
+
+        Args:
+            slew_rate (float): slew rate of the rising edge of current setpoint
+                   transitions in A/s.
         """
-        self.instrument.write(f"CURR:DYN:RISE {float(slew_rate)}")
+
+        # actually needs to be sent in A/us
+        self.instrument.write(f"CURR:DYN:RISE {float(slew_rate)/1e6}")
 
     def get_dynamic_current_rise_rate(self) -> float:
         """
         get_dynamic_current_rise_rate()
 
-        returns the slew rate for the rising edge between the two dynamic
+        Retrives the slew-rate for the rising edge between the two dynamic
         current setpoint in dynamic current mode.
+
+        Returns:
+            float: slew-rate in Amps/sec
         """
+
         response = self.instrument.query("CURR:DYN:RISE?")
-        return float(response)
+
+        # actually returned in A/us
+        return float(response)*1e6
 
     def set_dynamic_current_fall_rate(self, slew_rate: float) -> None:
         """
         set_dynamic_current_fall_rate(slew_rate)
 
-        slew_rate: float, slew rate of the falling edge of current setpoint
-        transitions, A/us
+        Sets the slew-rate for the falling edge between the two dynamic current
+        setpoint in dynamic current mode.
 
-        sets the slew rate for the falling edge between the two dynamic current
-        setpoint in
-        dynamic current mode.
+        Args:
+            slew_rate (float): slew rate of the falling edge of current
+                setpoint transitions in A/s.
         """
-        self.instrument.write(f"CURR:DYN:FALL {float(slew_rate)}")
+
+        # actually needs to be sent in A/us
+        self.instrument.write(f"CURR:DYN:FALL {float(slew_rate)/1e6}")
 
     def get_dynamic_current_fall_rate(self) -> float:
         """
         get_dynamic_current_fall_rate()
 
-        returns the slew rate for the falling edge between the two dynamic
+        Retrives the slew-rate for the falling edge between the two dynamic
         current setpoint in dynamic current mode.
+
+        Returns:
+            float: slew-rate in Amps/sec
         """
+
         response = self.instrument.query("CURR:DYN:FALL?")
-        return float(response)
+
+        # actually returned in A/us
+        return float(response)*1e6
 
     def set_resistance(self, resistance: float, channel: int = 0) -> None:
         """
         set_resistance(resistance, channel=0)
 
-        resistance: float, desired resistance setpoint
-        channel (optional): int, channel to change setpoint of.
-            valid options are 0,1,2 (default is 0)
-
-        changes the resistance setpoint of the load for the specified channel
-        in constant resistance mode. if channel = 0 both channels will be set
+        Changes the resistance setpoint of the load for the specified channel
+        in constant resistance mode. If channel = 0 both channels will be set
         to the value specified
+
+        Args:
+            resistance (float): Desired resistance setpoint in Ohms.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
         if int(channel) == 0:
@@ -393,32 +434,46 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f"RES:STAT:L{int(channel)} {float(resistance)}"
             self.instrument.write(cmd_str)
 
-    def get_resistance(self, channel: int) -> float:
+    def get_resistance(self, channel: int) -> OneOrTwoFloats:
         """
         get_resistance(channel)
 
-        channel: int, channel to get setpoint of.
-            valid options are 1,2
+        Retrives the resistance setpoint of the load for the specified channel
+        in constant resistance mode.
 
-        reads the resistance setpoint of the load for the specified channel in
-        constant resistance mode
+        Args:
+            channel (int): Channel number to query or 0 to query both channels.
+                For this load, valid channels are 1, and 2.
+
+        Returns:
+            OneOrTwoFloats: Resistence setpoint in Ohms. If channel == 0 then
+                the setpoints for both channels will be returned in a tuple
+                ordered by channel number.
         """
 
-        response = self.instrument.query(f"RES:STAT:L{int(channel)}?")
-        return float(response)
+        if int(channel) == 0:
+            response1 = self.instrument.query("RES:STAT:L1?")
+            response2 = self.instrument.query("RES:STAT:L2?")
+            return (float(response1), float(response2))
+        else:
+            response = self.instrument.query(f"RES:STAT:L{int(channel)}?")
+            return float(response)
 
     def set_voltage(self, voltage: float, channel: int = 0) -> None:
         """
         set_voltage(voltage, channel=0)
 
-        voltage: float, desired voltage setpoint
-        channel (optional): int, channel to change setpoint of.
-            valid options are 0,1,2 (default is 0)
-
-        changes the voltage setpoint of the load for the specified channel in
+        Changes the voltage setpoint of the load for the specified channel in
         constant voltage mode if channel = 0 both channels will be set to the
-        value specified
+        value specified.
+
+        Args:
+            voltage (float): Desired voltage setpoint in Volts DC.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
+
         if int(channel) == 0:
             self.instrument.write(f"VOLT:STAT:L1 {float(voltage)}")
             self.instrument.write(f"VOLT:STAT:L2 {float(voltage)}")
@@ -426,27 +481,39 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f"VOLT:STAT:L{int(channel)} {float(voltage)}"
             self.instrument.write(cmd_str)
 
-    def get_voltage(self, channel: int) -> float:
+    def get_voltage(self, channel: int) -> OneOrTwoFloats:
         """
         get_voltage(channel)
 
-        channel: int, channel to get setpoint of.
-            valid options are 1,2
+        Reads the voltage setpoint of the load for the specified channel in
+        constant voltage mode.
 
-        reads the voltage setpoint of the load for the specified channel in
-        constant voltage mode
+        Args:
+            channel (int): Channel number to query or 0 to query both channels.
+                For this load, valid channels are 1, and 2.
+
+        Returns:
+            OneOrTwoFloats: Voltage setpoint in Volts DC. If channel == 0 then
+                the setpoints for both channels will be returned in a tuple
+                ordered by channel number.
         """
 
-        response = self.instrument.query(f"VOLT:STAT:L{int(channel)}?")
-        return float(response)
+        if int(channel) == 0:
+            response1 = self.instrument.query("VOLT:STAT:L1?")
+            response2 = self.instrument.query("VOLT:STAT:L2?")
+            return (float(response1), float(response2))
+        else:
+            response = self.instrument.query(f"VOLT:STAT:L{int(channel)}?")
+            return float(response)
 
     def set_cv_current(self, current: float) -> None:
         """
         set_cv_current(current)
 
-        current: float, desired current setpoint
+        Changes the current setpoint of the load in constant voltage mode
 
-        changes the current setpoint of the load in constant voltage mode
+        Args:
+            current (float): Desired current setpoint in Amps DC.
         """
 
         self.instrument.write(f"VOLT:STAT:ILIM {float(current)}")
@@ -455,7 +522,10 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
         get_cv_current()
 
-        reads the current setpoint of the load in constant voltage mode
+        Reads the current setpoint of the load in constant voltage mode
+
+        Returns:
+            float: Current set-point in Amps DC.
         """
 
         response = self.instrument.query("VOLT:STAT:ILIM?")
@@ -465,79 +535,115 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         """
         set_power(power, channel=0)
 
-        power: float, desired power setpoint
-        channel (optional): int, channel to change setpoint of.
-            valid options are 0,1,2 (default is 0)
-
-        changes the power setpoint of the load for the specified channel in
+        Changes the power setpoint of the load for the specified channel in
         constant power mode. if channel = 0 both channels will be set to the
-        value specified
+        value specified.
+
+        Args:
+            power (float): Desired power setpoint in Watts.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
         if int(channel) == 0:
             self.instrument.write(f'POW:STAT:L1 {float(power)}')
             self.instrument.write(f'POW:STAT:L2 {float(power)}')
         else:
-            self.instrument.write(f'POW:STAT:L{int(channel)} {power}')
+            self.instrument.write(f'POW:STAT:L{int(channel)} {float(power)}')
 
-    def get_power(self, channel: int) -> float:
+    def get_power(self, channel: int) -> OneOrTwoFloats:
         """
         get_power(channel)
 
-        channel: int, channel to get the setpoint of.
-            valid options are 1,2
-
-        reads the power setpoint of the load for the specified channel in
+        Reads the power setpoint of the load for the specified channel in
         constant power mode
+
+        Args:
+            channel (int): Channel number to query or 0 for to query both
+                channels.
+
+        Returns:
+            OneOrTwoFloats: Power setpoint in Watts DC. If channel == 0 then
+                the setpoints for both channels will be returned in a tuple
+                ordered by channel number.
         """
 
-        response = self.instrument.query(f'POW:STAT:L{int(channel)}?')
-        return float(response)
+        if int(channel) == 0:
+            response1 = self.instrument.query('POW:STAT:L1?')
+            response2 = self.instrument.query('POW:STAT:L2?')
+            return (float(response1), float(response2))
+        else:
+            response = self.instrument.query(f'POW:STAT:L{int(channel)}?')
+            return float(response)
 
-    def measure_voltage(self) -> float:
+    def measure_voltage(self, fetch: bool = True) -> float:
         """
         measure_voltage()
 
         Retrives measurement of the voltage present across the load's input.
 
+        Args:
+            fetch (bool): If True this will cause the load to issue a trigger
+                for a new sample of the power and return the result. Otherwise
+                returns the current contents of the measurement buffer.
+                Defaults to True.
         Returns:
             float: Measured Voltage in Volts DC
         """
 
-        response = self.instrument.query('FETC:VOLT?')
+        if fetch:
+            response = self.instrument.query('FETC:VOLT?')
+        else:
+            response = self.instrument.query('MEAS:VOLT?')
+
         return float(response)
 
-    def measure_current(self) -> float:
+    def measure_current(self, fetch: bool = True) -> float:
         """
         measure_current()
 
         Retrives measurement of the current present through the load.
 
+        Args:
+            fetch (bool): If True this will cause the load to issue a trigger
+                for a new sample of the power and return the result. Otherwise
+                returns the current contents of the measurement buffer.
+                Defaults to True.
         Returns:
             float: Measured Current in Amps DC
         """
 
-        response = self.instrument.query('FETC:CURR?')
+        if fetch:
+            response = self.instrument.query('FETC:CURR?')
+        else:
+            response = self.instrument.query('MEAS:CURR?')
+
         return float(response)
 
-    def measure_power(self) -> float:
+    def measure_power(self, fetch: bool = True) -> float:
         """
         measure_power()
 
         Retrives measurement of the power dissipated by the load.
 
+        Args:
+            fetch (bool): If True this will cause the load to issue a trigger
+                for a new sample of the power and return the result. Otherwise
+                returns the current contents of the measurement buffer.
+                Defaults to True.
         Returns:
             float: Measured power in Watts.
         """
 
-        response = self.instrument.query('FETC:POW?')
+        if fetch:
+            response = self.instrument.query('FETC:POW?')
+        else:
+            response = self.instrument.query('MEAS:POW?')
+
         return float(response)
 
-    def pulse(self, level: float, duration: float) -> None:
-        """
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
-        """
+    def pulse(self, level: float, duration: float, channel: int = 0) -> None:
         """
         pulse(level, duration)
 
@@ -547,18 +653,27 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         less than or greater than the previous current setpoint.
 
         Args:
-            level (float): current level of pulse in Amps DC
-            duration (float): duration of the pulse in seconds
+            level (float): Current level of pulse in Amps DC
+            duration (float): Duration of the pulse in seconds
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
-        start_level = self.get_current(1)
+        start_level = self.get_current(int(channel))
 
-        self.set_current(float(level))
+        self.set_current(float(level), channel=int(channel))
         sleep(duration)
-        self.set_current(start_level)
+        if isinstance(start_level, float):
+            self.set_current(start_level)
+        elif isinstance(start_level, tuple):
+            self.set_current(start_level[0], channel=1)
+            self.set_current(start_level[1], channel=2)
+        else:
+            raise TypeError('Expected start_level to be a float or tuple')
 
     def ramp(self, start: float, stop: float, n: int = 100,
-             dt: float = 0.01) -> None:
+             dt: float = 0.01, channel: int = 0) -> None:
         """
         ramp(start, stop, n=100, dt=0.01)
 
@@ -570,20 +685,23 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         with this device.
 
         Args:
-            start (float): initial current setpoint of the ramp in Amps DC.
-            stop (float): final current setpoint of the ramp in Amps DC.
+            start (float): Initial current setpoint of the ramp in Amps DC.
+            stop (float): Final current setpoint of the ramp in Amps DC.
             n (int, optional): Number of points in the ramp between "start" and
                 "stop". Defaults to 100.
             dt (float, optional): Time between changes in the value of the
                 setpoint in seconds. Defaults to 0.01.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
         for i in np.linspace(float(start), float(stop), int(n)):
-            self.set_current(i)
+            self.set_current(i, channel=int(channel))
             sleep(dt)
 
     def slew(self, start: float, stop: float, n: int = 100,
-             dt: float = 0.01, dwell: float = 0) -> None:
+             dt: float = 0.01, dwell: float = 0, channel: int = 0) -> None:
         """
         slew(start, stop, n=100, dt=0.01, dwell=0)
 
@@ -597,19 +715,22 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         with this device.
 
         Args:
-            start (float): initial current setpoint of the ramp in Amps DC.
-            stop (float): midpoint current setpoint of the ramp in Amps DC.
+            start (float): Initial current setpoint of the ramp in Amps DC.
+            stop (float): Midpoint current setpoint of the ramp in Amps DC.
             n (int, optional): Number of points in the ramp between "start" and
                 "stop". Defaults to 100.
             dt (float, optional): Time between changes in the value of the
                 setpoint in seconds. Defaults to 0.01.
             dwell (float, optional): Time to dwell at the "stop" value before
                 ramping back to "start". Defaults to 0.
+            channel (int, optional): Channel number to adjust or 0 to adjust
+                both channels. For this load, valid channels are 1, and 2.
+                Defaults to 0.
         """
 
-        self.ramp(start, stop, n=int(n), dt=dt)
+        self.ramp(start, stop, n=int(n), dt=dt, channel=int(channel))
         sleep(dwell)
-        self.ramp(stop, start, n=int(n), dt=dt)
+        self.ramp(stop, start, n=int(n), dt=dt, channel=int(channel))
 
 
 if __name__ == '__main__':
