@@ -110,7 +110,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         Retrives the current state of the loads short circuit feature.
 
         Returns:
-            bool: True == Enable, False == Disable
+            bool: True == Enabled, False == Disabled
         """
 
         response = self.instrument.query("LOAD:SHOR?")
@@ -128,7 +128,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         Args:
             mode (str): Mode to operate the load in, currently only "CC", "CR",
                 "CP", and "CCD" are supported with this library.
-            range_setting (Union[int, str], optional): index or name of the
+            range_setting (Union[int, str], optional): Index or name of the
                 range to use for the given mode, 0/"L" for Low, 1/"M" for
                 Medium and 2/"H" for High. Defaults to 2.
         """
@@ -140,7 +140,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             raise ValueError('Invalid option for arguement "mode"')
 
         if isinstance(range_setting, int):
-            if int(range_setting) in range(0, 3):
+            if range_setting in range(0, 3):
                 range_string = valid_ranges[range_setting]
             else:
                 raise ValueError('Invalid option for the int "range_setting"')
@@ -149,6 +149,8 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 range_string = range_setting.upper()
             else:
                 raise ValueError('Invalid option for the str "range_setting"')
+        else:
+            raise TypeError('Expected range_setting to be of type str or int')
 
         self.instrument.write(f"MODE {mode}{range_string}")
 
@@ -217,7 +219,6 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             response1 = self.instrument.query('CURR:STAT:L1?')
             response2 = self.instrument.query('CURR:STAT:L2?')
             return (float(response1), float(response2))
-
         else:
             response = self.instrument.query(f'CURR:STAT:L{int(channel)}?')
             return float(response)
@@ -265,7 +266,6 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             response1 = self.instrument.query('CURR:DYN:L1?')
             response2 = self.instrument.query('CURR:DYN:L2?')
             return (float(response1), float(response2))
-
         else:
             response = self.instrument.query(f'CURR:DYN:L{int(channel)}?')
             return float(response)
@@ -358,8 +358,8 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         setpoint in dynamic current mode.
 
         Args:
-            slew_rate (float): slew rate of the rising edge of current setpoint
-                   transitions in A/s.
+            slew_rate (float): Slew-rate of the rising edge of current setpoint
+                   transitions in Amps/sec.
         """
 
         # actually needs to be sent in A/us
@@ -373,7 +373,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         current setpoint in dynamic current mode.
 
         Returns:
-            float: slew-rate in Amps/sec
+            float: Slew-rate in Amps/sec.
         """
 
         response = self.instrument.query("CURR:DYN:RISE?")
@@ -389,8 +389,8 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         setpoint in dynamic current mode.
 
         Args:
-            slew_rate (float): slew rate of the falling edge of current
-                setpoint transitions in A/s.
+            slew_rate (float): Slew-rate of the falling edge of current
+                setpoint transitions in Amps/sec.
         """
 
         # actually needs to be sent in A/us
@@ -404,7 +404,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         current setpoint in dynamic current mode.
 
         Returns:
-            float: slew-rate in Amps/sec
+            float: Slew-rate in Amps/sec.
         """
 
         response = self.instrument.query("CURR:DYN:FALL?")
@@ -611,7 +611,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 returns the current contents of the measurement buffer.
                 Defaults to True.
         Returns:
-            float: Measured Current in Amps DC
+            float: Measured Current in Amps DC.
         """
 
         if fetch:
@@ -645,7 +645,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
 
     def pulse(self, level: float, duration: float, channel: int = 0) -> None:
         """
-        pulse(level, duration)
+        pulse(level, duration, channel=0)
 
         Generates a square pulse with height and duration specified by level
         and duration. The load will start and return to the previous current
@@ -675,7 +675,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
     def ramp(self, start: float, stop: float, n: int = 100,
              dt: float = 0.01, channel: int = 0) -> None:
         """
-        ramp(start, stop, n=100, dt=0.01)
+        ramp(start, stop, n=100, dt=0.01, channel=0)
 
         Generates a linear ramp on the loads current specified by the
         parameters start, stop, n, and dt.
@@ -703,7 +703,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
     def slew(self, start: float, stop: float, n: int = 100,
              dt: float = 0.01, dwell: float = 0, channel: int = 0) -> None:
         """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
+        slew(start, stop, n=100, dt=0.01, dwell=0, channel=0)
 
         Generates a triangular waveform on the loads current specified by the
         parameters start, stop, n, and dt.

@@ -1,6 +1,7 @@
 from pythonequipmentdrivers import Scpi_Instrument
 from time import sleep
 import numpy as np
+from typing import Tuple, Dict, List
 
 
 class Chroma_62012P(Scpi_Instrument):
@@ -248,28 +249,282 @@ class Chroma_62012P(Scpi_Instrument):
         response = self.instrument.query("FETC:POW?")
         return float(response)
 
-    def get_status(self):
+    def get_status(self) -> Tuple:
         """
-        returns the current status of the supplies fault register
-        returns: str, the error code.
-            valid codes are:
-                "NE" (no error)
-                "OVP" (over voltage protection fault)
-                "OCP" (over current protection fault)
-                "OPP" (over power protection fault)
+        get_status()
+
+        Fetches and decodes the status reponse register of the source.
+
+        Possible Error messages returned by this source are:
+            'OVP'
+            'OCP'
+            'OPP'
+            'Remote_Inhibit'
+            'OTP'
+            'Fan_Lock'
+            'Sense_Fault'
+            'Series_Fault'
+            'Bus_OVP'
+            'AC_Fault'
+            'Fold_Back_CV_to_CC'
+            'Fold_Back_CC_to_CV'
+            'Reserved'
+            'Reserved'
+            'Reserved'
+            'Reserved
+
+        Returns:
+            Tuple: (Error_Mesaage, Output_State, Output_Mode),
+                Error_Message is a str, if more than one error is present each
+                error message str will be returned joined by commas.
+                Output_State is a boolean True/False state corresponding to the
+                state of the output relay (see self.get_state). Output mode is
+                either "CC" or "CV" depending on the configuration of the
+                source and its external loading.
         """
 
-        status = self.instrument.query("FETC:STAT?").rstrip('\n')
-        status = [x.strip() for x in status.split(',')]
-        warning_meas = int(status[0])
-        if warning_meas == 0:
-            return "NE"
-        elif (warning_meas & 0x0001) == 0x0001:
-            return "OVP"
-        elif (warning_meas & 0x0002) == 0x0002:
-            return "OCP"
-        elif (warning_meas & 0x0008) == 0x0008:
-            return "OPP"
+        # encoded as a bit mask, elements in this tuple represent the meaning
+        # of each bit with the tuple index representing the bit weight.
+        message_responses = ('OVP', 'OCP', 'OPP', 'Remote_Inhibit',
+                             'OTP', 'Fan_Lock', 'Sense_Fault', 'Series_Fault',
+                             'Bus_OVP', 'AC_Fault', 'Fold_Back_CV_to_CC',
+                             'Fold_Back_CC_to_CV', 'Reserved', 'Reserved',
+                             'Reserved', 'Reserved')
+
+        response = self.instrument.query("FETC:STAT?")
+        response = response.strip('\n')
+
+        message_code, state, mode = response.split(',')
+
+        message_code = int(message_code)
+        messages = []
+        for n, msg in enumerate(message_responses):
+            if message_code & (1 << n):
+                messages.append(msg)
+        messages = ','.join(messages)
+
+        output_state = True if (state == 'ON') else False
+
+        return (messages, output_state, mode)
+
+    def set_program_type(self, program_type: str) -> None:
+
+        valid_program_types = ('STEP', 'LIST', 'CP')
+
+        program_type = str(program_type).upper()
+        if program_type not in valid_program_types:
+            raise ValueError('Invalid program type'
+                             f', use: {valid_program_types}')
+
+        self.instrument.write(f'PROG:MODE {program_type}')
+
+    def set_program(self, n: int) -> None:
+        self.instrument.write(f'PROG:SEL {int(n)}')
+
+    def get_program_type(self) -> str:
+
+        response = self.instrument.query('PROG:MODE?')
+        return response.lower()
+
+    def build_program(self, *sequence: dict, **kwargs) -> None:
+
+        if not (1 <= len(sequence) <= 100):
+            raise ValueError('Program must have between 1-100 Sequences')
+
+        # initialization
+        cmds = []
+        cmds.append(f'PROG:SEL {int(kwargs.get("program_number", 1))}')
+
+        if kwargs.get('clear', True):
+            cmds.append('PROG:CLEAR')
+
+        # 0 links to no program
+        cmds.append(f'PROG:LINK {int(kwargs.get("link", 0))}')
+
+        cmds.append(f'PROG:COUNT {int(kwargs.get("count", 1))}')
+
+        for cmd in cmds:
+            self.instrument.write(cmd)
+
+        # build program
+        valid_sequence_types = ('AUTO',  # move to next sequence after "time"
+                                'MANUAL',  # wait until front panel pressed
+                                'TRIGGER',  # wait for sine wave on pin 8 of
+                                            # analog interface
+                                'SKIP')  # skip this sequence and move to next
+
+        for n, seq in enumerate(sequence, start=1):
+
+            if not isinstance(seq, dict):
+                raise TypeError('Sequence Must be of Type "dict"')
+
+            cmds.clear()  # clear command queue
+
+            # create new sequence
+            cmds.append(f'PROG:ADD {n}')
+            cmds.append(f'PROG:SEQ:SEL {n}')
+
+            # set sequence type
+            seq_type = str(seq.get('type', 'AUTO')).upper()
+            if seq_type not in valid_sequence_types:
+                raise ValueError(f'Invalid Sequence type "{seq_type}"')
+            cmds.append(f'PROG:SEQ:TYPE {seq_type}')
+
+            # set sequence parameters
+            cmds.append(f'PROG:SEQ:VOLT {float(seq.get("voltage", 0))}')  # V
+            cmds.append(f'PROG:SEQ:CURR {float(seq.get("current", 0))}')  # A
+            cmds.append(f'PROG:SEQ:TIME {float(seq.get("time", 0))}')  # sec
+
+            #   slew-rate arg is in V/s but it actually needs to be sent
+            #   in V/ms
+            volt_slew = float(seq.get("voltage_slew", 1000))  # V/s
+            cmds.append(f'PROG:SEQ:VOLT:SLEW {volt_slew/1e3}')  # V/ms
+
+            curr_slew = seq.get("current_slew", "INF")
+            if isinstance(curr_slew, str):
+                if (curr_slew.upper() != 'INF'):
+                    raise ValueError('Current Slew-rate must be a float or'
+                                     'the string "INF"')
+                else:
+                    cmds.append('PROG:SEQ:CURR:SLEWINF')
+            else:
+                #   slew-rate arg is in A/s but it actually needs to be sent
+                #   in A/ms
+                cmds.append(f'PROG:SEQ:CURR:SLEW {float(curr_slew)/1000}')
+
+            #   TTL is an 8-bit number, sets the voltage of 8 of the digitial
+            #   pins on the back of the source (pins 12 -> 19, TTL0 -> TTL7).
+            #   Uses 5 V Logic
+            ttl = int(seq.get("ttl", 0))
+            if not (0 <= ttl <= 255):
+                raise ValueError('TTL Must be an int in the range 0-255')
+            cmds.append(f'PROG:SEQ:TTL {ttl}')
+
+            for cmd in cmds:  # send commands in queue
+                self.instrument.write(cmd)
+        else:
+            if kwargs.get('save', False):
+                self.instrument.write('PROG:SAVE')
+
+    def get_program(self, program_type: str,
+                    program_number: int) -> Tuple[Dict, List]:
+
+        # select specified program
+        self.set_program_type(program_type)
+        self.set_program(program_number)
+
+        # get program metadata
+        N = int(self.instrument.query('PROG:MAX?'))  # number of sequences
+
+        options = {'program_number': program_number,
+                   'count': int(self.instrument.query('PROG:COUNT?')),
+                   'link': int(self.instrument.query('PROG:LINK?'))}
+
+        valid_sequence_types = ('AUTO',  # move to next sequence after "time"
+                                'MANUAL',  # wait until front panel pressed
+                                'TRIGGER',  # wait for sine wave on pin 8 of
+                                            # analog interface
+                                'SKIP')  # skip this sequence and move to next
+
+        # retrive info on each sequence
+        program = []
+        seq = {}
+        for n in range(1, N+1, 1):
+            seq.clear()
+            self.instrument.write(f'PROG:SEQ:SEL {n}')  # select sequence
+
+            response = self.instrument.query('PROG:SEQ?')
+            response = response.strip()
+            type_, volt, volt_sr, curr, curr_sr, ttl, t = response.split(',')
+
+            # decode into same format used in self.build_program
+            seq['type'] = valid_sequence_types[int(type_)]  # index into a list
+
+            seq['voltage'] = float(volt)
+            seq['voltage_slew'] = float(volt_sr)*1e3  # convert to V/s for user
+
+            seq['current'] = float(curr)
+            if ('INF' in curr_sr):
+                seq['current_slew'] = 'INF'
+            else:
+                float(curr_sr)
+
+            # convert to A/s for user output
+            if isinstance(seq['current_slew'], float):
+                seq['current_slew']*1e3
+
+            seq['ttl'] = int(ttl)
+
+            seq['time'] = float(t)
+
+            program.append(seq.copy())  # add to program list
+
+        # to duplicate this program pass to build_program with "program" as
+        # Args and "options" as Kwargs
+        return options, program
+
+    def run_program(self, n: int = 0) -> None:
+
+        if n != 0:
+            self.set_program(n)
+
+        self.instrument.write('PROG:RUN ON')
+
+    def halt_program(self) -> None:
+
+        self.instrument.write('PROG:RUN OFF')
+
+    def get_program_state(self) -> bool:
+
+        response = self.instrument.query('PROG:RUN?')
+        response = response.strip()
+
+        return (response == 'ON')
+
+    def v_step_program(self, start: float, stop: float, t: float) -> None:
+
+        # convert time to h:m:s (max is 99:59:59.99)
+        h, m, s = (0, 0, 0)
+        while t >= 3600:
+            h, t = (h+1, t-3600)
+        while t >= 60:
+            m, t = (m+1, t-60)
+        s += t
+
+        cmds = (f'PROG:STEP:STARTV {float(start)}',
+                f'PROG:STEP:ENDV {float(stop)}',
+                f'PROG:STEP:TIME {int(h)},{int(m)},{float(s)}')
+
+        for cmd in cmds:
+            self.instrument.write(cmd)
+
+    def cp_program(self, voltage: float = 0, current: float = 0,
+                   power: float = 0, tracking_speed: int = 50) -> None:
+
+        if not(1 <= int(tracking_speed) <= 100):
+            # 1 == least aggressive most stable
+            # 100 == most aggressive least stable
+            raise ValueError('tracking_speed must be between 1-100')
+
+        cmds = (f'PROG:CP:RESP {int(tracking_speed)}',
+                f'PROG:CP:VOLT {float(voltage)}',
+                f'PROG:CP:CURR {float(current)}',
+                f'PROG:CP:POW {float(power)}')
+
+        for cmd in cmds:
+            self.instrument.write(cmd)
+
+    def get_system_errors(self):
+
+        response = self.instrument.query('SYST:ERR?')
+        response = response.strip()
+
+        error_status = response.split(',')
+
+        error_code = int(error_status[0])
+        error_message = error_status[1].replace('"', '')
+
+        return (error_code, error_message)
 
     def pulse(self, level, duration):
         """
