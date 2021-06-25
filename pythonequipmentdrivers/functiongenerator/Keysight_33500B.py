@@ -18,17 +18,27 @@ class Keysight_33500B(Scpi_Instrument):
     valid_wave_types = ('ARB', 'DC', 'NOIS', 'PRBS', 'PULSE', 'RAMP', 'SIN',
                         'SQU', 'TRI')
 
-    def set_waveform_config(self, source: int = 1, **kwargs):
-        """[summary]
+    def set_waveform_config(self, source: int = 1, **kwargs) -> None:
+        """
+        set_waveform_config(self, source, **kwargs)
 
-        Args:
-            wave_type (str, optional): [description]
-            frequency (float, optional): [description]
-            amplitude (float, optional): [description]
-            offset (float, optional): [description]
-            source (int, optional): [description]. Defaults to 1.
+        Sets multiple parameters to configure a waveform in one command.
+        Parameters configured depend on the passed keyword arguements.
+
+        Kwargs:
+            wave_type (str, optional): Waveform type, valid options include
+                'arb' (arbitrary), 'dc' (DC), 'nois' (noise), 'prbs' (?),
+                'pulse' (pulse), 'ramp' (ramp), 'sin' (sine), 'squ' (square),
+                and 'tri' (triangle).
+            frequency (float, optional): Frequency of the waveform in Hz.
+            amplitude (float, optional): Peak-to-peak amplitude of the waveform
+                in Volts DC.
+            offset (float, optional): DC offset voltage of the waveform in
+                Volts DC.
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
 
         """
+
         wave_type = kwargs.get('wave_type', self.get_wave_type(source))
         frequency = kwargs.get('frequency', self.get_frequency(source))
         amplitude = kwargs.get('amplitude', self.get_voltage(source))
@@ -39,7 +49,6 @@ class Keysight_33500B(Scpi_Instrument):
                                                                  frequency,
                                                                  amplitude,
                                                                  offset))
-        return None
 
     def get_waveform_config(self, source: int = 1):
         response = self.instrument.query(f'SOUR{source}:APPL?')
@@ -60,8 +69,8 @@ class Keysight_33500B(Scpi_Instrument):
         response = self.instrument.query(f'SOUR{source}:VOLT?')
         return float(response)
 
-    def set_voltage_offset(self, offset: float, source: int = 1):
-        self.instrument.write(f'SOUR{source}:VOLT:OFFS {offset}')
+    def set_voltage_offset(self, voltage: float, source: int = 1):
+        self.instrument.write(f'SOUR{source}:VOLT:OFFS {voltage}')
         return None
 
     def get_voltage_offset(self, source: int = 1):
@@ -228,17 +237,16 @@ class Keysight_33500B(Scpi_Instrument):
         response = self.instrument.query(f'SOUR{source}:BURS:PHASE?')
         return float(response)
 
-    def set_burst_state(self, state: int, source: int = 1):
-        self.instrument.write(f'SOUR{source}:BURS:STAT {state}')
-        return None
+    def set_burst_state(self, state: bool, source: int = 1) -> None:
+        self.instrument.write('SOUR{}:BURS:STAT {}'.format(int(source),
+                                                           1 if state else 0))
 
-    def get_burst_state(self, source: int = 1):
-        response = self.instrument.query(f'SOUR{source}:BURS:STAT?')
-        return int(response)
+    def get_burst_state(self, source: int = 1) -> bool:
+        response = self.instrument.query(f'SOUR{int(source)}:BURS:STAT?')
+        return bool(int(response))
 
-    def trigger(self, source: int = 1):
-        self.instrument.write(f'TRIG{source}')
-        return None
+    def trigger(self, source: int = 1) -> None:
+        self.instrument.write(f'TRIG{int(source)}')
 
     def get_trigger_count(self, source: int = 1):
         response = self.instrument.query(f'TRIG{source}:COUN?')
@@ -315,13 +323,12 @@ class Keysight_33500B(Scpi_Instrument):
         response = self.instrument.query('DISP:UNIT:RATE?')
         return response.strip().lower()
 
-    def set_output_state(self, state: int, source: int = 1):
-        self.instrument.write(f"OUTP{source} {state}")
-        return None
+    def set_output_state(self, state: bool, source: int = 1) -> None:
+        self.instrument.write(f"OUTP{int(source)} {1 if state else 0}")
 
-    def get_output_state(self, source: int = 1):
-        response = self.instrument.query(f"OUTP{source}?")
-        return int(response)
+    def get_output_state(self, source: int = 1) -> bool:
+        response = self.instrument.query(f"OUTP{int(source)}?")
+        return bool(int(response))
 
     def set_output_impedance(self, impedance, source=1):
         """Valid options are 1-10k, min, max, and inf"""

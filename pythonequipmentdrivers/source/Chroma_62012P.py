@@ -327,6 +327,66 @@ class Chroma_62012P(Scpi_Instrument):
         return response.lower()
 
     def build_program(self, *sequence: dict, **kwargs) -> None:
+        """
+        build_program(*sequence, **kwargs)
+
+        Creates a program and stores it on the source to be executed later
+        (see run_program method). The program consists of a series of
+        sequences that are executed in order until the end of the program. Each
+        sequence is passed as a dictionary with the following possible keys:
+
+            "type" (str, optional): Type of sequence, valid types are "auto",
+                "manual", "trigger", and "skip". In the Auto mode the sequence
+                is executed, then after amount of "time" the program moves to
+                the get sequence. In the Manual mode the sequence executes
+                before waiting for the user to press the 'enter' button on the
+                front panel to continue the program. In the Trigger mode, the
+                source waits for a rising/falling edge on rear IO pin 8 to
+                continue the program. In Skip mode the sequence is skipped and
+                does not execute. Defaults to "auto".
+            "voltage" (float, optional): Voltage to set at the beginning of the
+                sequence in Volts DC. Defaults to 0.
+            "current" (float, optional): Current to set at the beginning of the
+                sequence in Amps DC. Defaults to 0.
+            "time" (float, optional): During of the sequence in seconds.
+                Defaults to 0.
+            "voltage_slew" (float, optional): Slew-rate using when
+                transitioning the voltage between setpoints during the sequence
+                in V/s. Defaults to 1000.
+            "current_slew" (Union[float, str], optional): Slew-rate using when
+                responding to loads current during the sequence in A/s, or
+                alternatively the str "inf" to set to the max slew-rate.
+                Defaults to "inf".
+            "ttl" (int, optional): State of the digital output pins at the rear
+                of the source. TTL represents an 8-bit number whose binary
+                representation sets the state of the 8 digital output pins
+                (pin 12[LSB] - pin 19[MSB]). Defaults to 0.
+
+        A valid program must consist at least 1 sequence but cannot exceed 100
+        sequences (limitation of source). As every sequence arugement has
+        default values programs can be quickly build by suppling a spare set of
+        sequences.
+        Programs can be further modified using the keyword arguements listed
+        below.
+
+        Kwargs:
+            program_number (int, optional): Location to store the resulting
+                program. The source can store up to 10 programs numbered 1-10.
+                Defaults to 1.
+            clear (bool, optional): Whether or not to clear the existing
+                contents of the specified program before loading in the new
+                program.  Defaults to True.
+            link (int, optional): Program number to jump to after the new
+                program completes. If set to 0 the program does not jump to
+                another program after finish execution. Defaults to 0.
+            count (int, optional): Number of times to run the program before
+                finishing execution. Repeats are performed before jumping to
+                another program. Defaults to 1.
+            save (bool, optional): Whether or not to save the program to
+                non-volitile memory. Will only be saved if no errors occur when
+                building the program. Defaults to False.
+
+        """
 
         if not (1 <= len(sequence) <= 100):
             raise ValueError('Program must have between 1-100 Sequences')
