@@ -184,7 +184,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         value specified.
 
         Args:
-            current (float): Desired current setpoint
+            current (float): Desired current setpoint in Amps DC.
             channel (int, optional): Channel number to adjust or 0 to adjust
                 both channels. For this load, valid channels are 1, and 2.
                 Defaults to 0.
@@ -728,10 +728,6 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 Defaults to 0.
         """
 
-        self.ramp(start, stop, n=int(n), dt=dt, channel=int(channel))
+        self.ramp(start, stop, n=n, dt=dt, channel=channel)
         sleep(dwell)
-        self.ramp(stop, start, n=int(n), dt=dt, channel=int(channel))
-
-
-if __name__ == '__main__':
-    pass
+        self.ramp(stop, start, n=n, dt=dt, channel=channel)

@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from time import sleep
@@ -5,77 +6,75 @@ from time import sleep
 
 class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
     """
+    Kikusui_PLZ1004WH(address)
+
+    address : str, address of the connected electronic load
+
     Programmers Manual:
-    http://www.kikusui.co.jp/kiku_manuals/P/PLZ4W/i_f_manual/english/sr_sys1_sour.html
-
-    need to update:
-        logic
-        documenation
+    https://manual.kikusui.co.jp/P/PLZ4W/i_f_manual/english/00-intro.html
     """
+    # need to update:
+    #     logic
+    #     documenation
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the input for the load
 
-        enables/disables the input for the load
+        Args:
+            state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP {state}")
-        return None
+        self.instrument.write(f"OUTP {1 if state else 0}")
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the input to the load
+        Returns the current state of the input to the load
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Load state (True == enabled, False == disabled)
         """
 
         if int(self.instrument.query("OUTP?")) == 1:
             return True
         return False
 
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the input for the load
-        equivalent to set_state(1)
+        Enables the input for the load. Equivalent to set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the input for the load
-        equivalent to set_state(0)
+        Disables the input for the load. Equivalent to set_state(False)
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state: bool = False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
-        return_state (optional): boolean, whether or not to return the state
-                                 load's input
-
-        reverses the current state of the load's input
-
-        if return_state = True the boolean state of the load after toggle() is
+        Reverses the current state of the load's input
+        If return_state = True the boolean state of the load after toggle() is
         executed will be returned
+
+        Args:
+            return_state (bool, optional): [description]. Defaults to False.
+
+        Returns:
+            Union[None, bool]: If return_state == True returns the Load state
+                (True == enabled, False == disabled), else returns None
         """
 
         if self.get_state():
@@ -85,7 +84,6 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
 
         if return_state:
             return self.get_state()
-        return None
 
     def set_mode(self, mode, cv=False):
         """
@@ -120,24 +118,26 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
         response = self.instrument.query("FUNC?")
         return response.rstrip("\n")
 
-    def set_voltage(self, voltage):
+    def set_voltage(self, voltage: float) -> None:
         """
         set_voltage(voltage)
 
-        voltage: float, voltage setpoint for CV mode
+        Changes the voltage setpoint of the load in constant voltage.
 
-        sets the constant voltage setpoint if the load is in constant current
-        mode or any mode that includes a CV option
+        Args:
+            voltage (float): Desired voltage setpoint in Volts DC.
         """
 
-        self.instrument.write(f"VOLT {voltage}")
-        return None
+        self.instrument.write(f"VOLT {float(voltage)}")
 
-    def get_voltage(self):
+    def get_voltage(self) -> None:
         """
         get_voltage()
 
-        gets the constant voltage setpoint used in a CV mode in Vdc
+        Reads the voltage setpoint of the load in constant voltage mode.
+
+        Returns:
+            float: Voltage setpoint in Volts DC.
         """
 
         response = self.instrument.query("VOLT?")
@@ -202,54 +202,62 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
         response = self.instrument.query("COND:RANG?")
         return response.rstrip('\n')
 
-    def set_slew(self, slew_rate):
+    def set_slew_rate(self, slew_rate: Union[float, str]) -> None:
         """
-        set_slew(slew_rate)
+        set_slew_rate(slew_rate)
 
-        slew_rate: float/str, value of the slew rate to be set in Amps/uS
-           valid options are either: positive real floats, the strings "MAX"
-           or positive real ints
+        Adjusts the slew-rate of the load used when transitioning between
+        current setpoints or while trying to regulate the current, voltage,
+        power, or resistence under dynamic conditions.
 
-        adjusts the slew rate of the load according to the value specified by
-        "slew_rate"
+        Args:
+            slew_rate (Union[float, str]): slew-rate to use in A/S or the
+                string "max".
         """
 
-        if type(slew_rate) in (float, int):
-            self.instrument.write(f"CURR:SLEW {slew_rate}")
-        elif (type(slew_rate) is str) and (slew_rate.upper() == "MAX"):
+        if isinstance(slew_rate, float):  # set-point needs to be sent in A/us
+            self.instrument.write(f"CURR:SLEW {slew_rate*1e-6}")
+        elif isinstance(slew_rate, str) and (slew_rate.upper() == "MAX"):
             self.instrument.write(f"CURR:SLEW {slew_rate}")
         else:
-            raise ValueError("Invalid option")
+            raise ValueError('slew_rate must be a float or the str "max"')
 
-        return None
-
-    def get_slew(self):
+    def get_slew_rate(self) -> float:
         """
-        get_slew()
+        get_slew_rate()
 
-        returns the current slew rate setting of the electronic load in Amps/uS
+        Retrives the slew-rate of the load used when transitioning between
+        current setpoints or while trying to regulate the current, voltage,
+        power, or resistence under dynamic conditions.
+
+        Returns:
+            float: slew-rate currently used in A/S
         """
 
         response = self.instrument.query("CURR:SLEW?")
-        return float(response)
+        slew_rate = float(response)*1e6  # return is in A/us
+        return slew_rate
 
-    def set_current(self, current):
+    def set_current(self, current: float) -> None:
         """
         set_current(current)
 
-        current: float, desired current setpoint
+        Changes the current setpoint of the load in constant current mode.
 
-        changes the current setpoint of the load
+        Args:
+            current (float): Desired current setpoint in Amps DC.
         """
 
-        self.instrument.write(f"CURR {current}")
-        return None
+        self.instrument.write(f"CURR {float(current)}")
 
-    def get_current(self):
+    def get_current(self) -> float:
         """
         get_current()
 
-        reads the current setpoint of the load in Adc
+        Reads the current setpoint of the load in constant current mode.
+
+        Returns:
+            float: Current setpoint in Amps DC.
         """
 
         response = self.instrument.query("CURR?")
@@ -353,83 +361,90 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
         response = self.instrument.query("SOUR:PULS:FREQ?")
         return float(response)
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
-        measure_voltage_rms()
+        measure_voltage()
 
-        returns measurement of the voltage present across the load in Vdc
-        returns: float
+        Retrives measurement of the voltage present across the load's input.
+
+        Returns:
+            float: Measured Voltage in Volts DC
         """
 
         response = self.instrument.query('MEAS:VOLT?')
         return float(response)
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
-        returns measurement of the current through the load in Adc
-        returns: float
+        Retrives measurement of the current present through the load.
+
+        Returns:
+            float: Measured Current in Amps DC.
         """
+
         response = self.instrument.query('MEAS:CURR?')
         return float(response)
 
-    def measure_power(self):
+    def measure_power(self) -> float:
         """
         measure_power()
 
-        returns measurement of the power consumed by the load in W
-        returns: float
+        Retrives measurement of the power dissipated by the load.
+
+        Returns:
+            float: Measured power in Watts.
         """
 
         response = self.instrument.query('MEAS:POW?')
         return float(response)
 
-    def pulse(self, level, duration):
+    def pulse(self, level: float, duration: float) -> None:
         """
         pulse(level, duration)
 
-        level: float/int, current level of "high" state of the pulse in Amps
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
+        Generates a square pulse with height and duration specified by level
+        and duration. The load will start and return to the previous current
+        level set on the load before the execution of pulse(). "level" can be
+        less than or greater than the previous current setpoint.
 
-        generates a square pulse with height and duration specified by level
-        and duration. Will start and return to the previous current level set
-        on the load before the execution of pulse(). level can be less than or
-        greater than the previous current setpoint
+        Args:
+            level (float): Current level of pulse in Amps DC
+            duration (float): Duration of the pulse in seconds
         """
 
         start_level = self.get_current()
+
         self.set_current(level)
         sleep(duration)
         self.set_current(start_level)
-        return None
 
     def ramp(self, start, stop, n=100, dt=0.01):
         """
         ramp(start, stop, n=100, dt=0.01)
 
-        start: float/int, starting current setpoint of the ramp in Adc
-        stop: float/int, ending current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-            setpoint in seconds. default is 0.01 sec
-
-        generates a linear ramp on the loads current specified by the
-        parameters start, stop, n, and dt. input of the load should be enabled
-        before executing this command contrary to what this documentation may
-        imply, start can be higher than stop or vise-versa. minimum dt is
+        Generates a linear ramp on the loads current specified by the
+        parameters start, stop, n, and dt.
+        The input of the load should be enabled before executing this command.
+        "start" can be higher than "stop" or vise-versa. The minimum dt is
         limited by the communication speed of the interface used to communicate
-        with this device
+        with this device.
+
+        Args:
+            start (float): Initial current setpoint of the ramp in Amps DC.
+            stop (float): Final current setpoint of the ramp in Amps DC.
+            n (int, optional): Number of points in the ramp between "start" and
+                "stop". Defaults to 100.
+            dt (float, optional): Time between changes in the value of the
+                setpoint in seconds. Defaults to 0.01.
         """
 
-        for i in np.linspace(start, stop, int(n)):
+        for i in np.linspace(float(start), float(stop), int(n)):
             self.set_current(i)
             sleep(dt)
-        return None
 
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0):
+    def slew(self, start, stop, n=100, dt=0.01, dwell=0) -> None:
         """
         slew(start, stop, n=100, dt=0.01, dwell=0)
 
@@ -451,11 +466,6 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
         interface used to communicate with this device
         """
 
-        self.ramp(start, stop, n=int(n), dt=dt)
+        self.ramp(start, stop, n=n, dt=dt)
         sleep(dwell)
-        self.ramp(stop, start, n=int(n), dt=dt)
-        return None
-
-
-if __name__ == '__main__':
-    pass
+        self.ramp(stop, start, n=n, dt=dt)
