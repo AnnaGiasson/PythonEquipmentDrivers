@@ -187,14 +187,14 @@ class Keysight_33500B(Scpi_Instrument):
         response = self.instrument.query(f'SOUR{source}:FUNC:SQU:PER?')
         return float(response)
 
-    def set_burst_mode(self, mode: str, source: int = 1):
+    def set_burst_mode(self, mode: str, source: int = 1) -> None:
         mode = mode.upper()
-        if mode not in ['TRIG', 'GAT']:
-            raise ValueError('Invalid mode, valid modes are "TRIG"/"GAT"')
+        burst_modes = ('TRIG', 'GAT')
+        if mode not in burst_modes:
+            raise ValueError(f'Invalid mode, valid modes are: {burst_modes}')
         self.instrument.write(f'SOUR{source}:BURS:MODE {mode}')
-        return None
 
-    def get_burst_mode(self, source: int = 1):
+    def get_burst_mode(self, source: int = 1) -> str:
         response = self.instrument.query(f'SOUR{source}:BURS:MODE?')
         return response.strip().lower()
 
