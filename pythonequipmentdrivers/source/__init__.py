@@ -8,6 +8,7 @@ from .Intepro_PSI9000 import Intepro_PSI9000
 from .PPSC_3150AFX import PPSC_3150AFX
 from .HP_6632A import HP_6632A
 from .Agilent_6030A import Agilent_6030A
+from .Sorensen_SGA import Sorensen_SGA
 
 
 __all__ = ['BKPrecision_9132B',
@@ -20,4 +21,5 @@ __all__ = ['BKPrecision_9132B',
            'PPSC_3150AFX',
            'HP_6632A',
            'Agilent_6030A',
+           'Sorensen_SGA',
            ]

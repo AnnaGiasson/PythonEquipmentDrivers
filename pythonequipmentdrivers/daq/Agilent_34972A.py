@@ -218,7 +218,7 @@ class Agilent_34972A(Scpi_Instrument):
         """
         if delaytime is None:
             return self.get_trigger_timer()
-        if isinstance(delaytime, float):
+        if isinstance(delaytime, (float, int)):
             self.instrument.write(f"TRIG:TIM {delaytime}", **kwargs)
         else:
             raise ValueError("Invalid trigger count number type, use int")

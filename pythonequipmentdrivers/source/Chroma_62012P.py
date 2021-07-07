@@ -1,7 +1,7 @@
 from pythonequipmentdrivers import Scpi_Instrument
 from time import sleep
 import numpy as np
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Union
 
 
 class Chroma_62012P(Scpi_Instrument):
@@ -13,123 +13,121 @@ class Chroma_62012P(Scpi_Instrument):
     object for accessing basic functionallity of the Chroma_62012P DC supply
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the output of the supply
 
-        enables/disables the state for the power supply's output
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"CONF:OUTP {state}")
-        return None
+        self.instrument.write(f"CONF:OUTP {1 if state else 0}")
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the output relay,
+        Retrives the current state of the output of the supply.
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
         """
 
         response = self.instrument.query("CONF:OUTP?").rstrip('\n')
-        if response != "ON":
-            return 0
-        return 1
+        return ("ON" in response)
 
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the relay for the power supply's output
-        equivalent to set_state(1)
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the relay for the power supply's output
-        equivalent to set_state(0)
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state: bool = False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
-        return_state (optional): boolean, whether or not to return the state
-        of the output relay.
+        Reverses the current state of the Supply's output
+        If return_state = True the boolean state of the supply after toggle()
+        is executed will be returned.
 
-        reverses the current state of the power supply's output relay
+        Args:
+            return_state (bool, optional): Whether or not to return the state
+                of the supply after changing its state. Defaults to False.
 
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
+        Returns:
+            Union[None, bool]: If return_state == True returns the Supply state
+                (True == enabled, False == disabled), else returns None
         """
 
-        if not self.get_state():  # logic inverted so the default state is off
-            self.on()
-        else:
+        if self.get_state():
             self.off()
+        else:
+            self.on()
 
         if return_state:
             return self.get_state()
-        return None
 
-    def set_voltage(self, voltage):
+    def set_voltage(self, voltage: float) -> None:
         """
         set_voltage(voltage)
 
-        voltage: float or int, amplitude to set output to in Vdc
+        Sets the output voltage setpoint for the supply.
 
-        set the output voltage setpoint specified by "voltage"
+        Args:
+            voltage (float): output voltage setpoint in Volts DC.
         """
 
-        self.instrument.write(f"SOUR:VOLT {voltage}")
-        return None
+        self.instrument.write(f"SOUR:VOLT {float(voltage)}")
 
-    def get_voltage(self):
+    def get_voltage(self) -> float:
         """
         get_voltage()
 
-        gets the output voltage setpoint in Vdc
+        Retrives the current value output voltage setpoint.
 
-        returns: float
+        Returns:
+            float: Output voltage setpoint in Volts DC.
         """
 
         response = self.instrument.query("SOUR:VOLT?")
         return float(response)
 
-    def set_current(self, current):
+    def set_current(self, current: float) -> None:
         """
         set_current(current)
 
-        current: float/int, current limit setpoint in Adc
+        Sets the current limit threshold for the power supply.
 
-        sets the current limit setting for the power supply in Adc
+        Args:
+            current (float): Current Limit setpoint in Amps DC.
         """
-        self.instrument.write(f"SOUR:CURR {current}")
-        return None
 
-    def get_current(self):
+        self.instrument.write(f"SOUR:CURR {float(current)}")
+
+    def get_current(self) -> float:
         """
         get_current()
 
-        gets the current limit setting for the power supply in Adc
+        Retrives the current limit threshold for the power supply.
 
-        returns: float
+        Returns:
+            float: Current Limit setpoint in Amps DC.
         """
 
         response = self.instrument.query("SOUR:CURR?")
@@ -214,36 +212,40 @@ class Chroma_62012P(Scpi_Instrument):
         resp = self.instrument.query('SOUR:VOLT:LIM:HIGH?')
         return float(resp)
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
-        returns measurement of the dc voltage of the power supply in Vdc
+        Retrives measurement of the voltage present across the supply's output.
 
-        returns: float
+        Returns:
+            float: Measured Voltage in Volts DC
         """
 
         response = self.instrument.query("FETC:VOLT?")
         return float(response)
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
-        returns measurement of the dc current of the power supply in Adc
-        returns: float
+        Retrives measurement of the current present through the supply.
+
+        Returns:
+            float: Measured Current in Amps DC.
         """
 
         response = self.instrument.query("FETC:CURR?")
         return float(response)
 
-    def measure_power(self):
+    def measure_power(self) -> float:
         """
         measure_power()
 
-        returns measurement of the power drawn from the power supply in W
+        Retrives measurement of the power drawn from the supply.
 
-        returns: float
+        Returns:
+            float: Measured power in Watts.
         """
 
         response = self.instrument.query("FETC:POW?")
@@ -586,77 +588,78 @@ class Chroma_62012P(Scpi_Instrument):
 
         return (error_code, error_message)
 
-    def pulse(self, level, duration):
+    def pulse(self, level: float, duration: float) -> None:
         """
         pulse(level, duration)
 
-        level: float/int, voltage level of "high" state of the pulse in Volts
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
+        Generates a square pulse with height and duration specified by level
+        and duration. The supply will start and return to the previous voltage
+        level set on the supply before the execution of pulse(). "level" can be
+        less than or greater than the previous voltage setpoint.
 
-        generates a square pulse with height and duration specified by level
-        and duration. will start and return to the previous voltage level set
-        on the source before the execution of pulse(). level can be less than
-        or greater than the previous voltage setpoint
+        Args:
+            level (float): Voltage level of pulse in Volts DC
+            duration (float): Duration of the pulse in seconds
         """
 
         start_level = self.get_voltage()
         self.set_voltage(level)
         sleep(duration)
         self.set_voltage(start_level)
-        return None
 
-    def ramp(self, start, stop, n=100, dt=0.01):
+    def ramp(self, start: float, stop: float,
+             n: int = 100, dt: float = 0.01) -> None:
         """
         ramp(start, stop, n=100, dt=0.01)
 
-        start: float/int, starting voltage setpoint of the ramp in Vdc
-        stop: float/int, ending voltage setpoint of the ramp in Vdc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
+        Generates a linear ramp on the supply's voltage specified by the
+        parameters start, stop, n, and dt.
+        The input of the supply should be enabled before executing this
+        command. "start" can be higher than "stop" or vise-versa. The minimum
+        dt is limited by the communication speed of the interface used to
+        communicate with this device.
 
-        generates a linear ramp on the sources voltage specified by the
-        parameters start, stop, n, and dt. output of the source should be
-        enabled before executing this command. contrary to what this
-        documentation may imply, start can be higher than stop or vise-versa.
-        minimum dt is limited by the communication speed of the interface used
-        to communicate with this device and the connected electrical network.
+        Args:
+            start (float): Initial voltage setpoint of the ramp in Volts DC.
+            stop (float): Final voltage setpoint of the ramp in Volts DC.
+            n (int, optional): Number of points in the ramp between "start" and
+                "stop". Defaults to 100.
+            dt (float, optional): Time between changes in the value of the
+                setpoint in seconds. Defaults to 0.01.
         """
 
-        for i in np.linspace(start, stop, int(n)):
-            self.set_voltage(i)
+        for v in np.linspace(float(start), float(stop), int(n)):
+            self.set_voltage(v)
             sleep(dt)
-        return None
 
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0):
+    def slew(self, start: float, stop: float, n: int = 100,
+             dt: float = 0.01, dwell: float = 0) -> None:
         """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
+        slew(start, stop, n=100, dt=0.01, dwell=0, channel=0)
 
-        start: float/int, "low" voltage setpoint of the ramp in Vdc
-        stop: float/int, "high" voltage setpoint of the ramp in Vdc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
+        Generates a triangular waveform on the supply's voltage specified by
+        the parameters start, stop, n, and dt.
+        Optionally, a dwell acan be added at the top of the waveform to create
+        a trapezoidal voltage shape.
+        The input of the supply should be enabled before executing this
+        command. "start" can be higher than "stop" or vise-versa. The minimum
+        dt is limited by the communication speed of the interface used to
+        communicate with this device.
 
-        generates a triangular waveform on the sources voltage specified by the
-        parameters start, stop, n, and dt. optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal voltage shape. The
-        output of the load should be enabled before executing this command.
-        contrary to what this documentation may imply, start can be higher than
-        stop or vise-versa. minimum dt is limited by the communication speed of
-        the interface used to communicate with this device and the connected
-        electrical network.
+        Args:
+            start (float): Initial voltage setpoint of the ramp in Volts DC.
+            stop (float): Midpoint voltage setpoint of the ramp in Volts DC.
+            n (int, optional): Number of points in the ramp between "start" and
+                "stop". Defaults to 100.
+            dt (float, optional): Time between changes in the value of the
+                setpoint in seconds. Defaults to 0.01.
+            dwell (float, optional): Time to dwell at the "stop" value before
+                ramping back to "start". Defaults to 0.
         """
 
-        self.ramp(start, stop, n=int(n/2), dt=dt)
+        self.ramp(start, stop, n=n, dt=dt)
         sleep(dwell)
-        self.ramp(stop, start, n=int(n/2), dt=dt)
-        return None
+        self.ramp(stop, start, n=n, dt=dt)
 
 
 if __name__ == '__main__':

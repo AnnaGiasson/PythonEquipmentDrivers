@@ -215,7 +215,8 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
                 string "max".
         """
 
-        if isinstance(slew_rate, float):  # set-point needs to be sent in A/us
+        if isinstance(slew_rate, (float, int)):
+            # set-point needs to be sent in A/us
             self.instrument.write(f"CURR:SLEW {slew_rate*1e-6}")
         elif isinstance(slew_rate, str) and (slew_rate.upper() == "MAX"):
             self.instrument.write(f"CURR:SLEW {slew_rate}")
@@ -420,7 +421,8 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
         sleep(duration)
         self.set_current(start_level)
 
-    def ramp(self, start, stop, n=100, dt=0.01):
+    def ramp(self, start: float, stop: float,
+             n: int = 100, dt: float = 0.01) -> None:
         """
         ramp(start, stop, n=100, dt=0.01)
 
@@ -444,26 +446,29 @@ class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
             self.set_current(i)
             sleep(dt)
 
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0) -> None:
+    def slew(self, start: float, stop: float, n: int = 100,
+             dt: float = 0.01, dwell: float = 0) -> None:
         """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
+        slew(start, stop, n=100, dt=0.01, dwell=0, channel=0)
 
-        start: float/int, "low" current setpoint of the ramp in Adc
-        stop: float/int, "high" current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
+        Generates a triangular waveform on the loads current specified by the
+        parameters start, stop, n, and dt.
+        Optionally, a dwell acan be added at the top of the waveform to create
+        a trapezoidal load shape.
+        The input of the load should be enabled before executing this command.
+        "start" can be higher than "stop" or vise-versa. The minimum dt is
+        limited by the communication speed of the interface used to communicate
+        with this device.
 
-        generates a triangular waveform on the loads current specified by the
-        parameters start, stop, n, and dt optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal load shape. input of
-        the load should be enabled before executing this command contrary to
-        what this documentation may imply, start can be higher than stop or
-        vise-versa. minimum dt is limited by the communication speed of the
-        interface used to communicate with this device
+        Args:
+            start (float): Initial current setpoint of the ramp in Amps DC.
+            stop (float): Midpoint current setpoint of the ramp in Amps DC.
+            n (int, optional): Number of points in the ramp between "start" and
+                "stop". Defaults to 100.
+            dt (float, optional): Time between changes in the value of the
+                setpoint in seconds. Defaults to 0.01.
+            dwell (float, optional): Time to dwell at the "stop" value before
+                ramping back to "start". Defaults to 0.
         """
 
         self.ramp(start, stop, n=n, dt=dt)

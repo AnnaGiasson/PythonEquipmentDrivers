@@ -76,7 +76,8 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         executed will be returned
 
         Args:
-            return_state (bool, optional): [description]. Defaults to False.
+            return_state (bool, optional): Whether or not to return the state
+                of the load after changing its state. Defaults to False.
 
         Returns:
             Union[None, bool]: If return_state == True returns the Load state
@@ -664,7 +665,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
 
         self.set_current(float(level), channel=int(channel))
         sleep(duration)
-        if isinstance(start_level, float):
+        if isinstance(start_level, (float, int)):
             self.set_current(start_level)
         elif isinstance(start_level, tuple):
             self.set_current(start_level[0], channel=1)

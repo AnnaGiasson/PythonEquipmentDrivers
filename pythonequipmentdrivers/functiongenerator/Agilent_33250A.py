@@ -28,7 +28,7 @@ class Agilent_33250A(Scpi_Instrument):
 
         valid_str = ('MIN', 'MAX', 'INF')
 
-        if isinstance(impedance, float):
+        if isinstance(impedance, (float, int)):
             z = np.clip(impedance, 10, 10e3)
             self.instrument.write(f'OUTP:LOAD {z}')
         elif isinstance(impedance, str) and (impedance.upper() in valid_str):
