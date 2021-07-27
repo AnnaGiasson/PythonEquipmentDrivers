@@ -243,6 +243,7 @@ class Sorensen_SGA(Scpi_Instrument):
             return None
         return response.strip()
 
+        '''   Infinite Loop TODO: Fix 
     def error_queue(self) -> List:
         """
         error_queue()
@@ -268,7 +269,7 @@ class Sorensen_SGA(Scpi_Instrument):
             queue.append(error)
 
         return queue
-
+        '''
     def set_local(self, state: bool) -> None:
         """
         set_local(state)
