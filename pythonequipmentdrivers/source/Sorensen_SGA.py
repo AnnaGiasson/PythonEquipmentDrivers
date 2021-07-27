@@ -243,7 +243,7 @@ class Sorensen_SGA(Scpi_Instrument):
             return None
         return response.strip()
 
-        '''   Infinite Loop TODO: Fix 
+        '''   Infinite Loop when empty error queue
     def error_queue(self) -> List:
         """
         error_queue()
