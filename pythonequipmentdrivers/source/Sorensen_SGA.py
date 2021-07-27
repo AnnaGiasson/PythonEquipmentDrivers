@@ -210,7 +210,7 @@ class Sorensen_SGA(Scpi_Instrument):
 
         self.instrument.write(f'SOUR:CURR:LIM {float(current)}')
 
-    def get_over_currrent_protection(self) -> float:
+    def get_over_current_protection(self) -> float:
         """
         get_over_current_protection(current)
 
