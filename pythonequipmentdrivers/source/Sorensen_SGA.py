@@ -239,11 +239,10 @@ class Sorensen_SGA(Scpi_Instrument):
         """
 
         response = self.instrument.query('SYST:ERR?')
-        if response == '0':
+        if response[0] == '0':
             return None
         return response.strip()
 
-        '''   Infinite Loop when empty error queue
     def error_queue(self) -> List:
         """
         error_queue()
@@ -269,7 +268,7 @@ class Sorensen_SGA(Scpi_Instrument):
             queue.append(error)
 
         return queue
-        '''
+
     def set_local(self, state: bool) -> None:
         """
         set_local(state)
