@@ -1,4 +1,5 @@
-from pythonequipmentdrivers import Scpi_Instrument, VisaIOError
+from typing import Union
+from pythonequipmentdrivers import Scpi_Instrument
 from time import sleep
 import numpy as np
 
@@ -12,24 +13,16 @@ class Keithley_2231A(Scpi_Instrument):
     object for accessing basic functionallity of the Keithley DC supply
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.set_access_remote('remote')
-        return None
 
-    def __del__(self):
-        try:
-            # if connection has been estabilished terminate it
-            if hasattr(self, 'instrument'):
-                self.set_access_remote('local')
-                self.instrument.close()
-        except VisaIOError:
-            # if connection not connection has been estabilished (such as if an
-            # error is throw in __init__) do nothing
-            pass
-        return None
+    def __del__(self) -> None:
+        if hasattr(self, 'instrument'):
+            self.set_access_remote('local')
+        super().__del__()
 
-    def set_access_remote(self, mode):
+    def set_access_remote(self, mode) -> None:
         """
         set_access_remote(mode)
 
@@ -42,8 +35,6 @@ class Keithley_2231A(Scpi_Instrument):
             self.instrument.write('SYSTem:RWLock')
         elif mode.lower() == 'local':
             self.instrument.write('SYSTem:LOCal')
-
-        return None
 
     def set_channel(self, channel):  # check
         """
@@ -72,91 +63,93 @@ class Keithley_2231A(Scpi_Instrument):
         channel = int(resp)
         return channel
 
-    def set_state(self, state, channel):  # check
+    def set_state(self, state: bool, channel: int) -> None:
         """
         set_state(state, channel)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the output of the supply
 
-        channel: int, index of the channel to control.
-                 valid options are 1-3
-
-        enables/disables the state for the power supply's output
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
+            channel (int): Index of the channel to control. valid options
+                are 1-3
         """
 
         self.set_channel(channel)
-        self.instrument.write(f"CHAN:OUTP {state}")
-        return None
+        self.instrument.write(f"CHAN:OUTP {1 if state else 0}")
 
-    def get_state(self, channel):  # check
+    def get_state(self, channel: int) -> bool:
         """
         get_state(channel)
 
-        channel: int, index of the channel to control.
-                 valid options are 1-3
+        Retrives the current state of the output of the supply.
 
-        returns the current state of the output relay,
+        Args:
+            channel (int): index of the channel to control. Valid options
+                are 1-3
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query("CHAN:OUTP?").rstrip('\n')
-        if resp not in ["ON", '1']:
-            return 0
-        return 1
+        response = self.instrument.query("CHAN:OUTP?")
+        if response.rstrip('\n') not in ("ON", '1'):
+            return False
+        return True
 
-    def on(self, channel):
+    def on(self, channel: int) -> None:
         """
         on(channel)
 
-        channel: int, index of the channel to control.
-                 valid options are 1-3
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
 
-        enables the relay for the power supply's output
-        equivalent to set_state(1)
+        Args:
+            channel (int): Index of the channel to control. Valid options
+                are 1-3
         """
 
-        self.set_state(1, channel)
-        return None
+        self.set_state(True, channel)
 
-    def off(self, channel):
+    def off(self, channel: int) -> None:
         """
         off(channel)
 
-        channel: int, index of the channel to control.
-                 valid options are 1-3
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
 
-        disables the relay for the power supply's output
-        equivalent to set_state(0)
+        Args:
+            channel (int): Index of the channel to control. Valid options
+                are 1-3
         """
 
-        self.set_state(0, channel)
-        return None
+        self.set_state(False, channel)
 
-    def toggle(self, channel, return_state=False):
+    def toggle(self, channel: int,
+               return_state: bool = False) -> Union[None, bool]:
         """
-        toggle(return_state=False)
+        toggle(channel, return_state=False)
 
-        return_state (optional): boolean, whether or not to return the state
-        of the output relay.
+        Reverses the current state of the Supply's output
+        If return_state = True the boolean state of the supply after toggle()
+        is executed will be returned.
 
-        reverses the current state of the power supply's output relay
+        Args:
+            channel (int): Index of the channel to control. Valid options
+                are 1-3
+            return_state (bool, optional): Whether or not to return the state
+                of the supply after changing its state. Defaults to False.
 
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
+        Returns:
+            Union[None, bool]: If return_state == True returns the Supply state
+                (True == enabled, False == disabled), else returns None
         """
 
-        # logic inverted so the default state is off
-        if not self.get_state(channel):
-            self.on(channel)
-        else:
-            self.off(channel)
+        self.set_state(self.get_state() ^ True, channel)
 
         if return_state:
             return self.get_state(channel)
-        return None
 
     def set_voltage(self, voltage, channel):
         """

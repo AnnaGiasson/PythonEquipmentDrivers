@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 
 
@@ -17,54 +18,52 @@ class PPSC_3150AFX(Scpi_Instrument):
         super().__init__(address, **kwargs)
         return None
 
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the output of the supply
 
-        enables/disables the relay for the power supply's output
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP:STAT {state}")
-        return None
+        self.instrument.write(f"OUTP:STAT {1 if state else 0}")
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the output relay,
+        Retrives the current state of the output of the supply.
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
         """
 
         state = self.instrument.query("OUTP:STAT?")
-        return int(state)
+        return (int(state) == 1)
 
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the relay for the power supply's output
-        equivalent to set_state(1)
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the relay for the power supply's output
-        equivalent to set_state(0)
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state=False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
@@ -77,21 +76,17 @@ class PPSC_3150AFX(Scpi_Instrument):
         executed will be returned
         """
 
-        if not(self.get_state()):  # logic inverted so the default state is off
-            self.on()
-        else:
-            self.off()
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
-        return None
 
-    def sleep(self):
+    def sleep(self) -> None:
         """
-        Forces the supply to enter sleep mode.
-        If the supply's output is on when this command is issued it will be
-        turned off
+        sleep()
 
+        Forces the supply to enter sleep mode. If the supply's output is on
+        when this command is issued it will be turned off.
         Sleep mode will turn off the internal power supply for the output,
         which will cause a delay in the next subsequent startup as the internal
         supply reboots. Sleep mode will also disable the front panel fans if
@@ -102,8 +97,6 @@ class PPSC_3150AFX(Scpi_Instrument):
             self.off()
 
         self.instrument.write("OUTPUT:ALL OFF")
-
-        return None
 
     def set_range(self, voltage_range):
         """

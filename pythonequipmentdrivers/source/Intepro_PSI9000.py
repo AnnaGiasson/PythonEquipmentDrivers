@@ -1,4 +1,5 @@
 from pythonequipmentdrivers import Scpi_Instrument
+from typing import Union
 
 
 class Intepro_PSI9000(Scpi_Instrument):
@@ -9,52 +10,92 @@ class Intepro_PSI9000(Scpi_Instrument):
     https://www.inteproate.com/wp-content/uploads/2016/11/Intepro-ModBus-SCPI-User-Manual-A4-new-edits-6_2017.pdf
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        return None
+        self.set_lock(True)
 
-    def __del__(self):
-        self.set_lock(0)
-        self.instrument.close()
-        return None
+    def __del__(self) -> None:
+        if hasattr(self, 'instrument'):
+            self.set_lock(False)
+        super().__del__()
 
-    def set_lock(self, state):
-        self.instrument.write(f"SYST:LOCK {state}")
-        return None
+    def set_lock(self, state: bool):
+        self.instrument.write(f"SYST:LOCK {1 if state else 0}")
 
-    def get_lock(self):
+    def get_lock(self) -> True:
         query = self.instrument.query("SYST:LOCK:OWN?")
         if query.strip('\n') == 'REMOTE':
-            return 1
-        return 0
+            return True
+        return False
 
-    def set_state(self, state):
-        self.instrument.write(f"OUTP {state}")
-        return None
+    def set_state(self, state: bool) -> None:
+        """
+        set_state(state)
 
-    def get_state(self):
+        Enables/disables the output of the supply
+
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
+        """
+
+        self.instrument.write(f"OUTP {1 if state else 0}")
+
+    def get_state(self) -> bool:
+        """
+        get_state()
+
+        Retrives the current state of the output of the supply.
+
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
+        """
+
         query = self.instrument.query("OUTP?")
         if query.strip('\n') == "ON":
             return True
         return False
 
-    def on(self):
-        self.set_state(1)
-        return None
+    def on(self) -> None:
+        """
+        on()
 
-    def off(self):
-        self.set_state(0)
-        return None
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
+        """
 
-    def toggle(self, return_state=False):
-        if not self.get_state():  # logic inverted so the default state is off
-            self.on()
-        else:
-            self.off()
+        self.set_state(True)
+
+    def off(self) -> None:
+        """
+        off()
+
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
+        """
+
+        self.set_state(False)
+
+    def toggle(self, return_state: bool = False) -> Union[None, bool]:
+        """
+        toggle(return_state=False)
+
+        Reverses the current state of the Supply's output
+        If return_state = True the boolean state of the supply after toggle()
+        is executed will be returned.
+
+        Args:
+            return_state (bool, optional): Whether or not to return the state
+                of the supply after changing its state. Defaults to False.
+
+        Returns:
+            Union[None, bool]: If return_state == True returns the Supply state
+                (True == enabled, False == disabled), else returns None
+        """
+
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
-        return None
 
     def set_voltage(self, voltage):
         self.instrument.write(f"VOLT {voltage}")

@@ -75,10 +75,7 @@ class Chroma_62012P(Scpi_Instrument):
                 (True == enabled, False == disabled), else returns None
         """
 
-        if self.get_state():
-            self.off()
-        else:
-            self.on()
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()

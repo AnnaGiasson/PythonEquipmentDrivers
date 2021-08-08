@@ -4,10 +4,6 @@ from time import sleep
 from typing import Union, Tuple
 
 
-# custom type, either one float or a tuple of two floats
-OneOrTwoFloats = Union[float, Tuple[float, float]]
-
-
 class Chroma_63206A(Scpi_Instrument):  # 6 kW
     """
     Chroma_63206A(address)
@@ -198,7 +194,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f'CURR:STAT:L{int(channel)} {float(current)}'
             self.instrument.write(cmd_str)
 
-    def get_current(self, channel: int) -> OneOrTwoFloats:
+    def get_current(self, channel: int) -> Union[float, Tuple[float]]:
         """
         get_current(channel)
 
@@ -211,9 +207,9 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrTwoFloats: Current setpoint in Amps DC. If channel == 0 then
-                the setpoints for both channels will be returned in a tuple
-                ordered by channel number.
+            Union[float, Tuple[float]]: Current setpoint in Amps DC. If
+                channel == 0 then the setpoints for both channels will be
+                returned in a tuple ordered by channel number.
         """
 
         if int(channel) == 0:
@@ -245,7 +241,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         else:
             self.instrument.write(f'CURR:DYN:L{int(channel)} {float(current)}')
 
-    def get_dynamic_current(self, channel: int) -> OneOrTwoFloats:
+    def get_dynamic_current(self, channel: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current(channel)
 
@@ -258,7 +254,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrTwoFloats: Desired current setpoint in Amps DC. If
+            Union[float, Tuple[float]]: Desired current setpoint in Amps DC. If
                 channel == 0 then the setpoints for both channels will be
                 returned in a tuple ordered by channel number.
         """
@@ -292,7 +288,8 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         else:
             self.instrument.write(f'CURR:DYN:T{int(channel)} {float(t)}')
 
-    def get_dynamic_current_time(self, channel: int) -> OneOrTwoFloats:
+    def get_dynamic_current_time(self,
+                                 channel: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current_time(channel)
 
@@ -304,10 +301,10 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrTwoFloats: The duration of one or more of the dynamic current
-                setpoints in seconds. If channel == 0 then the setpoints for
-                both channels will be returned in a tuple ordered by channel
-                number.
+            Union[float, Tuple[float]]: The duration of one or more of the
+                dynamic current setpoints in seconds. If channel == 0 then the
+                setpoints for both channels will be returned in a tuple ordered
+                by channel number.
         """
 
         if int(channel) == 0:
@@ -435,7 +432,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f"RES:STAT:L{int(channel)} {float(resistance)}"
             self.instrument.write(cmd_str)
 
-    def get_resistance(self, channel: int) -> OneOrTwoFloats:
+    def get_resistance(self, channel: int) -> Union[float, Tuple[float]]:
         """
         get_resistance(channel)
 
@@ -447,9 +444,9 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrTwoFloats: Resistence setpoint in Ohms. If channel == 0 then
-                the setpoints for both channels will be returned in a tuple
-                ordered by channel number.
+            Union[float, Tuple[float]]: Resistence setpoint in Ohms. If
+                channel == 0 then the setpoints for both channels will be
+                returned in a tuple ordered by channel number.
         """
 
         if int(channel) == 0:
@@ -482,7 +479,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
             cmd_str = f"VOLT:STAT:L{int(channel)} {float(voltage)}"
             self.instrument.write(cmd_str)
 
-    def get_voltage(self, channel: int) -> OneOrTwoFloats:
+    def get_voltage(self, channel: int) -> Union[float, Tuple[float]]:
         """
         get_voltage(channel)
 
@@ -494,9 +491,9 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 For this load, valid channels are 1, and 2.
 
         Returns:
-            OneOrTwoFloats: Voltage setpoint in Volts DC. If channel == 0 then
-                the setpoints for both channels will be returned in a tuple
-                ordered by channel number.
+            Union[float, Tuple[float]]: Voltage setpoint in Volts DC. If
+                channel == 0 then the setpoints for both channels will be
+                returned in a tuple ordered by channel number.
         """
 
         if int(channel) == 0:
@@ -553,7 +550,7 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
         else:
             self.instrument.write(f'POW:STAT:L{int(channel)} {float(power)}')
 
-    def get_power(self, channel: int) -> OneOrTwoFloats:
+    def get_power(self, channel: int) -> Union[float, Tuple[float]]:
         """
         get_power(channel)
 
@@ -565,9 +562,9 @@ class Chroma_63206A(Scpi_Instrument):  # 6 kW
                 channels.
 
         Returns:
-            OneOrTwoFloats: Power setpoint in Watts DC. If channel == 0 then
-                the setpoints for both channels will be returned in a tuple
-                ordered by channel number.
+            Union[float, Tuple[float]]: Power setpoint in Watts DC. If
+                channel == 0 then the setpoints for both channels will be
+                returned in a tuple ordered by channel number.
         """
 
         if int(channel) == 0:

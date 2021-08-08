@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 
 
@@ -7,38 +8,75 @@ class CaliforniaInstruments_CSW5550(Scpi_Instrument):
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
-        a delay of 1 second is required after changing the relay state before
+        set_state(state)
+
+        Enables/disables the output of the supply.
+        A delay of 1 second is required after changing the relay state before
         any program command is sent
+
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
+
         """
-        self.instrument.write(f"OUTP {state}")
-        return None
 
-    def get_state(self):
-        return int(self.instrument.query("OUTP?"))
+        self.instrument.write(f"OUTP {1 if state else 0}")
 
-    def on(self):
-        self.set_state(1)
-        return None
+    def get_state(self) -> bool:
+        """
+        get_state()
 
-    def off(self):
-        self.set_state(0)
-        return None
+        Retrives the current state of the output of the supply.
 
-    def toggle(self, return_state=False):
-        if not(self.get_state()):
-            self.on()
-        else:
-            self.off()
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
+        """
+
+        response = self.instrument.query("OUTP?")
+        return (int(response) == 1)
+
+    def on(self) -> None:
+        """
+        on()
+
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
+        """
+
+        self.set_state(True)
+
+    def off(self) -> None:
+        """
+        off()
+
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
+        """
+
+        self.set_state(False)
+
+    def toggle(self, return_state=False) -> Union[None, bool]:
+        """
+        toggle(return_state=False)
+
+        Reverses the current state of the Supply's output
+        If return_state = True the boolean state of the supply after toggle()
+        is executed will be returned.
+
+        Args:
+            return_state (bool, optional): Whether or not to return the state
+                of the supply after changing its state. Defaults to False.
+
+        Returns:
+            Union[None, bool]: If return_state == True returns the Supply state
+                (True == enabled, False == disabled), else returns None
+        """
+
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
-        return None
 
     def set_voltage_range(self, voltage_range):
         if voltage_range > 156:

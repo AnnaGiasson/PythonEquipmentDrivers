@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 
 
@@ -8,58 +9,52 @@ class Elgar_5250A(Scpi_Instrument):
         http://elgar.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03_RevE.pdf
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the output of the supply
 
-        enables/disables the state for the power supply's output
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP:STAT {int(state)}")
-        return None
+        self.instrument.write(f"OUTP:STAT {1 if state else 0}")
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the output relay,
+        Retrives the current state of the output of the supply.
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query("OUTP:STAT?")
-        return int(response)
+        response = self.instrument.query('OUTP:STAT?')
+        return ('1' in response)
 
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the relay for the power supply's output
-        equivalent to set_state(1)
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the relay for the power supply's output
-        equivalent to set_state(0)
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state: bool = False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
@@ -72,14 +67,18 @@ class Elgar_5250A(Scpi_Instrument):
         executed will be returned
         """
 
-        if self.get_state():
-            self.off()
-        else:
-            self.on()
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
+
+    def set_voltage(self, voltage, phase=0):
+        self.instrument.write(f"SOUR{phase}:VOLT {voltage}")
         return None
+
+    def get_voltage(self, phase=1):
+        response = self.instrument.query(f"SOUR{phase}:VOLT?")
+        return float(response)
 
     def set_current(self, current, phase=0):
         self.instrument.write(f"SOUR{phase}:CURR {current}")
@@ -95,14 +94,6 @@ class Elgar_5250A(Scpi_Instrument):
 
     def get_frequency(self):
         response = self.instrument.query("SOUR:FREQ?")
-        return float(response)
-
-    def set_voltage(self, voltage, phase=0):
-        self.instrument.write(f"SOUR{phase}:VOLT {voltage}")
-        return None
-
-    def get_voltage(self, phase=1):
-        response = self.instrument.query(f"SOUR{phase}:VOLT?")
         return float(response)
 
     def set_voltage_limit(self, voltage_limit):

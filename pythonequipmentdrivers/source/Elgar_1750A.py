@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 from time import sleep
 
@@ -14,79 +15,72 @@ class Elgar_1750A(Scpi_Instrument):
     http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the output of the supply
 
-        enables/disables the state for the power supply's output
+        Args:
+            state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP:STAT {state}")
-        return None
+        self.instrument.write(f'OUTP:STAT {1 if state else 0}')
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the output relay,
+        Retrives the current state of the output of the supply.
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = int(self.instrument.query("OUTP:STAT?").rstrip('\n'))
+        response = self.instrument.query('OUTP:STAT?')
+        return ('1' in response)
 
-        return response
-
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the relay for the power supply's output
-        equivalent to set_state(1)
+        Enables the relay for the power supply's output equivalent to
+        set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the relay for the power supply's output
-        equivalent to set_state(0)
+        Disables the relay for the power supply's output equivalent to
+        set_state(False).
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state=False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
-        return_state (optional): boolean, whether or not to return the state
-        of the output relay.
+        Reverses the current state of the Supply's output
+        If return_state = True the boolean state of the supply after toggle()
+        is executed will be returned.
 
-        reverses the current state of the power supply's output relay
+        Args:
+            return_state (bool, optional): Whether or not to return the state
+                of the supply after changing its state. Defaults to False.
 
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
+        Returns:
+            Union[None, bool]: If return_state == True returns the Supply state
+                (True == enabled, False == disabled), else returns None
         """
 
-        if not self.get_state():  # logic inverted so the default state is off
-            self.on()
-        else:
-            self.off()
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
-        return None
 
     def set_current(self, current):
         self.instrument.write("SOUR:CURR {}".format(current))
@@ -174,8 +168,8 @@ class Elgar_1750A(Scpi_Instrument):
 
         return True
 
-    def auto_range(self, vin):
-        if vin > 156:
+    def auto_range(self, voltage: float) -> None:
+        if voltage > 156:
             self.set_voltage_range(1)
             self.set_voltage_limit(510)
             self.set_current(5)
@@ -183,7 +177,6 @@ class Elgar_1750A(Scpi_Instrument):
             self.set_voltage_range(0)
             self.set_voltage_limit(255)
             self.set_current(13)
-        return None
 
 
 if __name__ == '__main__':

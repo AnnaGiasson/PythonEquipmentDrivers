@@ -1,3 +1,4 @@
+from typing import Union
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from time import sleep
@@ -18,11 +19,7 @@ class Chroma_63600(Scpi_Instrument):
     was adapted from code written by Peter Makrum
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        self.valid_modes = ['CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM'
-                            'SWD']
-        return None
+    valid_modes = ('CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM', 'SWD')
 
     def _channel_index(self, channel, reverse=False):
         """
@@ -43,55 +40,51 @@ class Chroma_63600(Scpi_Instrument):
         else:
             return int((channel + 1)/2)
 
-    def set_state(self, state):
+    def set_state(self, state: bool) -> None:
         """
         set_state(state)
 
-        state: int, 1 or 0 for on and off respectively
+        Enables/disables the input for the load
 
-        enables/disables the input for the load
+        Args:
+            state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"LOAD {state}")
-        return None
+        self.instrument.write(f"LOAD {1 if state else 0}")
 
-    def get_state(self):
+    def get_state(self) -> bool:
         """
         get_state()
 
-        returns the current state of the input to the load
+        Returns the current state of the input to the load
 
-        returns: int
-        1: enabled, 0: disabled
+        Returns:
+            bool: Load state (True == enabled, False == disabled)
         """
 
         if self.instrument.query("LOAD?").rstrip('\n') == "ON":
-            return 1
-        return 0
+            return True
+        return False
 
-    def on(self):
+    def on(self) -> None:
         """
         on()
 
-        enables the input for the load
-        equivalent to set_state(1)
+        Enables the input for the load. Equivalent to set_state(True).
         """
 
-        self.set_state(1)
-        return None
+        self.set_state(True)
 
-    def off(self):
+    def off(self) -> None:
         """
         off()
 
-        disables the input for the load
-        equivalent to set_state(0)
+        Disables the input for the load. Equivalent to set_state(False)
         """
 
-        self.set_state(0)
-        return None
+        self.set_state(False)
 
-    def toggle(self, return_state=False):
+    def toggle(self, return_state: bool = False) -> Union[None, bool]:
         """
         toggle(return_state=False)
 
@@ -103,14 +96,10 @@ class Chroma_63600(Scpi_Instrument):
         executed will be returned
         """
 
-        if self.get_state():
-            self.off()
-        else:
-            self.on()
+        self.set_state(self.get_state() ^ True)
 
         if return_state:
             return self.get_state()
-        return None
 
     def set_current(self, current, level=0):
         """

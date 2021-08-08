@@ -3,6 +3,7 @@ from pyvisa import VisaIOError
 from importlib import import_module
 import json
 from pathlib import Path
+from typing import List, Tuple
 
 
 # Globals
@@ -17,22 +18,23 @@ def get_devices_addresses():
     return rm.list_resources()
 
 
-def identify_devices(verbose=False):
+def identify_devices(verbose: bool = False) -> List[Tuple[str]]:
     """
     identify_connections(verbose=False)
 
-    verbose (optional): bool, if True address and identicaion information is
-    printed to the screen in addition to return the data in a structure,
-    default behavior is to print the information.
+    Queries devices connected to the machine for with and IDN query, return
+    those with a valid response response. The IDN query is a IEEE 488.2 Common
+    Command and should be supported by all SCPI compatible instruments.
 
-    Queries devices connected for IDN response
-    appends addresses with valid responses to a tuple with its response
+    Args:
+        verbose (bool, optional): if True device addresses and responses, or,
+            lack thereof are printed to stdout as they are queried. Defaults to
+            False.
 
-    returns:
-        ((address_1, idn_response_1),
-         (address_2, idn_response_2),
-         ...
-         (address_n, idn_response_n))
+    Returns:
+        List[Tuple[str]]: A list of tuples containing address, IDN response
+            pairs for each detected device that responded to the query with a
+            valid response.
     """
 
     scpi_devices = []
@@ -44,29 +46,25 @@ def identify_devices(verbose=False):
             device.close()
 
             if verbose:
-                print(f"{len(scpi_devices)-1}:")
-                print(f"\taddress: {address}")
-                print(f"\tresponse: {response}\n")
+                print(f"address: {address}\nresponse: {response}\n")
 
         except pyvisa.Error:
             if verbose:
                 print(f"Invalid IDN query reponse from address {address}\n")
             device.close()
-            continue
 
     return scpi_devices
 
 
 class Scpi_Instrument():
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, **kwargs) -> None:
         self.address = address
         self.instrument = rm.open_resource(self.address)
         self.timeout = kwargs.get('timeout', 1000)
-        return None
 
     @property
-    def idn(self):
+    def idn(self) -> str:
         """
         idn
 
@@ -79,6 +77,7 @@ class Scpi_Instrument():
         Returns:
             str: uniquely identifies the instrument
         """
+
         return self.instrument.query('*IDN?')
 
     def cls(self, **kwargs) -> None:
@@ -118,11 +117,10 @@ class Scpi_Instrument():
         return self.instrument.timeout
 
     @timeout.setter
-    def timeout(self, timeout):
+    def timeout(self, timeout) -> None:
         self.instrument.timeout = timeout
-        return None
 
-    def __del__(self):
+    def __del__(self) -> None:
         try:
             # if connection has been estabilished terminate it
             if hasattr(self, 'instrument'):
@@ -131,19 +129,18 @@ class Scpi_Instrument():
             # if connection not connection has been estabilished (such as if an
             # error is throw in __init__) do nothing
             pass
-        return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         def_str = f"{self.__class__.__name__}"
         def_str += f"({self.address}, timeout={self.timeout})"
 
         return def_str
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Instrument ID: {self.idn}\nAddress: {self.address}'
 
-    def __eq__(self, obj):
+    def __eq__(self, obj) -> bool:
 
         """
         __eq__(obj)
@@ -160,15 +157,14 @@ class Scpi_Instrument():
         if not isinstance(obj, Scpi_Instrument):
             return False
 
-        if not (self.address == obj.address):
-            return False
-
         if not (self.__class__.__name__ == obj.__class__.__name__):
             return False
 
+        if not (self.address == obj.address):
+            return False
         return True
 
-    def __ne__(self, obj):
+    def __ne__(self, obj) -> bool:
         """
         __ne__(obj)
 
@@ -194,12 +190,9 @@ class Scpi_Instrument():
         Args:
             command_str: string, scpi command to be passed through to the
                 device.
-
-        Returns:
-            None
         """
 
-        self.instrument.write(command_str, **kwargs)
+        self.instrument.write(str(command_str), **kwargs)
 
     def query_raw_scpi(self, query_str: str, **kwargs) -> str:
         """
@@ -215,7 +208,7 @@ class Scpi_Instrument():
 
         """
 
-        return self.instrument.query(query_str, **kwargs)
+        return self.instrument.query(str(query_str), **kwargs)
 
     def read_raw_scpi(self, **kwargs) -> str:
         """
@@ -410,7 +403,7 @@ class EnvironmentSetup():
         return None
 
 
-def get_callable_methods(instance):
+def get_callable_methods(instance) -> Tuple:
     """
     get_callable_methods(instance)
 
@@ -433,7 +426,7 @@ def get_callable_methods(instance):
     return tuple(valid_cmds)
 
 
-def initiaize_device(inst, initialization_sequence):
+def initiaize_device(inst, initialization_sequence) -> None:
     """
     initiaize_device(inst, initialization_sequence)
 
@@ -465,10 +458,8 @@ def initiaize_device(inst, initialization_sequence):
             except TypeError as error:  # invalid kwargs
                 print(f"\tError with initialization command\t{error}")
 
-    return None
 
-
-# Custom Exception
+# Custom Exceptions
 class UnsupportedResourceError(Exception):
     def __init__(self, message="Device is not supported"):
         super().__init__(message)
