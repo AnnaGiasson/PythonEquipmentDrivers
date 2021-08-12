@@ -369,13 +369,13 @@ class EnvironmentSetup():
                 class_ = getattr(import_module(device_info['definition']),
                                  device_info['object'])
 
-                # get any kwargs for instanciation
-                kwargs = device_info.get('kwargs', {})
+                # get any kwargs for instantiation
+                device_kwargs = device_info.get('kwargs', {})
 
                 # creates instance named 'device_name' of class
                 # 'device_info['object']'
                 vars(self)[device_name] = class_(device_info['address'],
-                                                 **kwargs)
+                                                 **device_kwargs)
 
                 if kwargs.get('verbose', True):
                     print(f'[CONNECTED] {device_name}')
@@ -478,4 +478,4 @@ class ResourceConnectionError(Exception):
 
 
 if __name__ == "__main__":
-    identify_devices()
+    pass
