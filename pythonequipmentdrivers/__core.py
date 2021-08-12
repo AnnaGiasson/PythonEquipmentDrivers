@@ -280,7 +280,7 @@ class EnvironmentSetup():
     exception will be raised. Otherwise, this object will connect exculsively
     to the devices specified in object_mask.
 
-    If init_devices is True than this object will search the JSON file for an
+    If init_ is True than this object will search the JSON file for an
     array named "init" which defines a sequence of commands to initialize the
     device. For example:
 
@@ -294,7 +294,7 @@ class EnvironmentSetup():
                              ]
                     },
 
-    In this example, If init_devices is True and the device was successfully
+    In this example, If init is True and the device was successfully
     connected, this object will successively iterate through the array of
     command, arguement pairs; calling the commands listed using arguements (if
     any) provided. The commands listed must be valid methods of the device
@@ -302,46 +302,42 @@ class EnvironmentSetup():
     therefore need to be named.
     """
 
-    def __init__(self, equipment_setup, object_mask=None, init_devices=False,
-                 **kwargs):
+    def __init__(self, equipment_setup, init=False, **kwargs) -> None:
 
-        # init
-        self.object_mask = object_mask
+        self.read_configuration(equipment_setup)
 
-        if isinstance(equipment_setup, (str, Path)):
-            self.equipment_json_path = equipment_setup
+        self.object_mask = set(kwargs.get('object_mask', []))
+        if self.object_mask:
+            self.check_mask()
 
-            # read equipment info from file
-            with open(self.equipment_json_path, 'rb') as read_file:
-                self.configuration = json.load(read_file)
+        self.__make_connections(init=init,
+                                verbose=kwargs.get('verbose', True))
 
-        elif isinstance(equipment_setup, dict):
-            self.equipment_json_path = None
-            self.configuration = equipment_setup
-        else:
+    def check_mask(self) -> None:
+
+        common = set.intersection(set(self.configuration.keys()),
+                                  self.object_mask)
+
+        if common != self.object_mask:
+            raise ValueError("Required Equipment Missing",
+                             self.object_mask.difference(common))
+
+    def read_configuration(self, equipment_setup) -> None:
+
+        if not isinstance(equipment_setup, (str, Path, dict)):
             raise ValueError('Unsupported type for arguement "equipment_setup"'
                              ' should a str/Path object to a JSON file or a'
                              ' dictionary')
 
-        # check that required items are present in file
-        if self.object_mask is not None:
+        if isinstance(equipment_setup, dict):
+            self.configuration = equipment_setup
+            return None
 
-            self.object_mask = set(self.object_mask)
-            equipment_in_file = set(self.configuration)
-            common_equipment = equipment_in_file.intersection(self.object_mask)
+        # read equipment info from file
+        with open(equipment_setup, 'rb') as file:
+            self.configuration = json.load(file)
 
-            if common_equipment != self.object_mask:
-
-                missing_items = self.object_mask.difference(common_equipment)
-                print("Required equipment not found in configuration file")
-                print(f"Missing items: {', '.join(missing_items)}")
-                raise IOError("Required Equipment Missing")
-
-        self.__make_connections(init_devices=init_devices,
-                                verbose=kwargs.get('verbose', True))
-        return None
-
-    def __make_connections(self, init_devices=False, verbose=True):
+    def __make_connections(self, init=False, verbose=True):
         """
         Establishs connections to the equipment specified in equipment_json
         """
@@ -372,7 +368,7 @@ class EnvironmentSetup():
                 if verbose:
                     print(f'[CONNECTED] {device_name}')
 
-                if ('init' in device_info) and init_devices:
+                if ('init' in device_info) and init:
                     # get the instance in question
                     inst = getattr(self, device_name)
                     initiaize_device(inst, device_info['init'])
