@@ -109,9 +109,9 @@ class Keysight_33500B(Scpi_Instrument):
         response = self.instrument.query(f'SOUR{source}:FUNC?')
         return response.strip().lower()
 
-    def set_pulse_dc(self, duty_cycle, source: int = 1):
-        self.instrument.write(f'SOUR{source}:FUNC:PULSE:DCYC {duty_cycle}')
-        return None
+    def set_pulse_dc(self, duty_cycle, source: int = 1) -> None:
+        dc = round(duty_cycle, 2)
+        self.instrument.write(f'SOUR{source}:FUNC:PULSE:DCYC {dc}')
 
     def get_pulse_dc(self, source: int = 1):
         response = self.instrument.query(f'SOUR{source}:FUNC:PULSE:DCYC?')

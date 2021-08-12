@@ -30,6 +30,7 @@ more easily reusable.
 
 """
 
+from typing import Tuple
 import pythonequipmentdrivers as ped
 from pathlib import Path
 import json
@@ -60,21 +61,15 @@ class Test_Environment():
             help(pythonequipmentdrivers.EnvironmentSetup) for more information.
 
     Kwargs:
-        initialize (bool, optional): If true the Test_Environment object will
-            attempt to run any initialization sequences for equipment that are
-            present in "equipment_config". Defaults to False.
-
-    Returns:
-        None
+        init (bool, optional): If true the Test_Environment object will attempt
+            to run any initialization sequences for equipment that are present
+            in "equipment_config". Defaults to False.
     """
 
-    def __init__(self, equipment_config, **kwargs):
+    def __init__(self, equipment_config, **kwargs) -> None:
+        self.env = ped.EnvironmentSetup(equipment_config, **kwargs)
 
-        init = kwargs.get("initialize", False)
-        self.env = ped.EnvironmentSetup(equipment_config, init_devices=init)
-        return None
-
-    def set_operating_point(self, **op_point):
+    def set_operating_point(self, **op_point) -> None:
 
         if op_point.get('v_dr', False):
             self.set_v_aux(op_point.get('v_dr'))
@@ -88,9 +83,7 @@ class Test_Environment():
         if op_point.get('i_out', False):
             self.set_i_out(op_point.get('i_out'))
 
-        return None
-
-    def set_v_in(self, voltage, **kwargs):
+    def set_v_in(self, voltage, **kwargs) -> None:
         """
         set_v_in(self, voltage, **kwargs)
 
@@ -108,9 +101,6 @@ class Test_Environment():
             disable (bool, optional): If true, enables the output of the
                 voltage source after setting the requested output voltage
                 level. Defaults to False.
-
-        Returns:
-            None
         """
 
         # set levels
@@ -125,19 +115,17 @@ class Test_Environment():
             if self.env.source.get_state():
                 self.env.source.off()
 
-        return None
-
     @staticmethod
-    def __onsemi_v_ref_to_dc(v_ref):
+    def __onsemi_v_ref_to_dc(v_ref: float) -> float:
         """
         determines the duty cycle needed to provide a specific reference
         voltage to the Onsemi controller
         """
 
         # more accurate equation determined through regression
-        return min([max([102.71584607*v_ref - 32.04081548, 2]), 98])
+        return min([max([102.71584607*v_ref - 32.04081548, 2.0]), 98.0])
 
-    def set_v_out(self, voltage, **kwargs):
+    def set_v_out(self, voltage: float, **kwargs) -> None:
         """
         set_v_out(self, voltage, **kwargs)
 
@@ -145,7 +133,7 @@ class Test_Environment():
         Vout connection of the test environment.
 
         Args:
-            voltage (float, int): voltage level to set in Volts DC.
+            voltage (float): voltage level to set in Volts DC.
 
         Kwargs:
             enable (bool, optional): If true, enables the output of the voltage
@@ -155,16 +143,13 @@ class Test_Environment():
             disable (bool, optional): If true, enables the output of the
                 voltage source after setting the requested output voltage
                 level. Defaults to False.
-
-        Returns:
-            None
         """
 
         channel = kwargs.get('v_ref_chan', 2)
 
         # set levels
-        dc = round(self.__onsemi_v_ref_to_dc(voltage), 2)
-        self.env.function_gen.set_pulse_dc(dc, source=channel)
+        self.env.function_gen.set_pulse_dc(self.__onsemi_v_ref_to_dc(voltage),
+                                           source=channel)
 
         # enable/disable
         if kwargs.get("enable", False):
@@ -175,9 +160,7 @@ class Test_Environment():
             if self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(0, source=channel)
 
-        return None
-
-    def set_i_out(self, current, **kwargs):
+    def set_i_out(self, current, **kwargs) -> None:
         """
         set_i_out(self, current, **kwargs)
 
@@ -195,9 +178,6 @@ class Test_Environment():
             disable (bool, optional): If true, enables the output of the
                 current source after setting the requested output current
                 level. Defaults to False.
-
-        Returns:
-            None
         """
 
         channel = kwargs.get('i_drive_chan', 1)
@@ -220,9 +200,7 @@ class Test_Environment():
             if self.env.function_gen.get_output_state(source=channel):
                 self.env.function_gen.set_output_state(0, source=channel)
 
-        return None
-
-    def set_v_aux(self, voltage=5.1, channel=1, **kwargs):
+    def set_v_aux(self, voltage=5.1, channel=1, **kwargs) -> None:
         """
         set_v_aux(self, voltage, **kwargs)
 
@@ -240,9 +218,6 @@ class Test_Environment():
             disable (bool, optional): If true, enables the output of the
                 voltage source after setting the requested output voltage
                 level. Defaults to False.
-
-        Returns:
-            None
         """
 
         # set levels
@@ -257,9 +232,7 @@ class Test_Environment():
             if self.env.aux_source.get_output_state(channel):
                 self.env.aux_source.set_output_state(0, channel)
 
-        return None
-
-    def initialize(self, v_in=40, v_out=0.8, i_out=10, **kwargs):
+    def initialize(self, v_in=40, v_out=0.8, i_out=10, **kwargs) -> None:
 
         self.set_v_aux(enable=True)
         sleep(0.5)  # give time for controller to wake up
@@ -270,9 +243,7 @@ class Test_Environment():
 
         sleep(0.5)  # let DUT boot
 
-        return None
-
-    def shut_down(self):
+    def shut_down(self) -> None:
 
         self.set_v_in(0, disable=True)
         sleep(0.5)  # to allow output to discharge
@@ -282,13 +253,10 @@ class Test_Environment():
         self.set_v_out(0, disable=True)
         self.set_i_out(10, current_low=0, disable=True)
 
-        return None
-
-    def idle(self):
+    def idle(self) -> None:
         self.set_i_out(10, current_low=0)
-        return None
 
-    def adjust_scope(self, **op_point):
+    def adjust_scope(self, **op_point) -> None:
 
         if op_point.get('v_out', False):
 
@@ -313,9 +281,7 @@ class Test_Environment():
 
             self.env.oscilloscope.set_trigger_level(0.5*i_o/self.g_i_drive)
 
-        return None
-
-    def collect_data(self, **kwargs):
+    def collect_data(self, **kwargs) -> Tuple:
 
         # trigger environment
 
@@ -338,7 +304,7 @@ class Test_Environment():
 
 class User_Feedback():
 
-    def initialization(self, directory, images, raw_data):
+    def initialization(self, directory, images, raw_data) -> None:
 
         print('Test environment initialized')
 
@@ -351,45 +317,37 @@ class User_Feedback():
                   f"\tdirectory: {Path(directory) / 'raw_data'}")
         print('')
 
-        return None
-
-    def test_start(self):
+    def test_start(self) -> None:
         print('\n***** Starting Test *****\n')
-        return None
 
-    def test_progress(self, **op_point):
+    def test_progress(self, **op_point) -> None:
 
         print('Testing Op point ', end='')
         for key, val in op_point.items():
             print(f'|  {key} = {val}  |', end='')
         print('')
 
-        return None
-
-    def test_finish(self):
+    def test_finish(self) -> None:
         print("\n***** Test Complete *****\n")
-        return None
 
-    def test_error(self, error):
+    def test_error(self, error) -> None:
         print('\n!!!!!!!!!!!!!!!!!!!!!!!! '
               'An error has occured which interrupted testing'
               ' !!!!!!!!!!!!!!!!!!!!!!!!\n')
         print(f'Error: {error}\n')
-        return None
 
-    def test_data_logged(self, file_name):
+    def test_data_logged(self, file_name: Path) -> None:
         print('\tMeasurement data saved to file.')
         print(f'\tScope image saved to file: {Path(file_name).name}')
-        return None
 
-    def idling(self):
+    def idling(self) -> None:
         print('\tCooling Down .....\n')
-        return None
 
 
 class Matrix_Test():
 
-    def __init__(self, test_env: Test_Environment, test_config, **kwargs):
+    def __init__(self, test_env: Test_Environment,
+                 test_config, **kwargs) -> None:
 
         # Using MVC architecture, this class is the Controller
         self.test_env = test_env        # Model
@@ -422,9 +380,7 @@ class Matrix_Test():
                              *self.test_config.get("data_columns", []),
                              init=True)
 
-        return None
-
-    def run(self):
+    def run(self) -> None:
 
         # Vout needs to be converted to mV before use
         fname_template = r"Vout{}mV_Vin{}V_Iout{}A"
@@ -481,13 +437,11 @@ class Matrix_Test():
         finally:
             self.test_env.shut_down()
 
-        return None
-
 
 if __name__ == "__main__":
     cwd = Path(__file__).parent
 
     test = Matrix_Test(Test_Environment(cwd / 'equipment_configuration.json',
-                                        initialize=True),
+                                        init=True),
                        test_config=cwd/'test_configuration.json')
     test.run()
