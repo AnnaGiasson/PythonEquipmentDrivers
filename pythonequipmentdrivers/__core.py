@@ -40,18 +40,16 @@ def identify_devices(verbose: bool = False) -> List[Tuple[str]]:
     scpi_devices = []
     for address in rm.list_resources():
         try:
-            device = rm.open_resource(address)
-            response = device.query("*IDN?")
-            scpi_devices.append((address, response))
-            device.close()
-
+            device = Scpi_Instrument(address)
+            scpi_devices.append((address, device.idn))
             if verbose:
-                print(f"address: {address}\nresponse: {response}\n")
+                print("address: {}\nresponse: {}\n".format(*scpi_devices[-1]))
 
         except pyvisa.Error:
             if verbose:
                 print(f"Invalid IDN query reponse from address {address}\n")
-            device.close()
+        finally:
+            del(device)
 
     return scpi_devices
 
@@ -60,8 +58,9 @@ class Scpi_Instrument():
 
     def __init__(self, address, **kwargs) -> None:
         self.address = address
-        self.instrument = rm.open_resource(self.address)
-        self.timeout = kwargs.get('timeout', 1000)
+        self.instrument = rm.open_resource(self.address,
+                                           open_timeout=1000)
+        self.timeout = int(kwargs.get('timeout', 1000))  # ms
 
     @property
     def idn(self) -> str:
@@ -112,13 +111,12 @@ class Scpi_Instrument():
         self.instrument.write('*RST', **kwargs)
 
     @property
-    def timeout(self):
-
+    def timeout(self) -> int:
         return self.instrument.timeout
 
     @timeout.setter
-    def timeout(self, timeout) -> None:
-        self.instrument.timeout = timeout
+    def timeout(self, timeout: int) -> None:
+        self.instrument.timeout = int(timeout)  # ms
 
     def __del__(self) -> None:
         try:
@@ -480,4 +478,4 @@ class ResourceConnectionError(Exception):
 
 
 if __name__ == "__main__":
-    pass
+    identify_devices()
