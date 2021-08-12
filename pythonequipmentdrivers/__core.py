@@ -3,7 +3,7 @@ from pyvisa import VisaIOError
 from importlib import import_module
 import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 
 # Globals
@@ -302,18 +302,25 @@ class EnvironmentSetup():
     therefore need to be named.
     """
 
-    def __init__(self, equipment_setup, init=False, **kwargs) -> None:
+    def __init__(self, equipment_setup, init: bool = False, **kwargs) -> None:
 
         self.read_configuration(equipment_setup)
 
         self.object_mask = set(kwargs.get('object_mask', []))
-        if self.object_mask:
-            self.check_mask()
+        self.check_mask()
 
-        self.__make_connections(init=init,
-                                verbose=kwargs.get('verbose', True))
+        self.connect_to_devices(init=init, verbose=kwargs.get('verbose', True))
 
     def check_mask(self) -> None:
+        """
+        check_mask()
+
+        Checks that the devices required by self.object_mask are present within
+        the configuration information.
+        """
+
+        if not self.object_mask:  # mo mask
+            return None
 
         common = set.intersection(set(self.configuration.keys()),
                                   self.object_mask)
@@ -322,35 +329,42 @@ class EnvironmentSetup():
             raise ValueError("Required Equipment Missing",
                              self.object_mask.difference(common))
 
-    def read_configuration(self, equipment_setup) -> None:
+    def read_configuration(self, device_setup: Union[str, Path, dict]) -> None:
+        """
+        read_configuration(equipment_setup)
 
-        if not isinstance(equipment_setup, (str, Path, dict)):
+        Reads configuration information and stores it as the instance variable
+        "configuration".
+
+        Args:
+            device_setup (str, Path, dict): Configuration information for the
+                devices to connect to. Information can either be passed
+                directly (dict) or can read from a file (str or Path-like).
+        """
+
+        if not isinstance(device_setup, (str, Path, dict)):
             raise ValueError('Unsupported type for arguement "equipment_setup"'
                              ' should a str/Path object to a JSON file or a'
                              ' dictionary')
 
-        if isinstance(equipment_setup, dict):
-            self.configuration = equipment_setup
+        if isinstance(device_setup, dict):
+            self.configuration = device_setup
             return None
 
         # read equipment info from file
-        with open(equipment_setup, 'rb') as file:
+        with open(device_setup, 'rb') as file:
             self.configuration = json.load(file)
 
-    def __make_connections(self, init=False, verbose=True):
+    def connect_to_devices(self, **kwargs) -> None:
         """
         Establishs connections to the equipment specified in equipment_json
         """
 
-        if self.object_mask is not None:
-            device_list = list(self.configuration.keys())
-            for device_name in device_list:
-                if device_name not in self.object_mask:
-                    self.configuration.pop(device_name)
+        if self.object_mask:  # remove items not in mask
+            for device in set(self.configuration).difference(self.object_mask):
+                self.configuration.pop(device)
 
-        for device_name in self.configuration:
-
-            device_info = self.configuration[device_name]
+        for device_name, device_info in self.configuration.items():
 
             try:
                 # get object to instantate from config file
@@ -365,22 +379,22 @@ class EnvironmentSetup():
                 vars(self)[device_name] = class_(device_info['address'],
                                                  **kwargs)
 
-                if verbose:
+                if kwargs.get('verbose', True):
                     print(f'[CONNECTED] {device_name}')
 
-                if ('init' in device_info) and init:
+                if kwargs.get('init', False) and ('init' in device_info):
                     # get the instance in question
                     inst = getattr(self, device_name)
                     initiaize_device(inst, device_info['init'])
-                    if verbose:
+                    if kwargs.get('verbose', True):
                         print('\tInitialzed')
 
             except (VisaIOError, ConnectionError) as error:
 
-                if verbose:
+                if kwargs.get('verbose', True):
                     print(f'[FAILED CONNECTION] {device_name}')
 
-                if self.object_mask is not None:
+                if self.object_mask:
                     # if the failed connection is for a piece of required
                     # equipment stop instantations
                     print(error)
@@ -388,15 +402,14 @@ class EnvironmentSetup():
 
             except (ModuleNotFoundError, AttributeError) as error:
 
-                if verbose:
+                if kwargs.get('verbose', True):
                     print(f'[UNSUPPORTED DEVICE] {device_name}\t{error}')
 
-                if self.object_mask is not None:
+                if self.object_mask:
                     # if the failed connection is for a piece of required
                     # equipment stop instantations
                     print(error)
                     raise ConnectionError(f"Failed connection: {device_name}")
-        return None
 
 
 def get_callable_methods(instance) -> Tuple:
