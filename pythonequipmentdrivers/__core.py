@@ -429,17 +429,17 @@ class EnvironmentSetup():
         cmds = filter(lambda func_name: ('__' not in func_name), cmds)
         return tuple(cmds)
 
-    def initiaize_device(self, inst, initialization_sequence) -> None:
+    def initiaize_device(self, instance, sequence) -> None:
         """
-        initiaize_device(inst, initialization_sequence)
+        initiaize_device(inst, sequence)
 
         Here "inst" has the two methods "set_voltage", and "off". The first of
         which requires the arguement voltage and the second of which has no
         args.
         Args:
-            inst (object): instance of object to initialize
+            instance (object): object instance to initialize
 
-            initialization_sequence (list): list of lists containing valid
+            sequence (list): list of lists containing valid
                 methods of "inst" with a dict of arguements to pass as kwargs.
 
                                 Will run in the order given
@@ -449,18 +449,17 @@ class EnvironmentSetup():
                     ]
         """
 
-        valid_cmds = self._get_callable_methods(inst)
+        valid_cmds = self._get_callable_methods(instance)
+        error_msg = '\tError with initialization command {}:\t{}'
 
-        # for cmd in initialization_sequence:
-        for method_name, method_kwargs in initialization_sequence:
+        for method_name, method_kwargs in sequence:
             if method_name in valid_cmds:
                 try:
-                    # call instance method with kwargs in passed dict
-                    func = getattr(inst, method_name)
+                    func = getattr(instance, method_name)
                     func(**method_kwargs)
 
                 except TypeError as error:  # invalid kwargs
-                    print(f"\tError with initialization command\t{error}")
+                    print(error_msg.format(method_name, error))
 
 
 if __name__ == "__main__":
