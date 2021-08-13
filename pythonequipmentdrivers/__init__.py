@@ -15,6 +15,8 @@ from . import networkanalyzer
 from . import functiongenerator
 
 from . import utility
+from . import errors
+
 
 __all__ = ['Scpi_Instrument', 'EnvironmentSetup',
            'get_devices_addresses', 'identify_devices',
@@ -22,7 +24,7 @@ __all__ = ['Scpi_Instrument', 'EnvironmentSetup',
            'initiaize_device',
            'VisaIOError',
 
-           'utility',
+           'utility', 'errors',
 
            'source',
            'sink',

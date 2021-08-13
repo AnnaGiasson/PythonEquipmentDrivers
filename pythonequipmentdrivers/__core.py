@@ -1,5 +1,6 @@
 import pyvisa
 from pyvisa import VisaIOError
+from . import errors
 from importlib import import_module
 import json
 from pathlib import Path
@@ -11,7 +12,7 @@ rm = pyvisa.ResourceManager()
 
 
 # Utility Functions
-def get_devices_addresses():
+def get_devices_addresses() -> Tuple[str]:
     """
     returns a list of the addresses of peripherals connected to the computer
     """
@@ -362,119 +363,104 @@ class EnvironmentSetup():
             for device in set(self.configuration).difference(self.object_mask):
                 self.configuration.pop(device)
 
-        for device_name, device_info in self.configuration.items():
+        for name, info in self.configuration.items():
 
             try:
                 # get object to instantate from config file
-                class_ = getattr(import_module(device_info['definition']),
-                                 device_info['object'])
+                Module = import_module(info['definition'])
+                Class = getattr(Module, info['object'])
 
                 # get any kwargs for instantiation
-                device_kwargs = device_info.get('kwargs', {})
+                obj_kwargs = info.get('kwargs', {})
 
-                # creates instance named 'device_name' of class
-                # 'device_info['object']'
-                vars(self)[device_name] = class_(device_info['address'],
-                                                 **device_kwargs)
+                # create an instance of the Class 'info["object"]' named 'name'
+                vars(self)[name] = Class(info['address'], **obj_kwargs)
 
                 if kwargs.get('verbose', True):
-                    print(f'[CONNECTED] {device_name}')
+                    print(f'[CONNECTED] {name}')
 
-                if kwargs.get('init', False) and ('init' in device_info):
+                if kwargs.get('init', False) and ('init' in info):
                     # get the instance in question
-                    inst = getattr(self, device_name)
-                    initiaize_device(inst, device_info['init'])
+                    inst = getattr(self, name)
+                    self.initiaize_device(inst, info['init'])
                     if kwargs.get('verbose', True):
                         print('\tInitialzed')
 
             except (VisaIOError, ConnectionError) as error:
 
                 if kwargs.get('verbose', True):
-                    print(f'[FAILED CONNECTION] {device_name}')
+                    print(f'[FAILED CONNECTION] {name}')
 
+                # if the failed connection is for a piece of required
+                # equipment connecting devices
                 if self.object_mask:
-                    # if the failed connection is for a piece of required
-                    # equipment stop instantations
-                    print(error)
-                    raise ConnectionError(f"Failed connection: {device_name}")
+                    raise errors.ResourceConnectionError(error)
 
             except (ModuleNotFoundError, AttributeError) as error:
 
                 if kwargs.get('verbose', True):
-                    print(f'[UNSUPPORTED DEVICE] {device_name}\t{error}')
+                    print(f'[UNSUPPORTED DEVICE] {name}\t{error}')
 
                 if self.object_mask:
-                    # if the failed connection is for a piece of required
-                    # equipment stop instantations
-                    print(error)
-                    raise ConnectionError(f"Failed connection: {device_name}")
+                    raise errors.UnsupportedResourceError(error)
 
+    @staticmethod
+    def _get_callable_methods(instance) -> Tuple:
+        """
+        _get_callable_methods(instance)
 
-def get_callable_methods(instance) -> Tuple:
-    """
-    get_callable_methods(instance)
+        Returns a tuple of all callable methods of an object or instance that
+        are not "dunder"/"magic"/"private" methods
 
-    Returns a tuple of all callable methods of an object or instance that are
-    not "dunder"/"magic"/"private" methods
+        Args:
+            instance (object): object or instance of an object to get the
+                callable methods of.
 
-    Args:
-        instance (object): object or instance of an object to get methods of
+        Returns:
+            tuple: collection of callable methods.
+        """
 
-    Returns:
-        tuple: collection of callable methods.
-    """
+        # get methods that are callable (will not include sub-classes)
+        methods = instance.__dir__()
+        cmds = filter(lambda method: (callable(getattr(instance, method))),
+                      methods)
 
-    # get items in __dir__() that are callable (will include sub-classes)
-    valid_cmds = filter(lambda method: (callable(getattr(instance, method))),
-                        instance.__dir__())
+        # filter out ignore dunders
+        cmds = filter(lambda func_name: ('__' not in func_name), cmds)
+        return tuple(cmds)
 
-    # filter out ignore dunders
-    valid_cmds = filter(lambda func_name: ('__' not in func_name), valid_cmds)
-    return tuple(valid_cmds)
+    def initiaize_device(self, inst, initialization_sequence) -> None:
+        """
+        initiaize_device(inst, initialization_sequence)
 
+        Here "inst" has the two methods "set_voltage", and "off". The first of
+        which requires the arguement voltage and the second of which has no
+        args.
+        Args:
+            inst (object): instance of object to initialize
 
-def initiaize_device(inst, initialization_sequence) -> None:
-    """
-    initiaize_device(inst, initialization_sequence)
+            initialization_sequence (list): list of lists containing valid
+                methods of "inst" with a dict of arguements to pass as kwargs.
 
-    inst: (obj) instance of object to initialize
+                                Will run in the order given
+        ex: sequence = [
+                        ["set_voltage", {"voltage": 0}],
+                        ["off", {}],
+                    ]
+        """
 
-    initialization_sequence: (list) list of lists containing valid methods of
-                             "inst" with a dict of arguements to pass as kwargs
+        valid_cmds = self._get_callable_methods(inst)
 
-                             Will run in the order given
-    ex: sequence = [
-                    ["set_voltage", {"voltage": 0}],
-                    ["off", {}],
-                   ]
+        # for cmd in initialization_sequence:
+        for method_name, method_kwargs in initialization_sequence:
+            if method_name in valid_cmds:
+                try:
+                    # call instance method with kwargs in passed dict
+                    func = getattr(inst, method_name)
+                    func(**method_kwargs)
 
-    Here "inst" has the two methods "set_voltage", and "off". The first of
-    which requires the arguement voltage and the second of which has no args.
-    """
-
-    # get possible instance methods
-    valid_cmds = get_callable_methods(inst)
-
-    # for cmd in initialization_sequence:
-    for cmd, args in initialization_sequence:
-        if cmd in valid_cmds:
-            try:
-                # call instance method with kwargs in passed dict
-                getattr(inst, cmd)(**args)
-                # getattr(inst, cmd)(**initialization_sequence[cmd])
-            except TypeError as error:  # invalid kwargs
-                print(f"\tError with initialization command\t{error}")
-
-
-# Custom Exceptions
-class UnsupportedResourceError(Exception):
-    def __init__(self, message="Device is not supported"):
-        super().__init__(message)
-
-
-class ResourceConnectionError(Exception):
-    def __init__(self, message="Could not connect to device"):
-        super().__init__(message)
+                except TypeError as error:  # invalid kwargs
+                    print(f"\tError with initialization command\t{error}")
 
 
 if __name__ == "__main__":
