@@ -71,12 +71,43 @@ class Environment:
 
 
 # Update expected/assumed format of json file
-def build_environment(configuration, **kwargs) -> Environment:
+def build_environment(configuration: Union[str, Path, dict],
+                      **kwargs) -> Environment:
     """
-    Class for handling the instantiation of generic sets of test equipment
-    based on addressing data from file. Can blindly connect to all equipment in
-    the provided file or dictionary (configuration) and can optionally verify
-    that a specific set of equipment is in file (based on object_mask)
+    build_environment(configuration, **kwargs)
+
+    Returns in instance of an Environment object; an object containing multiple
+    equipment instances as instance attributes. This simplifies the overhead
+    needed to instantiate connections to an entire set of devices.
+
+    This can be useful when repeatedly connecting to the same set of devices,
+    or for ensuring different sets of equipment are instantiated as Environment
+    objects with the same attributes; allowing for easy reuse of the same test
+    scripts using differents setups.
+
+    The information required to configure the returned Environment object is
+    provided using the 'configuration' arguement which is either a path to a
+    file or a dictionary containing the required information.
+
+    Args:
+        configuration (Union[str, Path, dict]): [description]
+
+    Kwargs:
+        object_mask (set, optional): A set of attribute names specified in the
+            configuration information to connect. If any of the specified
+            devices fail to connect an exception will be raised. Defaults
+            behavior is to connect everything present.
+        verbose (bool, optional): If True, instantiation, status, and error
+            information will be printed to the console. Defaults to True.
+        init (bool, optional): Whether or not to run any initialization
+            sequences (if present) after connecting to a device. Defaults to
+            False.
+
+    Returns:
+        Environment: An object containing the device instances specified in
+            'configuration' as attributes.
+
+    Examples:
 
     Expected JSON file format
 
