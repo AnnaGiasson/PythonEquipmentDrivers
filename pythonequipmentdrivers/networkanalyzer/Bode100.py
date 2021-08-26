@@ -1,4 +1,4 @@
-import win32com
+import win32com.client
 import numpy as np
 import re
 

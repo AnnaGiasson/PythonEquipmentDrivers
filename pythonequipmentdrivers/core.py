@@ -37,7 +37,8 @@ def identify_devices(verbose: bool = False) -> List[Tuple[str]]:
     scpi_devices = []
     for address in rm.list_resources():
         try:
-            device = Scpi_Instrument(address)
+            device = Scpi_Instrument(address, open_timeout=100,
+                                     timeout=500)
             scpi_devices.append((address, device.idn))
             if verbose:
                 print("address: {}\nresponse: {}\n".format(*scpi_devices[-1]))
