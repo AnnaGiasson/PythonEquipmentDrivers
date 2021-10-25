@@ -68,16 +68,16 @@ class Test_Environment(ped.EnvironmentSetup):
 
     def set_operating_point(self, **op_point) -> None:
 
-        if op_point.get('v_dr', False):
+        if op_point.get('v_dr', False) is not None:
             self.set_v_aux(op_point.get('v_dr'))
 
-        if op_point.get('v_out', False):
+        if op_point.get('v_out', False) is not None:
             self.set_v_out(op_point.get('v_out'))
 
-        if op_point.get('v_in', False):
+        if op_point.get('v_in', False) is not None:
             self.set_v_in(op_point.get('v_in'))
 
-        if op_point.get('i_out', False):
+        if op_point.get('i_out', False) is not None:
             self.set_i_out(op_point.get('i_out'))
 
     def set_v_in(self, voltage, **kwargs) -> None:
