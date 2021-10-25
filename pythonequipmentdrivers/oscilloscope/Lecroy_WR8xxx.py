@@ -655,7 +655,8 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             description[key] = value
         return description
 
-    def get_channel_data(self, *channels: int, **kwargs) -> Tuple:
+    def get_channel_data(self, *channels: int,
+                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, return_time=True, dtype=np.float32)
 
@@ -735,6 +736,24 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         q_str = f"""vbs 'app.acquisition.C{channel}.LabelsText = "{label}" '"""
         self.instrument.write(q_str)
+
+    def get_channel_label(self, channel: int) -> str:
+        """
+        get_channel_label(channel)
+
+        Queries the text label of the channel specified by "channel".
+
+        Args:
+            channel (int): channel number to query label of.
+        Returns:
+            (str): text label to assigned to the specified channel
+        """
+
+        q_str = f"""vbs? 'return = app.acquisition.C{channel}.LabelsText'"""
+
+        response = self.instrument.query(q_str)
+
+        return ' '.join(response.strip().split()[1:])
 
     def set_channel_display(self, channel, mode):
         # mode = "true" or "false"

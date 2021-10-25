@@ -1,3 +1,4 @@
+from typing import Tuple
 from .Yokogawa_760203 import Yokogawa_760203
 
 
@@ -14,14 +15,13 @@ class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
     https://cdn.tmi.yokogawa.com/IMWT1801E-17EN.pdf
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.three_phase_channel_names = {'sigma_a': 7,
                                           'sigma_b': 8,
                                           'sigma_c': 9}
-        return None
 
-    def get_channel_data(self, channel, measurment_type):
+    def get_channel_data(self, channel, measurment_type: str):
         if channel in self.three_phase_channel_names.keys():
             channel = self.three_phase_channel_names[channel]
 
@@ -31,12 +31,11 @@ class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
 
         return float(response)
 
-    def set_harmonic_order(self, order_min, order_max):
+    def set_harmonic_order(self, order_min, order_max) -> None:
         self.instrument.write(f"HARM1:ORD {order_min},{order_max}")
-        return None
 
-    def get_harmonic_order(self):
+    def get_harmonic_order(self) -> Tuple[int]:
         response = self.instrument.query("HARM1:ORD?")
         response = response.split(' ')[-1].rstrip('\n')
 
-        return [int(x) for x in response.split(',')]
+        return tuple(map(int, response.split(',')))

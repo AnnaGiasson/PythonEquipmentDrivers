@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Tuple, Union
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from time import sleep
@@ -15,30 +15,38 @@ class Chroma_63600(Scpi_Instrument):
 
     address : str, address of the connected electronic load
 
-    object for accessing basic functionallity of the Chroma_63600 DC load. Code
-    was adapted from code written by Peter Makrum
+    object for accessing basic functionallity of the Chroma_63600 DC load.
     """
 
     valid_modes = ('CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM', 'SWD')
 
-    def _channel_index(self, channel, reverse=False):
+    def _channel_index(self, channel: int, reverse: bool = False) -> int:
         """
         _channel_index(channel, reverse=False)
 
-        reverse: Bool
+        This module assumes that the Chroma mainframe used has the higher-power
+        variant of 636xxx family load modules; these are assigned 2 addresses
+        (e.x. the load in physical position 2 has addr=3,4), but only the first
+        (odd) address is used. This method reindexes the channel numbers sent
+        to the device so other methods in this module can be writen such that
+        software address represents the physcial location.
 
-        Reindexes channel numbers sent to the device so the user doesn't have
-        to the conversion. If reverse=True the conversion is reversed. Load has
-        5 addresses but uses every-other odd number instead of numbering them
-        sequentially
+        Args:
+            channel (int): bay index number for the physical location of the
+                load on the load mainframe.
+            reverse (bool, optional): If True the indexing operation is
+                reversed. Defaults to False.
+
+        Returns:
+            int: software address offset sent to the load
         """
-        if not reverse:
-            if (channel > 5) and (channel < 1):
-                raise ValueError("Invalid Channel Number")
-            else:
-                return 2*channel - 1
-        else:
+
+        if reverse:
             return int((channel + 1)/2)
+
+        if (channel > 5) and (channel < 1):
+            raise ValueError("Invalid Channel Number")
+        return 2*channel - 1
 
     def set_state(self, state: bool) -> None:
         """
@@ -70,7 +78,7 @@ class Chroma_63600(Scpi_Instrument):
         """
         on()
 
-        Enables the input for the load. Equivalent to set_state(True).
+        Enables the relay for the Load's output; equivalent to set_state(True).
         """
 
         self.set_state(True)
@@ -88,12 +96,17 @@ class Chroma_63600(Scpi_Instrument):
         """
         toggle(return_state=False)
 
-        return_state: boolean, whether or not to return the state load's input
+        Reverses the current state of the Load's input. If return_state = True
+        the boolean state of the load after toggle() is executed will be
+        returned.
 
-        reverses the current state of the load's input
+        Args:
+            return_state (bool, optional): Whether or not to return the state
+                of the load after changing its state. Defaults to False.
 
-        if return_state = True the boolean state of the load after toggle() is
-        executed will be returned
+        Returns:
+            Union[None, bool]: If return_state == True returns the Load state
+                (True == enabled, False == disabled), else returns None
         """
 
         self.set_state(self.get_state() ^ True)
@@ -101,17 +114,18 @@ class Chroma_63600(Scpi_Instrument):
         if return_state:
             return self.get_state()
 
-    def set_current(self, current, level=0):
+    def set_current(self, current: float, level: int = 0) -> None:
         """
         set_current(current, level=0)
 
-        current: float, desired current setpoint
-        level (optional): int, level to change setpoint of.
-                          valid options are 0,1,2 (default is 0)
+        Changes the current setpoint of the load for the specified level in
+        constant current mode.
 
-        changes the current setpoint of the load for the specified level in
-        constant current mode. if level = 0 both levels will be set to the
-        value specified
+        Args:
+            current (float): Desired current setpoint in Amps DC.
+            level (int, optional): level to change setpoint of valid options
+                are 0,1,2; If level = 0 both levels will be set to the
+                value specified. Defaults to 0.
         """
 
         if level == 0:
@@ -120,87 +134,86 @@ class Chroma_63600(Scpi_Instrument):
         else:
             command_str = f'CURR:STAT:L{int(level)} {float(current)}'
             self.instrument.write(command_str)
-        return None
 
-    def get_current(self, level):
+    def get_current(self, level: int) -> Union[float, Tuple[float]]:
         """
         get_current(level)
 
-        level: int, level to get setpoint of.
-               valid options are 1,2, and 0
+        Retrives the current setpoint of the load for the specified level used
+        in constant current mode. if level == 0 then both load levels will be
+        returned.
 
-        reads the current setpoint of the load for the specified level in
-        constant current mode. if level == 0 then it will return a list
-        containing both load levels.
+        Args:
+            level (int, optional): level to retrive setpoint of valid options
+                are 0,1,2; If level = 0 the value of both levels will be
+                retrived. Defaults to 0.
+
+        Returns:
+            float: Retrivies the current setpoint in Amps DC.
         """
 
         if level == 0:
-            currents = []
-            currents = (float(self.instrument.query('CURR:STAT:L1?')),
-                        float(self.instrument.query('CURR:STAT:L2?')))
-            return currents
-        else:
-            response = self.instrument.query(f'CURR:STAT:L{int(level)}?')
-            return float(response)
+            return (float(self.instrument.query('CURR:STAT:L1?')),
+                    float(self.instrument.query('CURR:STAT:L2?'))
+                    )
+        response = self.instrument.query(f'CURR:STAT:L{int(level)}?')
+        return float(response)
 
-    def set_current_slew(self, slew, edge_polarity):
+    def set_current_slew_rate(self, slew_rate: float,
+                              edge_polarity: str) -> None:
         """
-        set_current_slew(slew, edge_polarity)
+        set_current_slew(slew_rate, edge_polarity)
 
-        slew: float, desired slew-rate setting in A/us
-        edge_polarity: str, edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'
+        Changes the slew-rate setting of the load (for the specified edge
+        polarity) in constant current mode.
 
-        changes the slew-rate setting of the load for the specified edge
-        polarity in constant current mode. if edge_polarity = 'both', both
-        polarities will be set to the value specified
-        """
-
-        if edge_polarity == 'rise':
-            self.instrument.write(f'CURR:STAT:RISE {slew}')
-        elif edge_polarity == 'fall':
-            self.instrument.write(f'CURR:STAT:FALL {slew}')
-        elif edge_polarity == 'both':
-            self.instrument.write(f'CURR:STAT:RISE {slew}')
-            self.instrument.write(f'CURR:STAT:FALL {slew}')
-        else:
-            raise IOError('Invalid option for arg "edge_polarity"')
-        return None
-
-    def get_current_slew(self, edge_polarity):
-        """
-        get_current_slew(slew, edge_polarity)
-
-        edge_polarity: str, edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'
-
-        returns:
-        slew: float, desired slew-rate setting in A/us,
-              if edge_polarity = 'both' this returns of list of floats
-              [rise rate, fall rate]
-
-        returns the slew-rate setting of the load for the specified edge
-        polarity in constant current mode. if edge_polarity = 'both', both
-        polarities will be returned
+        Args:
+            slew_rate (float): desired slew-rate setting in A/s
+            edge_polarity (str): edge to set the slew-rate of.
+                       valid options are 'rise', 'fall', and 'both'.
         """
 
-        if edge_polarity == 'rise':
-            resp = self.instrument.query('CURR:STAT:RISE?')
-            return float(resp)
+        edge_polarity = str(edge_polarity).upper()
 
-        elif edge_polarity == 'fall':
-            resp = self.instrument.query('CURR:STAT:FALL?')
-            return float(resp)
+        if edge_polarity not in ('BOTH', 'RISE', 'FALL'):
+            raise ValueError(f'Invalid edge_polarity: "{edge_polarity}"')
 
-        elif edge_polarity == 'both':
-            slews = []
-            resp = self.instrument.query('CURR:STAT:RISE?')
-            slews.append(float(resp))
-            resp = self.instrument.query('CURR:STAT:FALL?')
-            slews.append(float(resp))
-            return slews
-        else:
-            raise IOError('Invalid option for arg "edge_polarity"')
+        slew_rate = float(slew_rate)*(1e-6)  # A/s --> A/us
+
+        if edge_polarity == 'BOTH':
+            self.instrument.write(f'CURR:STAT:RISE {slew_rate}')
+            self.instrument.write(f'CURR:STAT:FALL {slew_rate}')
+            return None
+
+        self.instrument.write(f'CURR:STAT:{edge_polarity} {slew_rate}')
+
+    def get_current_slew_rate(self, edge_polarity: str) -> Union[float, Tuple[float]]:
+        """
+        get_current_slew_rate(edge_polarity)
+
+        Retrives the slew-rate setting of the load (for the specified edge
+        polarity) in constant current mode.
+
+        Args:
+            edge_polarity (str): edge to set the slew-rate of.
+                       valid options are 'rise', 'fall', and 'both'.
+
+        Returns:
+            Union[float, Tuple[float]]: slew-rate setting in A/s.
+        """
+
+        edge_polarity = str(edge_polarity).upper()
+
+        if edge_polarity not in ('BOTH', 'RISE', 'FALL'):
+            raise ValueError(f'Invalid edge_polarity: "{edge_polarity}"')
+
+        if edge_polarity == 'BOTH':
+            responses = (self.instrument.query('CURR:STAT:RISE?'),
+                         self.instrument.query('CURR:STAT:FALL?'))
+            return tuple(map(lambda r: float(r)*(1e6), responses))
+
+        response = self.instrument.query(f'CURR:STAT:{edge_polarity}?')
+        return float(response)*(1e6)  # A/us --> A/s
 
     def set_dynamic_current(self, current, level=0):
         """

@@ -103,7 +103,8 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         self.instrument.write(command_str)
         return None
 
-    def get_channel_data(self, channel, measurment_type):
+    def get_channel_data(self, channel, measurment_type: str) -> float:
+
         if channel == 'sigma':
             channel = 4
 

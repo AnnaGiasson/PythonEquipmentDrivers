@@ -3,9 +3,9 @@ from time import strftime
 import json
 
 
-def log_data(directory=None, file_name=None, *data, init=False):
+def log_data(file_path: Path, *data, init=False):
     """
-    log_data(directory, file_name, *data, init=False)
+    log_data(file_path, *data, init=False)
 
     Writes an iterable to a row of a csv file. Useful for logging data row by
     row while a test or measurement is in progress.
@@ -16,9 +16,9 @@ def log_data(directory=None, file_name=None, *data, init=False):
     "data" is unpacked and appended to the end of the document. If init = False
     but the file does not already exist it will be created.
 
-    The arguements "directory" and "file_name" specify the path of the file to
-    be created/updated. The log file will be storted at directory/file_name.csv
-    , file_name itself does not need to contain the file extension, it will
+    The arguement "file_path" specifies the path of the file to be
+    created/updated. The log file will be storted at file_path.csv
+    , file_path itself does not need to contain the file extension, it will
     automatically be added.
 
     The iterable "data" can contain an arbitrary number of elements and each
@@ -27,24 +27,22 @@ def log_data(directory=None, file_name=None, *data, init=False):
     not as an iterable. For example:
 
         Correct:
-            log_data("some_path", "my_data", 1, 2, 3, 4, 5)
-            log_data("some_path", "my_data", *list_of_data)
-            log_data("some_path", "my_data", *['a', 'b', 'c', 4, 5, 6])
-            log_data("some_path", "my_data", *(1, 2, 3, 4, 5))
-            log_data("some_path", "my_data", 'column 1', 'column 2', init=True)
+            log_data("my_data", 1, 2, 3, 4, 5)
+            log_data("my_data", *list_of_data)
+            log_data("my_data", *['a', 'b', 'c', 4, 5, 6])
+            log_data("my_data", *(1, 2, 3, 4, 5))
+            log_data("my_data", 'column 1', 'column 2', init=True)
 
         Incorrect:
-            log_data("some_path", "my_data", [1, 2, 3, 4, 5])
-            log_data("some_path", "my_data", ('a', 'b', 'c', 'd'))
+            log_data("my_data", [1, 2, 3, 4, 5])
+            log_data("my_data", ('a', 'b', 'c', 'd'))
 
     In the case of the incorrect examples the entire iterable "data" would be
     stored in a single cell of the csv file.
 
     Args:
-        directory (str, or path-like object): file directory where the log file
-            is/will be stored.
-        file_name (str): name of the log file to use, does not need to include
-            the file extension.
+        file_name (str, or path-like object): path of the log file to use, does
+            not need to include the file extension or previously exist.
         data: a sequence or unpacked iterable of data to be stored.
 
     Kwargs:
@@ -53,31 +51,20 @@ def log_data(directory=None, file_name=None, *data, init=False):
             adding additional data). Defaults to False.
     Example:
         cwd = Path().parent.resolve()
+        file = cwd.joinpath('my_data')
         mydata = [3, 4, 5]
         moredata = {6, 7, 8}
-        log_data(cwd, None, "column A", "column B", "column C", init=True)
-        log_data(cwd, None, 1, 2, 3)
-        log_data(cwd, None, *mydata)  # note use of generator
-        log_data(cwd, None, *moredata)  # note use of generator
-    Returns:
-        NoneType
+        log_data(file, "column A", "column B", "column C", init=True)
+        log_data(file, 1, 2, 3)
+        log_data(file, *mydata)  # note use of generator
+        log_data(file, *moredata)  # note use of generator
     """
 
-    if file_name is None:
-        file_name = 'data'
-
-    if directory is not None:
-        cwd = Path(directory)
-    else:
-        try:
-            cwd = Path(__file__).parent.resolve()
-        except NameError:  # command line is being used, use active directory
-            cwd = Path().parent.resolve()
-
-    with open(cwd / f'{file_name}.csv', 'w' if init else 'a') as f:
+    mode = 'w' if init else 'a'
+    file_path = Path(file_path)
+    file_path_ext = file_path.parent / f'{file_path.name}.csv'
+    with open(file_path_ext, mode) as f:
         print(*data, sep=',', file=f)
-
-    return None
 
 
 def dump_data(directory, file_name, data):

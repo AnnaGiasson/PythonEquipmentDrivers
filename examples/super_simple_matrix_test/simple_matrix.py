@@ -39,7 +39,7 @@ data_path = 'C:\\top_sneaky\\'
 data_file_name = 'test_data.csv'
 
 # create file to store data using the utility function
-ped.utility.log_data(data_path, data_file_name,
+ped.utility.log_data(data_path + data_file_name,
                      'v_in_set', 'i_out_set', 'v_in',         # columns names
                      'i_in', 'v_out', 'i_out', 'efficiency',  # of the data csv
                      init=True)
@@ -71,7 +71,7 @@ for v_in_set in v_in_conditions:
         measurement.append(eff)
 
         # log measurements
-        ped.utility.log_data(data_path, data_file_name, *measurement)
+        ped.utility.log_data(data_path + data_file_name, *measurement)
 
         sleep(cooldown_delay)  # cool down unit
 
