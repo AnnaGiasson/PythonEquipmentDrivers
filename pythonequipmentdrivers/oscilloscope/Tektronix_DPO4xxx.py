@@ -37,7 +37,8 @@ class Tektronix_DPO4xxx(Scpi_Instrument):
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self.instrument.write(cmd_str)
 
-    def get_channel_data(self, *channels: int, **kwargs) -> Tuple:
+    def get_channel_data(self, *channels: int,
+                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
                          return_time=True, dtype=np.float32)

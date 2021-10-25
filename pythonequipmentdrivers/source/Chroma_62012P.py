@@ -248,7 +248,7 @@ class Chroma_62012P(Scpi_Instrument):
         response = self.instrument.query("FETC:POW?")
         return float(response)
 
-    def get_status(self) -> Tuple:
+    def get_status(self) -> Tuple[str, bool, str]:
         """
         get_status()
 
@@ -300,9 +300,10 @@ class Chroma_62012P(Scpi_Instrument):
         for n, msg in enumerate(message_responses):
             if message_code & (1 << n):
                 messages.append(msg)
+
         messages = ','.join(messages)
 
-        output_state = True if (state == 'ON') else False
+        output_state = (state == 'ON')
 
         return (messages, output_state, mode)
 
@@ -530,7 +531,11 @@ class Chroma_62012P(Scpi_Instrument):
         self.instrument.write('PROG:RUN ON')
 
     def halt_program(self) -> None:
+        """
+        halt_program()
 
+        Ends execution of the current program if one is running.
+        """
         self.instrument.write('PROG:RUN OFF')
 
     def get_program_state(self) -> bool:

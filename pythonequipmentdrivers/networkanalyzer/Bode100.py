@@ -1,3 +1,4 @@
+from typing import Tuple
 import win32com.client
 import numpy as np
 import re
@@ -150,10 +151,11 @@ class Bode100():
 
         return measurement
 
-    def process_gain_phase_results(self, results, **options):
+    def _process_gain_phase_results(self, results,
+                                    **options) -> Tuple[np.ndarray]:
 
         """
-        process_gain_phase_results(results, **kwargs)
+        _process_gain_phase_results(results, **kwargs)
 
         Extracts frequency response data for a results object of a gain/phase
         measurement test. Returning the meausurment frequencies, gain,
@@ -297,8 +299,8 @@ class Bode100():
             results = measurement.Results
             self.connection.ShutDown()
 
-            freq, mag, phase = self.process_gain_phase_results(results,
-                                                               **kwargs)
+            freq, mag, phase = self._process_gain_phase_results(results,
+                                                                **kwargs)
 
             return freq, mag, phase
 

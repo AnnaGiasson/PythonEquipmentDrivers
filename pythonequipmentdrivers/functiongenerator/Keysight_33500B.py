@@ -1,3 +1,4 @@
+from typing import Sequence
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 
@@ -351,7 +352,8 @@ class Keysight_33500B(Scpi_Instrument):
     def clear_display_text(self):
         return self.set_display_text("")
 
-    def store_arbitrary_waveform(self, data, arb_name):
+    def store_arbitrary_waveform(self, data: Sequence, arb_name: str) -> None:
+
         if not (8 < len(data) < 65536):
             raise ValueError('data must be between 8 and 65536 samples')
 
@@ -367,8 +369,6 @@ class Keysight_33500B(Scpi_Instrument):
         self.instrument.write('{} {},{}'.format(cmd_str,
                                                 arb_name,
                                                 ",".join(map(str, data))))
-
-        return None
 
 
 if __name__ == "__main__":

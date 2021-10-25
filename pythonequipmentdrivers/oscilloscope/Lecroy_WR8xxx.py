@@ -655,7 +655,8 @@ class Lecroy_WR8xxx(Scpi_Instrument):
             description[key] = value
         return description
 
-    def get_channel_data(self, *channels: int, **kwargs) -> Tuple:
+    def get_channel_data(self, *channels: int,
+                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, return_time=True, dtype=np.float32)
 
