@@ -1,7 +1,7 @@
 from .core import (Scpi_Instrument, get_devices_addresses, identify_devices,
                    VisaIOError)
 
-from .environment_creation import build_environment
+from .equipment_collections import connect_equipment
 
 from . import utility
 from . import errors
@@ -21,7 +21,7 @@ from . import functiongenerator
 __all__ = ['Scpi_Instrument', 'get_devices_addresses', 'identify_devices',
            'VisaIOError',
 
-           'build_environment',
+           'connect_equipment',
 
            'utility', 'errors',
 

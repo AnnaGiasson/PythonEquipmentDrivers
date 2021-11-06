@@ -42,7 +42,7 @@ def mask_resources(configuration: dict, resource_mask: set) -> dict:
 
     Args:
         configuration (dict): resource configuration information for the
-            build_environment function.
+            connect_equipment function.
         resource_mask (set): a set of resources that are to be kept in the
             configuration information.
 
@@ -57,37 +57,37 @@ def mask_resources(configuration: dict, resource_mask: set) -> dict:
     return configuration
 
 
-class Environment:
+class EquipmentCollection:
     """
-    Environment
+    EquipmentCollection
 
-    Test environment Base-Class returned by build_environment
+    Test environment Base-Class returned by connect_equipment
 
-    Attributes of the Environment instance depend on the configuration passed
-    into the build_environment
+    Attributes of the EquipmentCollection instance depend on the configuration
+    passed into the connect_equipment
     """
 
     pass
 
 
 # Update expected/assumed format of json file
-def build_environment(configuration: Union[str, Path, dict],
-                      **kwargs) -> Environment:
+def connect_equipment(configuration: Union[str, Path, dict],
+                      **kwargs) -> EquipmentCollection:
     """
-    build_environment(configuration, **kwargs)
+    connect_equipment(configuration, **kwargs)
 
-    Returns in instance of an Environment object; an object containing multiple
-    equipment instances as instance attributes. This simplifies the overhead
-    needed to instantiate connections to an entire set of devices.
+    Returns in instance of an EquipmentCollection object; an object containing
+    multiple equipment instances as instance attributes. This simplifies the
+    overhead needed to instantiate connections to an entire set of devices.
 
     This can be useful when repeatedly connecting to the same set of devices,
-    or for ensuring different sets of equipment are instantiated as Environment
-    objects with the same attributes; allowing for easy reuse of the same test
-    scripts using differents setups.
+    or for ensuring different sets of equipment are instantiated as
+    EquipmentCollection objects with the same attributes; allowing for easy
+    reuse of the same test scripts using differents setups.
 
-    The information required to configure the returned Environment object is
-    provided using the 'configuration' arguement which is either a path to a
-    file or a dictionary containing the required information.
+    The information required to configure the returned EquipmentCollection
+    object is provided using the 'configuration' arguement which is either a
+    path to a file or a dictionary containing the required information.
 
     Args:
         configuration (Union[str, Path, dict]): [description]
@@ -104,8 +104,8 @@ def build_environment(configuration: Union[str, Path, dict],
             False.
 
     Returns:
-        Environment: An object containing the device instances specified in
-            'configuration' as attributes.
+        EquipmentCollection: An object containing the device instances
+            specified in 'configuration' as attributes.
 
     Examples:
 
@@ -192,8 +192,8 @@ def build_environment(configuration: Union[str, Path, dict],
             raise errors.EnvironmentSetupError("Required Equipment Missing",
                                                missing)
 
-    # build Environment instance
-    env = Environment()
+    # build EquipmentCollection instance
+    env = EquipmentCollection()
     for name, meta_info in env_config.items():
 
         try:
