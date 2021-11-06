@@ -1,10 +1,10 @@
-import pythonequipmentdrivers as ped
+from pythonequipmentdrivers.utility import log_data
+from pythonequipmentdrivers import connect_equipment
 from time import sleep
 
 
 # see file for equipment details and initialization
-equipment = ped.connect_equipment(configuration='.\\equipment.config',
-                                  init=True)
+equipment = connect_equipment(configuration='.\\equipment.config', init=True)
 
 # conditions to test, test parameters, location to store data
 v_in_conditions = (40, 48, 54, 60)
@@ -15,11 +15,11 @@ cooldown_delay = 5
 
 output_data_file = 'C:\\top_sneaky\\test_data.csv'
 
-# create file to store data using the utility function
-ped.utility.log_data(output_data_file,
-                     'v_in_set', 'i_out_set', 'v_in',         # columns names
-                     'i_in', 'v_out', 'i_out', 'efficiency',  # of the data csv
-                     init=True)
+# create file to store test data. When initiailizing we can pass the columns
+# names so they're added when the file is created
+log_data(output_data_file,
+         'v_in_set', 'i_out_set', 'v_in', 'i_in', 'v_out', 'i_out', 'eff',
+         init=True)
 
 # run test
 equipment.source.on()
@@ -40,15 +40,12 @@ for v_in_set in v_in_conditions:
 
         equipment.sink.set_current(0)
 
-        # calculations
+        # add calculations to data
         v_in, i_in, v_out, i_out = measurement[2:5+1]
         eff = (v_out*i_out)/(v_in*i_in)
-
-        # add to data
         measurement.append(eff)
 
-        # log measurements
-        ped.utility.log_data(output_data_file, *measurement)
+        log_data(output_data_file, *measurement)
 
         sleep(cooldown_delay)  # cool down unit
 
