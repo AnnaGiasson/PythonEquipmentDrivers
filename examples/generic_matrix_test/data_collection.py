@@ -459,7 +459,7 @@ class Matrix_Test():
 
 if __name__ == "__main__":
     cwd = Path(__file__).parent
-    env = Test_Environment(configuration=cwd / 'equipment_configuration.json',
+    env = Test_Environment(configuration=cwd / 'equipment.config',
                            init=True)
     test = Matrix_Test(env, test_config=cwd/'test_configuration.json')
     test.run()
