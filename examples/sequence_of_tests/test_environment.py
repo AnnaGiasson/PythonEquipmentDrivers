@@ -94,8 +94,7 @@ def enviroment_test() -> Test_Environment:
     cwd = Path(__file__).parent.resolve()
     config_path = cwd.joinpath('equipment.config')
 
-    return Test_Environment(connect_equipment(configuration=config_path,
-                                              init=True))
+    return Test_Environment(connect_equipment(config=config_path, init=True))
 
 
 if __name__ == '__main__':
