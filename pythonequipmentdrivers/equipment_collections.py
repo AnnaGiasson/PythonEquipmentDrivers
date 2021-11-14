@@ -71,10 +71,10 @@ class EquipmentCollection:
 
 
 # Update expected/assumed format of json file
-def connect_equipment(configuration: Union[str, Path, dict],
+def connect_equipment(config: Union[str, Path, dict],
                       **kwargs) -> EquipmentCollection:
     """
-    connect_equipment(configuration, **kwargs)
+    connect_equipment(config, **kwargs)
 
     Returns in instance of an EquipmentCollection object; an object containing
     multiple equipment instances as instance attributes. This simplifies the
@@ -86,15 +86,15 @@ def connect_equipment(configuration: Union[str, Path, dict],
     reuse of the same test scripts using differents setups.
 
     The information required to configure the returned EquipmentCollection
-    object is provided using the 'configuration' arguement which is either a
+    object is provided using the 'config' arguement which is either a
     path to a file or a dictionary containing the required information.
 
     Args:
-        configuration (Union[str, Path, dict]): [description]
+        config (Union[str, Path, dict]): [description]
 
     Kwargs:
         object_mask (set, optional): A set of attribute names specified in the
-            configuration information to connect. If any of the specified
+            config information to connect. If any of the specified
             devices fail to connect an exception will be raised. Defaults
             behavior is to connect everything present.
         verbose (bool, optional): If True, instantiation, status, and error
@@ -105,7 +105,7 @@ def connect_equipment(configuration: Union[str, Path, dict],
 
     Returns:
         EquipmentCollection: An object containing the device instances
-            specified in 'configuration' as attributes.
+            specified in 'config' as attributes.
 
     Examples:
 
@@ -181,7 +181,7 @@ def connect_equipment(configuration: Union[str, Path, dict],
     """
 
     # read/process configuration information
-    env_config = read_configuration(configuration)
+    env_config = read_configuration(config)
 
     object_mask = set(kwargs.get('object_mask', {}))
     if object_mask:

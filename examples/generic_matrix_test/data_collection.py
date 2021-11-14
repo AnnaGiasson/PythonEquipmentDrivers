@@ -56,8 +56,8 @@ class Test_Environment:
     of tests.
 
     Args:
-        equipment_setup (str, Path, dict): equipment configuration information
-            to instatiate an EnvironmentSetup object. See
+        equipment_setup (str, Path, dict): equipment config information to
+            instatiate an EnvironmentSetup object. See
             help(pythonequipmentdrivers.EnvironmentSetup) for more information.
 
     Kwargs:
@@ -66,11 +66,10 @@ class Test_Environment:
             in "equipment_setup". Defaults to False.
     """
 
-    def __init__(self, configuration: Union[str, Path, dict],
+    def __init__(self, config: Union[str, Path, dict],
                  init: bool = False) -> None:
 
-        self.equipment = ped.connect_equipment(configuration=configuration,
-                                               init=init)
+        self.equipment = ped.connect_equipment(config=config, init=init)
 
     def set_operating_point(self, **op_point) -> None:
 
@@ -459,7 +458,7 @@ class Matrix_Test():
 
 if __name__ == "__main__":
     cwd = Path(__file__).parent
-    env = Test_Environment(configuration=cwd / 'equipment.config',
+    env = Test_Environment(config=cwd / 'equipment.config',
                            init=True)
     test = Matrix_Test(env, test_config=cwd/'test_configuration.json')
     test.run()
