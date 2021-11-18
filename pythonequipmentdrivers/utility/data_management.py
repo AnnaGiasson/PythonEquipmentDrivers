@@ -1,6 +1,7 @@
 from pathlib import Path
 from time import strftime
 import json
+from itertools import zip_longest
 
 
 def log_data(file_path: Path, *data, init=False):
@@ -106,6 +107,92 @@ def dump_data(directory, file_name, data):
         for item in data:
             print(*item, sep=',', file=f)
 
+    return None
+
+
+def dump_array_data(file_path: Path, data: tuple, init=False,
+                    longest=False, fillvalue=None) -> None:
+    """
+    dump_array_data(file_path, data, init=False, longest=False, fillvalue=None)
+
+    Writes a tuple of iterables to rows of a csv file by transposing them.
+    Useful for logging data contained in multiple arrays, row by row after
+    a test or measurement completes.
+    if longest=True, will pad with fillvalue, default None
+
+    example:
+
+
+    If init=True a new file is created (or overwriten if the file already
+    exists) and the iterable "data" is unpacked into the first row of the new
+    document. If init = False then the existing file is opened and the iterable
+    "data" is unpacked and appended to the end of the document. If init = False
+    but the file does not already exist it will be created.
+
+    The arguement "file_path" specifies the path of the file to be
+    created/updated. The log file will be storted at file_path.csv
+    , file_path itself does not need to contain the file extension, it will
+    automatically be added.
+
+    The iterable "data" can contain an arbitrary number of elements and each
+    element can use an arbitrary data type as long as it can be safely cast to
+    a string. The argument "data" SHOULD be passed as a PACKED structure,
+    i.e. AS an iterable. For example:
+
+        Incorrect:
+            dump_array_data("my_data", 1, 2, 3, 4, 5)
+            dump_array_data("my_data", *list_of_data)
+            dump_array_data("my_data", *['a', 'b', 'c', 4, 5, 6])
+            dump_array_data("my_data", *(1, 2, 3, 4, 5))
+            dump_array_data("my_data", 'column 1', 'column 2', init=True)
+
+        Correct:
+            dump_array_data("my_data", [1, 2, 3, 4, 5])
+            dump_array_data("my_data", (['a', 'b', 'c', 'd'], [1, 2, 3, 4, 5]),
+                            init=True)
+
+    Args:
+        file_name (str, or path-like object): path of the log file to use, does
+            not need to include the file extension or previously exist.
+        data: an iterable of data to be stored.
+
+    Kwargs:
+        init (bool, optional): Whether or not to open the log file in write
+            mode ("True", for creating a new file) or append mode ("False" for
+            adding additional data). Defaults to False.
+    Example:
+        cwd = Path().parent.resolve()
+        file = cwd.joinpath('my_data')
+        list1 = ['a', 'b', 'c', 'd', 'e']
+        list2 = [1, 2, 3, 4, 5, 6, 7, 8]
+        list3 = [4, 5, 6, 7, 8, 9]
+        args = (list1, list2, list3)
+        dump_array_data(file, args, longest=True)
+
+        outputs as:
+        a,1,4
+        b,2,5
+        c,3,6
+        d,4,7
+        e,5,8
+        None,6,9
+        None,7,None
+        None,8,None
+
+    Returns:
+        None
+    """
+
+    mode = 'w' if init else 'a'
+    file_path = Path(file_path)
+    file_path_ext = file_path.parent / f'{file_path.name}.csv'
+    with open(file_path_ext, mode) as f:
+        if longest:
+            for vals in zip_longest(*data, fillvalue=fillvalue):
+                print(*vals, sep=',', file=f)
+        else:
+            for vals in zip(*data):
+                print(*vals, sep=',', file=f)
     return None
 
 
