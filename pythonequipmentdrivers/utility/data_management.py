@@ -1,9 +1,10 @@
 from pathlib import Path
 from time import strftime
 import json
+from typing import Any, Iterable
 
 
-def log_data(file_path: Path, *data, init=False):
+def log_data(file_path: Path, *data: Any, init: bool = False) -> None:
     """
     log_data(file_path, *data, init=False)
 
@@ -17,9 +18,8 @@ def log_data(file_path: Path, *data, init=False):
     but the file does not already exist it will be created.
 
     The arguement "file_path" specifies the path of the file to be
-    created/updated. The log file will be storted at file_path.csv
-    , file_path itself does not need to contain the file extension, it will
-    automatically be added.
+    created/updated. The log file will be storted at file_path.csv, if the
+    "csv" extension is not present it will be added automatically.
 
     The iterable "data" can contain an arbitrary number of elements and each
     element can use an arbitrary data type as long as it can be safely cast to
@@ -41,7 +41,7 @@ def log_data(file_path: Path, *data, init=False):
     stored in a single cell of the csv file.
 
     Args:
-        file_name (str, or path-like object): path of the log file to use, does
+        file_path (str, or path-like object): path of the log file to use, does
             not need to include the file extension or previously exist.
         data: a sequence or unpacked iterable of data to be stored.
 
@@ -56,18 +56,22 @@ def log_data(file_path: Path, *data, init=False):
         moredata = {6, 7, 8}
         log_data(file, "column A", "column B", "column C", init=True)
         log_data(file, 1, 2, 3)
-        log_data(file, *mydata)  # note use of generator
-        log_data(file, *moredata)  # note use of generator
+        log_data(file, *mydata)  # note use of list unpacking
+        log_data(file, *moredata)  # note use of set unpacking
     """
 
-    mode = 'w' if init else 'a'
     file_path = Path(file_path)
-    file_path_ext = file_path.parent / f'{file_path.name}.csv'
-    with open(file_path_ext, mode) as f:
+    # add/correct file extension
+    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+
+    if init:
+        file_path_ext.touch()  # create file
+
+    with open(file_path_ext, 'w' if init else 'a') as f:
         print(*data, sep=',', file=f)
 
 
-def dump_data(directory, file_name, data):
+def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
     """
     dump_data(directory, file_name, data)
 
@@ -75,38 +79,40 @@ def dump_data(directory, file_name, data):
     csv file. Useful for logging a large chunk of data at once after test or
     measurement.
 
-    The arguements "directory" and "file_name" specify the path of the file to
-    be created. The log file will be storted at directory/file_name.csv,
-    file_name itself does not need to contain the file extension, it will
-    automatically be added.
+    The arguement "file_path" specifies the path of the file to be created. The
+    log file will be storted at file_path.csv, if the "csv" extension is not
+    present it will be added automatically.
 
     The iterable "data" can contain an arbitrary number of elements which in
     turn can have arbitrary length and data type as long as it can be safely
     cast to a string. For example:
 
-    data = [["column A", "column B", "column C"], [1, 2, 3], [4, 5, 6]]
-    dump_data("some_directory", "my_data", data)
+        data = [["column A", "column B", "column C"], [1, 2, 3], [4, 5, 6]]
+        dump_data("some_directory\\my_data", data)
 
     Each element of data does not need to have the same length but it is
     recommended to make parsing the data after the fact easier.
 
     Args:
-        directory (str, or path-like object): file directory where the log file
-            is/will be stored.
-        file_name (str): name of the log file to use, does not need to include
-            the file extension.
-        data: an iterable of iterables of data to be stored.
+        file_path (str, or path-like object): path of the log file to use, does
+            not need to include the file extension or previously exist.
+        data (Iterable[Iterable[Any]]): an iterable of iterables of data to be
+            stored. Each element should be able to be cast to string.
 
     Returns:
         NoneType
     """
 
-    with open(Path(directory) / f'{file_name}.csv', 'w') as f:
+    file_path = Path(file_path)
+
+    # add/correct file extension
+    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+    file_path_ext.touch()  # create file
+
+    with open(file_path_ext, 'w') as f:
 
         for item in data:
             print(*item, sep=',', file=f)
-
-    return None
 
 
 def create_test_log(base_dir, images=False, raw_data=False, **test_info):
@@ -198,7 +204,3 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
                       sort_keys=False)
 
     return test_dir  # return newly created directory
-
-
-if __name__ == '__main__':
-    pass
