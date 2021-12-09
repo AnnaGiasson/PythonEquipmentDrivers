@@ -755,20 +755,55 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return ' '.join(response.strip().split()[1:])
 
+    # def set_channel_name(self, channel: int, name: str) -> None:
+    #     """
+    #     set_channel_name(channel, name)
+
+    #     updates the name string assigned to a specified channel, "channel",
+    #     with the value given in "name".
+
+    #     Args:
+    #         channel (int): channel number to update label of.
+    #         name (str): text to assign to the specified channel
+    #     """
+
+    #     if name == "":
+    #         name = f'C{int(channel)}'
+
+    #     q_str = f"""vbs 'app.acquisition.C{channel}.Name = "{name}" '"""
+    #     self.instrument.write(q_str)
+
+    # def get_channel_name(self, channel: int) -> str:
+    #     """
+    #     get_channel_name(channel)
+
+    #     Queries the channel name of the channel specified by "channel".
+
+    #     Args:
+    #         channel (int): channel number to query label of.
+    #     Returns:
+    #         (str): name to assigned to the specified channel
+    #     """
+
+    #     q_str = f"""vbs? 'return = app.acquisition.C{channel}.Name'"""
+
+    #     response = self.instrument.query(q_str)
+
+    #     return ' '.join(response.strip().split()[1:])
+
     def set_channel_display(self, channel, mode):
         # mode = "true" or "false"
         q_str = f"""vbs 'app.acquisition.C{channel}.View = {mode} '"""
         self.instrument.write(q_str)
         return None
 
-    def set_persistence_state(self, state):
+    def set_persistence_state(self, state) -> None:
         if state:
             self.instrument.write('PERSIST ON')
         else:
             self.instrument.write('PERSIST OFF')
-        return None
 
-    def get_persistence_state(self):
+    def get_persistence_state(self) -> bool:
 
         response = self.instrument.query('PERSIST?')
         response = response.split()[1]
@@ -789,7 +824,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
                 oscilloscope capture display in seconds. Valid values are
                 positive numbers or "inf" to set the maximum exposure time
         """
-        valid_durs = (0.5, 1, 2, 5, 1, 20, 'inf')
+        valid_durs = (0.5, 1, 2, 5, 1, 20, 'infinite')
 
         if isinstance(duration, str):
             duration = duration.lower()
@@ -815,7 +850,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         if response.isnumeric():
             return float(dur)
-        return 'inf'
+        return 'infinite'
 
     def set_comm_header(self, header: str) -> None:
         """
@@ -877,7 +912,3 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         header = header.strip().lower()
 
         return header
-
-
-if __name__ == '__main__':
-    pass

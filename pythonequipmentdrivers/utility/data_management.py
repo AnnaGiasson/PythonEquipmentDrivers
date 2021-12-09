@@ -197,7 +197,7 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
 
     # dump config dictionary to file if kwargs were passed
     if test_info:
-        with open(test_dir / f'log_{file_t_stamp}.txt', 'w') as f:
+        with open(test_dir / f'{test_name}_{file_t_stamp}.json', 'w') as f:
             json.dump(test_info, f, indent=4,
                       check_circular=True,
                       allow_nan=True,
