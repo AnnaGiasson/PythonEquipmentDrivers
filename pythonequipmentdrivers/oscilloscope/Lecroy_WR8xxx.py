@@ -755,6 +755,22 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return ' '.join(response.strip().split()[1:])
 
+    def set_channel_label_position(self, channel: int, position=0) -> None:
+        """
+        set_channel_label_position(channel, position)
+
+        updates the text label position on a channel specified by "channel"
+        with the position given in "position".
+
+        Args:
+            channel (int): channel number to update label of.
+            position (int): position trigger relative to place label
+        """
+
+        q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
+                 f""""{position}" '""")
+        self.instrument.write(q_str)
+
     def set_channel_display(self, channel, mode):
         # mode = "true" or "false"
         q_str = f"""vbs 'app.acquisition.C{channel}.View = {mode} '"""
