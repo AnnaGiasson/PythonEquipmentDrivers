@@ -771,6 +771,22 @@ class Lecroy_WR8xxx(Scpi_Instrument):
                  f""""{position}" '""")
         self.instrument.write(q_str)
 
+    def set_channel_label_view(self, channel: int, view: str = 'ON') -> None:
+        """
+        set_channel_label_view(channel, position)
+
+        updates the text label position on a channel specified by "channel"
+        with the position given in "position".
+
+        Args:
+            channel (int): channel number to update label of.
+            view (str): ON or OFF to view label
+        """
+
+        q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
+                 f""""{view}" '""")
+        self.instrument.write(q_str)
+
     def set_channel_display(self, channel, mode):
         # mode = "true" or "false"
         q_str = f"""vbs 'app.acquisition.C{channel}.View = {mode} '"""
