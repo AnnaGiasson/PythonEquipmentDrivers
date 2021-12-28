@@ -478,6 +478,21 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return float(response.lstrip(read_cmd).split()[0])
 
+    def set_trigger_level_auto(self) -> None:
+        """
+        set_trigger_level_auto(**kwargs)
+
+        Sets the vertical position of the trigger point.
+        Automatically sets trigger level to signal mean.
+
+        Args:
+            None
+        Kwargs:
+            None
+        """
+
+        self.instrument.write(f"""vbs 'app.acquisition.Trigger.FindLevel'""")
+
     def set_trigger_slope(self, slope: str, **kwargs) -> None:
         """
         set_trigger_slope(slope, **kwargs)
@@ -785,6 +800,20 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
                  f""""{view}" '""")
+        self.instrument.write(q_str)
+
+    def set_channel_findscale(self, channel: int) -> None:
+        """
+        set_channel_findscale(channel)
+
+        updates the scale on a channel specified by "channel"
+        automatically to fit singal on screen.
+
+        Args:
+            channel (int): channel number to update scale of.
+        """
+
+        q_str = (f"""vbs 'app.acquisition.C{channel}.FindScale'""")
         self.instrument.write(q_str)
 
     def set_channel_display(self, channel, mode):
