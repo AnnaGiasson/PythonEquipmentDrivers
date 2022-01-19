@@ -765,36 +765,31 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
         return ' '.join(response.strip().split()[1:])
 
-    def set_channel_label_position(self, channel: int, position=0) -> None:
-        """
-        set_channel_label_position(channel, position)
-
-        updates the text label position on a channel specified by "channel"
-        with the position given in "position".
+    def set_channel_label_position(self, channel: int,
+                                   position: float = 0) -> None:
+        """set_channel_label_position(channel, position)
 
         Args:
-            channel (int): channel number to update label of.
-            position (int): position trigger relative to place label
+            channel (int): channel number to update the label of
+            position (float, optional): time position relative to trigger to
+            place the label. Units are in seconds. Defaults to 0.
         """
 
         q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
                  f""""{position}" '""")
         self.instrument.write(q_str)
 
-    def set_channel_label_view(self, channel: int, view: str = 'ON') -> None:
-        """
-        set_channel_label_view(channel, position)
-
-        updates the text label position on a channel specified by "channel"
-        with the position given in "position".
+    def set_channel_label_view(self, channel: int, view: bool = True) -> None:
+        """set_channel_label_view(channel, view)
 
         Args:
-            channel (int): channel number to update label of.
-            view (str): ON or OFF to view label
+            channel (int): channel number to show/hide the label of
+            view (bool, optional): True = label 'ON', False = label 'OFF'
+            Defaults to True 'ON'
         """
 
         q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
-                 f""""{view}" '""")
+                 f""""{'ON' if view else 'OFF'}" '""")
         self.instrument.write(q_str)
 
     def set_channel_findscale(self, channel: int) -> None:
