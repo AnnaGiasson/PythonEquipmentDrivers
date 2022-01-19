@@ -480,15 +480,10 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
     def set_trigger_level_auto(self) -> None:
         """
-        set_trigger_level_auto(**kwargs)
+        set_trigger_level_auto()
 
         Sets the vertical position of the trigger point.
         Automatically sets trigger level to signal mean.
-
-        Args:
-            None
-        Kwargs:
-            None
         """
 
         self.instrument.write(f"""vbs 'app.acquisition.Trigger.FindLevel'""")
