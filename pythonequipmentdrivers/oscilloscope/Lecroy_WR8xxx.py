@@ -782,6 +782,10 @@ class Lecroy_WR8xxx(Scpi_Instrument):
     def set_channel_label_view(self, channel: int, view: bool = True) -> None:
         """set_channel_label_view(channel, view)
 
+        Turn channel label visibility on or off, also resets label position to
+        trigger position (time zero).  Use set_channel_label_position() AFTER
+        this command to prevent loss of position setting.
+
         Args:
             channel (int): channel number to show/hide the label of
             view (bool, optional): True = label 'ON', False = label 'OFF'
@@ -797,7 +801,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         set_channel_findscale(channel)
 
         updates the scale on a channel specified by "channel"
-        automatically to fit singal on screen.
+        automatically to fit signal on screen.
 
         Args:
             channel (int): channel number to update scale of.
