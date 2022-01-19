@@ -2,6 +2,7 @@ from pathlib import Path
 from time import strftime
 import json
 from itertools import zip_longest
+from typing import Iterable, Optional
 
 
 def log_data(file_path: Path, *data, init=False):
@@ -110,15 +111,18 @@ def dump_data(directory, file_name, data):
     return None
 
 
-def dump_array_data(file_path: Path, data: tuple, init=False,
-                    longest=False, fillvalue=None) -> None:
+def dump_array_data(file_path: Path,
+                    data: Iterable[Iterable[any]],
+                    init: bool = False,
+                    fill_value: Optional[str] = None) -> None:
     """
-    dump_array_data(file_path, data, init=False, longest=False, fillvalue=None)
+    dump_array_data(file_path, data, init=False, longest=False,
+    fill_value=None)
 
-    Writes a tuple of iterables to rows of a csv file by transposing them.
+    Writes a iterable of iterables to rows of a csv file by transposing them.
     Useful for logging data contained in multiple arrays, row by row after
     a test or measurement completes.
-    if longest=True, will pad with fillvalue, default None
+    if fill_value is not None, will pad with fill_value, default None
 
     example:
 
@@ -167,7 +171,7 @@ def dump_array_data(file_path: Path, data: tuple, init=False,
         list2 = [1, 2, 3, 4, 5, 6, 7, 8]
         list3 = [4, 5, 6, 7, 8, 9]
         args = (list1, list2, list3)
-        dump_array_data(file, args, longest=True)
+        dump_array_data(file, args, fill_value='')
 
         outputs as:
         a,1,4
@@ -175,25 +179,22 @@ def dump_array_data(file_path: Path, data: tuple, init=False,
         c,3,6
         d,4,7
         e,5,8
-        None,6,9
-        None,7,None
-        None,8,None
+        '',6,9
+        '',7,''
+        '',8,''
 
-    Returns:
-        None
     """
 
-    mode = 'w' if init else 'a'
     file_path = Path(file_path)
-    file_path_ext = file_path.parent / f'{file_path.name}.csv'
-    with open(file_path_ext, mode) as f:
-        if longest:
-            for vals in zip_longest(*data, fillvalue=fillvalue):
-                print(*vals, sep=',', file=f)
-        else:
-            for vals in zip(*data):
-                print(*vals, sep=',', file=f)
-    return None
+    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+
+    if fill_value is not None:  # create generator
+        rows = zip_longest(*data, fillvalue=fill_value)
+    else:
+        rows = zip(*data)
+
+    with open(file_path_ext, 'w' if init else 'a') as f:
+        print(*rows, sep=',', end='\n', file=f)
 
 
 def create_test_log(base_dir, images=False, raw_data=False, **test_info):
