@@ -1,7 +1,8 @@
+from argparse import ArgumentError
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from time import sleep
-from typing import Union, Tuple
+from typing import Literal, Union, Tuple
 
 
 class Koolance_EXC900(Scpi_Instrument):
@@ -27,14 +28,23 @@ class Koolance_EXC900(Scpi_Instrument):
         super().__init__(address, **kwargs)
 
     def _read_data(self) -> bytes:
+        """Read binary data from the device and return bytes"""
         data_request_command = [0xCF, 0x01, 0x08]
         self.instrument.write_raw(bytes(data_request_command))
         return self.instrument.read_bytes(51)
 
     def _write_data(self, data: bytes) -> None:
+        """Write bytes to the device"""
         self.instrument.write_raw(data)
 
-    def get_settings(self) -> dict:
+    def read_settings(self) -> dict:
+        """
+        Read data from the device and output values of supported parameters
+        in a dictionary format
+
+        Returns:
+            dict: dict of parameter name and the real value
+        """
         data = self._read_data()
         out_dict = {}
         for name, (offs, n_bytes, m, r, b) in self.DATA_REGISTER_MAP.items():
@@ -44,15 +54,47 @@ class Koolance_EXC900(Scpi_Instrument):
             out_dict[name] = val
         return out_dict
 
-    def set_settings(self, **kwargs) -> dict:
+    def update_settings(self, **kwargs) -> None:
+        """
+        Update settings to the values provided
+
+        Each kwarg should correspond to a supported parameter name as defined in
+        Koolance_EXC900.DATA_REGISTER_MAP
+
+        """
         data = bytearray(self._read_data())
         for name, value in kwargs.items():
-            offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
-            value = round((m * value + b) * 10 ** r)
+            try:
+                offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
+            except KeyError:
+                raise TypeError(f"{name} is not a valid setting name")
+            value = round((m * value + b) * 10**r)
             val_bytes = value.to_bytes(n_bytes, "big")
             data[offs : offs + n_bytes] = val_bytes
 
-        data[0:2] = [0xCF, 0x04]
-        data[2:14] = 12 * [0]
-        data[50] = sum(data[:50]) % 0x64
+        data[0:2] = [0xCF, 0x04]  # configure the command bytes for a write
+        data[2:14] = 12 * [0]  # set read-only locations to 0
+        data[50] = sum(data[:50]) % 0x64  # compute the checksum
         self._write_data(bytes(data))
+
+    def get_temperature(self) -> float:
+        return self.read_settings()["usr_temp_sp"]
+
+    def set_temperature(self, temp: float) -> None:
+        self.update_settings(usr_temp_sp=temp)
+
+    def measure_temperature(self, sensor: Literal["liq", "ext", "amb"]):
+        try:
+            return self.read_settings()[f"mon_{sensor}_temp"]
+        except KeyError:
+            raise ValueError(f"sensor={sensor} is not a valid option")
+
+    def get_units(self) -> str:
+        units_val = self.read_settings()["units"]
+        return "C" if units_val == 1 else "F"
+
+    def set_units(self, unit: Literal["C", "F"]):
+        if unit not in {"C", "F"}:
+            raise ValueError(f"unit={unit} is not a valid option")
+        units_val = 1 if unit == "C" else 2
+        self.update_settings(units=units_val)
