@@ -17,7 +17,10 @@ class Koolance_EXC900(Scpi_Instrument):
         "mon_pump_rpm": (10, 2, 1, 0, 0),
         "mon_flow_meter": (12, 2, 1, 1, 0),
         # user mode settings
-        "usr_temp_sp": (14, 2, 1, 0, 500),
+        "usr_temp_sp_liq": (14, 2, 1, 0, 500),
+        "usr_temp_sp_ext": (14, 2, 1, 0, 1000),
+        "usr_temp_sp_liq_amb": (14, 2, 1, 0, 1500),
+        "usr_temp_sp_ext_amb": (14, 2, 1, 0, 2000),
         "usr_pump_sp": (16, 2, 1, 0, 0),
         "usr_flow_sp": (18, 2, 1, 0, 0),
         # units
@@ -37,15 +40,17 @@ class Koolance_EXC900(Scpi_Instrument):
         """Write bytes to the device"""
         self.instrument.write_raw(data)
 
-    def read_settings(self) -> dict:
+    def read_settings(self, data: bytes = None) -> dict:
         """
         Read data from the device and output values of supported parameters
         in a dictionary format
 
+
+
         Returns:
             dict: dict of parameter name and the real value
         """
-        data = self._read_data()
+        data = data if data else self._read_data()
         out_dict = {}
         for name, (offs, n_bytes, m, r, b) in self.DATA_REGISTER_MAP.items():
             selected = data[offs : offs + n_bytes]
@@ -78,12 +83,22 @@ class Koolance_EXC900(Scpi_Instrument):
         self._write_data(bytes(data))
 
     def get_temperature(self) -> float:
-        return self.read_settings()["usr_temp_sp"]
+        data = self._read_data()  # prefetch the data once to save time
+        for sensor_config in ("liq", "ext", "liq_amb", "ext_amb"):
+            val = self.read_settings(data)[f"usr_temp_sp_{sensor_config}"]
+            if val:
+                return val
 
-    def set_temperature(self, temp: float) -> None:
-        self.update_settings(usr_temp_sp=temp)
+    def set_temperature(
+        self,
+        temp: float,
+        sensor_config: Literal["liq", "ext", "liq_amb", "ext_amb"] = "liq",
+    ) -> None:
+        if sensor_config not in {"liq", "ext", "liq_amb", "ext_amb"}:
+            raise ValueError(f"sensor_config={sensor_config} is not a valid option")
+        self.update_settings({f"usr_temp_sp_{sensor_config}": temp})
 
-    def measure_temperature(self, sensor: Literal["liq", "ext", "amb"]):
+    def measure_temperature(self, sensor: Literal["liq", "ext", "amb"] = "liq"):
         try:
             return self.read_settings()[f"mon_{sensor}_temp"]
         except KeyError:
