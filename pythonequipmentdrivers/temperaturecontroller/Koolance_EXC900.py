@@ -1,4 +1,3 @@
-from argparse import ArgumentError
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
 from time import sleep
