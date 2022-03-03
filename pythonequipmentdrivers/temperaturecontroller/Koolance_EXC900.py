@@ -1,13 +1,20 @@
 from pythonequipmentdrivers import Scpi_Instrument
 import numpy as np
-from time import sleep
+from time import sleep, time
 from typing import Literal, Union, Tuple
 
 
 class Koolance_EXC900(Scpi_Instrument):
+    """
+    Koolance_EXC900(address)
+
+    address : str, address of the connected device
+
+    object for accessing basic functionality of the Koolance_EXC900 Chiller
+    """
+
     DATA_REGISTER_MAP = {
-        # kwarg, offset, width, m, r, b
-        # TODO: implement more of the map
+        # kwarg name, offset, width, m, r, b
         # monitoring data
         "mon_liq_temp": (2, 2, 10, 0, 2000),
         "mon_ext_temp": (4, 2, 10, 0, 2000),
@@ -28,28 +35,43 @@ class Koolance_EXC900(Scpi_Instrument):
 
     def __init__(self, address, **kwargs):
         super().__init__(address, **kwargs)
+        self._last_read_data: bytes = None
+        self._last_read_data_time = None
+        self._read_data_max_age = kwargs("max_read_data_age", 1.0)
 
     def _read_data(self) -> bytes:
-        """Read binary data from the device and return bytes"""
-        data_request_command = [0xCF, 0x01, 0x08]
-        self.instrument.write_raw(bytes(data_request_command))
-        return self.instrument.read_bytes(51)
+        """
+        Read binary data from the device and return bytes
+        Since the serial commands are slow, the read data is buffered and only
+        refreshed when the age of the data > _read_data_max_age or when a write
+        has occured.
+        """
+        if (
+            self._read_data_time is None
+            or (time() - self._read_data_time) > self._read_data_max_age
+        ):
+            self._read_data_time = time()
+            data_request_command = [0xCF, 0x01, 0x08]
+            self.instrument.write_raw(bytes(data_request_command))
+            self._read_data = self.instrument.read_bytes(51)
+        return self._read_data
 
     def _write_data(self, data: bytes) -> None:
         """Write bytes to the device"""
+        self._read_data_time = None  # trigger a refresh on the next read
         self.instrument.write_raw(data)
 
-    def read_settings(self, data: bytes = None) -> dict:
+    def read_settings(self) -> dict:
         """
+        read_settings()
+
         Read data from the device and output values of supported parameters
-        in a dictionary format
-
-
+        in a key: value format
 
         Returns:
-            dict: dict of parameter name and the real value
+            dict: dict of parameter name and the value
         """
-        data = data if data else self._read_data()
+        data = self._read_data()
         out_dict = {}
         for name, (offs, n_bytes, m, r, b) in self.DATA_REGISTER_MAP.items():
             selected = data[offs : offs + n_bytes]
@@ -60,11 +82,16 @@ class Koolance_EXC900(Scpi_Instrument):
 
     def update_settings(self, **kwargs) -> None:
         """
+        update_settings(**kwargs)
+
         Update settings to the values provided
 
-        Each kwarg should correspond to a supported parameter name as defined in
-        Koolance_EXC900.DATA_REGISTER_MAP
-
+        args:
+            kwargs: Each kwarg should correspond to a writeable supported
+            parameter name as defined in Koolance_EXC900.DATA_REGISTER_MAP
+            eg:
+            update_settings(usr_temp_sp_liq=10) - set the setpoint to 10 deg
+            update_settings(units=1) - set the units used to C
         """
         data = bytearray(self._read_data())
         for name, value in kwargs.items():
@@ -72,7 +99,7 @@ class Koolance_EXC900(Scpi_Instrument):
                 offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
             except KeyError:
                 raise TypeError(f"{name} is not a valid setting name")
-            value = round((m * value + b) * 10 ** r)
+            value = round((m * value + b) * 10**r)
             val_bytes = value.to_bytes(n_bytes, "big")
             data[offs : offs + n_bytes] = val_bytes
 
@@ -82,6 +109,14 @@ class Koolance_EXC900(Scpi_Instrument):
         self._write_data(bytes(data))
 
     def get_temperature(self) -> float:
+        """
+        get_temperature()
+
+        returns the current setpoint of the device
+
+        Returns:
+            float: current setpoint of the device
+        """
         data = self._read_data()  # prefetch the data once to save time
         for sensor_config in ("liq", "ext", "liq_amb", "ext_amb"):
             val = self.read_settings(data)[f"usr_temp_sp_{sensor_config}"]
@@ -91,23 +126,61 @@ class Koolance_EXC900(Scpi_Instrument):
     def set_temperature(
         self,
         temp: float,
-        sensor_config: Literal["liq", "ext", "liq_amb", "ext_amb"] = "liq",
+        sensor_config: str = "liq",
     ) -> None:
+        """
+        set_temperature(temp)
+
+        Args:
+            temp (float): Temperature setpoint
+            sensor_config (Literal['liq', 'ext', 'liq_amb', 'ext_amb'], optional):
+            Temperature sensor configuration to use. Defaults to "liq".
+        """
         if sensor_config not in {"liq", "ext", "liq_amb", "ext_amb"}:
             raise ValueError(f"sensor_config={sensor_config} is not a valid option")
         self.update_settings(**{f"usr_temp_sp_{sensor_config}": temp})
 
-    def measure_temperature(self, sensor: Literal["liq", "ext", "amb"] = "liq"):
+    def measure_temperature(
+        self, sensor: Literal["liq", "ext", "amb"] = "liq"
+    ) -> float:
+        """
+        measure_temperature()
+
+        Return the measured temperature from the device
+
+        Args:
+            sensor (Literal['liq', 'ext', 'amb'], optional): Optionally specify which
+            sensor to return the measurement of. Defaults to "liq".
+
+        Returns:
+            float: measured temperature
+        """
         try:
             return self.read_settings()[f"mon_{sensor}_temp"]
         except KeyError:
             raise ValueError(f"sensor={sensor} is not a valid option")
 
     def get_units(self) -> str:
+        """
+        get_units()
+
+        Return the units setting of the device
+
+        Returns:
+            str: 'C' or 'F'
+        """
         units_val = self.read_settings()["units"]
         return "C" if units_val == 1 else "F"
 
-    def set_units(self, unit: Literal["C", "F"]):
+    def set_units(self, unit: Literal["C", "F"]) -> None:
+        """
+        set_units(unit)
+
+        Set the units used by the device
+
+        Args:
+            unit (Literal['C', 'F'])
+        """
         if unit not in {"C", "F"}:
             raise ValueError(f"unit={unit} is not a valid option")
         units_val = 1 if unit == "C" else 2
