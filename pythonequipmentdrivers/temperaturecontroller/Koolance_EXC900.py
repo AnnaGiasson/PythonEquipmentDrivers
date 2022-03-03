@@ -73,7 +73,7 @@ class Koolance_EXC900(Scpi_Instrument):
                 offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
             except KeyError:
                 raise TypeError(f"{name} is not a valid setting name")
-            value = round((m * value + b) * 10**r)
+            value = round((m * value + b) * 10 ** r)
             val_bytes = value.to_bytes(n_bytes, "big")
             data[offs : offs + n_bytes] = val_bytes
 
@@ -96,7 +96,7 @@ class Koolance_EXC900(Scpi_Instrument):
     ) -> None:
         if sensor_config not in {"liq", "ext", "liq_amb", "ext_amb"}:
             raise ValueError(f"sensor_config={sensor_config} is not a valid option")
-        self.update_settings({f"usr_temp_sp_{sensor_config}": temp})
+        self.update_settings(**{f"usr_temp_sp_{sensor_config}": temp})
 
     def measure_temperature(self, sensor: Literal["liq", "ext", "amb"] = "liq"):
         try:
