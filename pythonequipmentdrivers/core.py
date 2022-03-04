@@ -1,7 +1,7 @@
-import pyvisa
-from pyvisa import VisaIOError
 from typing import List, Tuple
 
+import pyvisa
+from pyvisa import VisaIOError
 
 # Globals
 rm = pyvisa.ResourceManager()
@@ -37,30 +37,28 @@ def identify_devices(verbose: bool = False) -> List[Tuple[str]]:
     scpi_devices = []
     for address in rm.list_resources():
         try:
-            device = Scpi_Instrument(address, open_timeout=100,
-                                     timeout=500)
+            device = Scpi_Instrument(address, open_timeout=1000, timeout=1000)
             scpi_devices.append((address, device.idn))
-            if verbose:
-                print("address: {}\nresponse: {}\n".format(*scpi_devices[-1]))
-
-        except pyvisa.Error:
+        except (pyvisa.Error, pyvisa.VisaIOError):
             if verbose:
                 print(f"Invalid IDN query reponse from address {address}\n")
-        finally:
-            del(device)
+        else:
+            if verbose:
+                print("address: {}\nresponse: {}\n".format(*scpi_devices[-1]))
+            del device
 
     return scpi_devices
 
 
-class Scpi_Instrument():
-
+class Scpi_Instrument:
     def __init__(self, address: str, **kwargs) -> None:
         self.address = address
-        open_timeout = int(kwargs.get('open_timeout', 1000))
+        open_timeout = int(kwargs.get("open_timeout", 1000))
 
-        self.instrument = rm.open_resource(self.address,
-                                           open_timeout=open_timeout)
-        self.timeout = int(kwargs.get('timeout', 1000))  # ms
+        self.instrument = rm.open_resource(
+            self.address, open_timeout=open_timeout
+        )
+        self.timeout = int(kwargs.get("timeout", 1000))  # ms
 
     @property
     def idn(self) -> str:
@@ -77,7 +75,7 @@ class Scpi_Instrument():
             str: uniquely identifies the instrument
         """
 
-        return self.instrument.query('*IDN?')
+        return self.instrument.query("*IDN?")
 
     def cls(self, **kwargs) -> None:
         """
@@ -95,7 +93,7 @@ class Scpi_Instrument():
             None
         """
 
-        self.instrument.write('*CLS', **kwargs)
+        self.instrument.write("*CLS", **kwargs)
 
     def rst(self, **kwargs) -> None:
         """
@@ -108,7 +106,7 @@ class Scpi_Instrument():
         Commands and should be supported by all SCPI compatible instruments.
         """
 
-        self.instrument.write('*RST', **kwargs)
+        self.instrument.write("*RST", **kwargs)
 
     @property
     def timeout(self) -> int:
@@ -121,7 +119,7 @@ class Scpi_Instrument():
     def __del__(self) -> None:
         try:
             # if connection has been estabilished terminate it
-            if hasattr(self, 'instrument'):
+            if hasattr(self, "instrument"):
                 self.instrument.close()
         except VisaIOError:
             # if connection not connection has been estabilished (such as if an
@@ -136,7 +134,7 @@ class Scpi_Instrument():
         return def_str
 
     def __str__(self) -> str:
-        return f'Instrument ID: {self.idn}\nAddress: {self.address}'
+        return f"Instrument ID: {self.idn}\nAddress: {self.address}"
 
     def __eq__(self, obj) -> bool:
 
