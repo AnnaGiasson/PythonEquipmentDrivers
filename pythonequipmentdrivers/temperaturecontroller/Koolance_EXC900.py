@@ -1,7 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument
+import logging
 import numpy as np
 from time import sleep, time
 from typing import Literal, Union, Tuple
+from pythonequipmentdrivers import Scpi_Instrument
+
+logger = logging.getLogger(__name__)
 
 
 class Koolance_EXC900(Scpi_Instrument):
@@ -37,7 +40,7 @@ class Koolance_EXC900(Scpi_Instrument):
         super().__init__(address, **kwargs)
         self._last_read_data: bytes = None
         self._last_read_data_time = None
-        self._read_data_max_age = kwargs("max_read_data_age", 1.0)
+        self._read_data_max_age = kwargs.get("max_read_data_age", 1.0)
 
     def _read_data(self) -> bytes:
         """
@@ -47,18 +50,19 @@ class Koolance_EXC900(Scpi_Instrument):
         has occured.
         """
         if (
-            self._read_data_time is None
-            or (time() - self._read_data_time) > self._read_data_max_age
+            self._last_read_data_time is None
+            or (time() - self._last_read_data_time) > self._read_data_max_age
         ):
-            self._read_data_time = time()
+            logger.debug("fetched new data from the device")
+            self._last_read_data_time = time()
             data_request_command = [0xCF, 0x01, 0x08]
             self.instrument.write_raw(bytes(data_request_command))
-            self._read_data = self.instrument.read_bytes(51)
-        return self._read_data
+            self._last_read_data = self.instrument.read_bytes(51)
+        return self._last_read_data
 
     def _write_data(self, data: bytes) -> None:
         """Write bytes to the device"""
-        self._read_data_time = None  # trigger a refresh on the next read
+        self._last_read_data_time = None  # trigger a refresh on the next read
         self.instrument.write_raw(data)
 
     def read_settings(self) -> dict:
@@ -99,7 +103,7 @@ class Koolance_EXC900(Scpi_Instrument):
                 offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
             except KeyError:
                 raise TypeError(f"{name} is not a valid setting name")
-            value = round((m * value + b) * 10**r)
+            value = round((m * value + b) * 10 ** r)
             val_bytes = value.to_bytes(n_bytes, "big")
             data[offs: offs + n_bytes] = val_bytes
 
@@ -117,9 +121,8 @@ class Koolance_EXC900(Scpi_Instrument):
         Returns:
             float: current setpoint of the device
         """
-        data = self._read_data()  # prefetch the data once to save time
         for sensor_config in ("liq", "ext", "liq_amb", "ext_amb"):
-            val = self.read_settings(data)[f"usr_temp_sp_{sensor_config}"]
+            val = self.read_settings()[f"usr_temp_sp_{sensor_config}"]
             if val:
                 return val
 
