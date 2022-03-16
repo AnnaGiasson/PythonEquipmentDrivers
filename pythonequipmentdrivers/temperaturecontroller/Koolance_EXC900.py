@@ -1,7 +1,5 @@
 import logging
-import numpy as np
-from time import sleep, time
-from typing import Literal, Union, Tuple
+from time import time
 from pythonequipmentdrivers import Scpi_Instrument
 
 logger = logging.getLogger(__name__)
@@ -46,17 +44,17 @@ class Koolance_EXC900(Scpi_Instrument):
         """
         Read binary data from the device and return bytes
         Since the serial commands are slow, the read data is buffered and only
-        refreshed when the age of the data > _read_data_max_age or when a write
-        has occured.
+        refreshed when the age of the buffered data > _read_data_max_age or 
+        when a write has occured.
         """
+        DATA_REQUEST_COMMAND = [0xCF, 0x01, 0x08]
         if (
             self._last_read_data_time is None
             or (time() - self._last_read_data_time) > self._read_data_max_age
         ):
             logger.debug("fetched new data from the device")
             self._last_read_data_time = time()
-            data_request_command = [0xCF, 0x01, 0x08]
-            self.instrument.write_raw(bytes(data_request_command))
+            self.instrument.write_raw(bytes(DATA_REQUEST_COMMAND))
             self._last_read_data = self.instrument.read_bytes(51)
         return self._last_read_data
 
@@ -88,7 +86,9 @@ class Koolance_EXC900(Scpi_Instrument):
         """
         update_settings(**kwargs)
 
-        Update settings to the values provided
+        Update settings to the values provided leaving other parameters 
+        unchanged. Using this method is the most efficient way to update several
+        parameters at once.
 
         args:
             kwargs: Each kwarg should correspond to a writeable supported
@@ -100,7 +100,7 @@ class Koolance_EXC900(Scpi_Instrument):
         data = bytearray(self._read_data())
         for name, value in kwargs.items():
             try:
-                offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name]
+                offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name.lower()]
             except KeyError:
                 raise TypeError(f"{name} is not a valid setting name")
             value = round((m * value + b) * 10 ** r)
@@ -116,14 +116,14 @@ class Koolance_EXC900(Scpi_Instrument):
         """
         get_temperature()
 
-        returns the current setpoint of the device
+        Returns the current setpoint of the device. Attempts to descern
 
         Returns:
             float: current setpoint of the device
         """
         for sensor_config in ("liq", "ext", "liq_amb", "ext_amb"):
             val = self.read_settings()[f"usr_temp_sp_{sensor_config}"]
-            if val:
+            if val > 0.0:
                 return val
 
     def set_temperature(
@@ -136,7 +136,7 @@ class Koolance_EXC900(Scpi_Instrument):
 
         Args:
             temp (float): Temperature setpoint
-            sensor_config (Literal['liq', 'ext', 'liq_amb', 'ext_amb'], optional):
+            sensor_config ('liq', 'ext', 'liq_amb', 'ext_amb', optional):
             Temperature sensor configuration to use. Defaults to "liq".
         """
         if sensor_config not in {"liq", "ext", "liq_amb", "ext_amb"}:
@@ -145,7 +145,7 @@ class Koolance_EXC900(Scpi_Instrument):
         self.update_settings(**{f"usr_temp_sp_{sensor_config}": temp})
 
     def measure_temperature(
-        self, sensor: Literal["liq", "ext", "amb"] = "liq"
+        self, sensor: str = "liq"
     ) -> float:
         """
         measure_temperature()
@@ -153,7 +153,7 @@ class Koolance_EXC900(Scpi_Instrument):
         Return the measured temperature from the device
 
         Args:
-            sensor (Literal['liq', 'ext', 'amb'], optional): Optionally specify which
+            sensor ('liq', 'ext', 'amb', optional): Optionally specify which
             sensor to return the measurement of. Defaults to "liq".
 
         Returns:
@@ -176,14 +176,14 @@ class Koolance_EXC900(Scpi_Instrument):
         units_val = self.read_settings()["units"]
         return "C" if units_val == 1 else "F"
 
-    def set_units(self, unit: Literal["C", "F"]) -> None:
+    def set_units(self, unit: str) -> None:
         """
         set_units(unit)
 
         Set the units used by the device
 
         Args:
-            unit (Literal['C', 'F'])
+            unit ('C', 'F')
         """
         if unit not in {"C", "F"}:
             raise ValueError(f"unit={unit} is not a valid option")
