@@ -485,7 +485,7 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         Automatically sets trigger level to signal mean.
         """
 
-        self.instrument.write(f"""vbs 'app.acquisition.Trigger.FindLevel'""")
+        self.instrument.write("""vbs 'app.acquisition.Trigger.FindLevel'""")
 
     def set_trigger_slope(self, slope: str, **kwargs) -> None:
         """
@@ -824,11 +824,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
         q_str = (f"""vbs 'app.acquisition.C{channel}.FindScale'""")
         self.instrument.write(q_str)
 
-    def set_channel_display(self, channel, mode):
-        # mode = "true" or "false"
-        q_str = f"""vbs 'app.acquisition.C{channel}.View = {mode} '"""
-        self.instrument.write(q_str)
-
     def get_channel_alias(self, channel: int) -> str:
         """
         get_channel_alias(channel)
@@ -861,7 +856,6 @@ class Lecroy_WR8xxx(Scpi_Instrument):
 
     def set_persistence_state(self, state) -> None:
         self.instrument.write(f'PERSIST {"ON" if state else "OFF"}')
-
 
     def get_persistence_state(self) -> bool:
 
