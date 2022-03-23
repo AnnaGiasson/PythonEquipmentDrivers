@@ -30,12 +30,13 @@ more easily reusable.
 
 """
 
-from typing import Tuple, Union
-import pythonequipmentdrivers as ped
-from pathlib import Path
 import json
-from time import sleep
 from itertools import product
+from pathlib import Path
+from time import sleep
+from typing import Tuple, Union
+
+import pythonequipmentdrivers as ped
 
 
 class Test_Environment:
@@ -69,7 +70,7 @@ class Test_Environment:
     def __init__(self, config: Union[str, Path, dict],
                  init: bool = False) -> None:
 
-        self.equipment = ped.connect_equipment(config=config, init=init)
+        self.equipment = ped.connect_resources(config=config, init=init)
 
     def set_operating_point(self, **op_point) -> None:
 

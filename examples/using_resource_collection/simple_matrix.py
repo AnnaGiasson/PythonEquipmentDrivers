@@ -1,10 +1,10 @@
-from pythonequipmentdrivers.utility import log_data
-from pythonequipmentdrivers import connect_equipment
 from time import sleep
 
+from pythonequipmentdrivers import connect_resources
+from pythonequipmentdrivers.utility import log_data
 
 # see file for equipment details and initialization
-equipment = connect_equipment(config='.\\equipment.config', init=True)
+equipment = connect_resources(config='.\\equipment.config', init=True)
 
 # conditions to test, test parameters, location to store data
 v_in_conditions = (40, 48, 54, 60)

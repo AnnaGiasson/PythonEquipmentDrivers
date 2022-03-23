@@ -1,9 +1,13 @@
-from pathlib import Path
 import json
-from pyvisa import VisaIOError
-from . import errors
 from importlib import import_module
-from typing import Union, Tuple
+from pathlib import Path
+from typing import Tuple, Union
+
+from pyvisa import VisaIOError
+
+from .errors import ResourceConnectionError, UnsupportedResourceError
+
+__all__ = ["ResourceCollection", "connect_resources", "initiaize_device"]
 
 
 def read_configuration(config_info: Union[str, Path, dict]) -> dict:
@@ -33,59 +37,35 @@ def read_configuration(config_info: Union[str, Path, dict]) -> dict:
     return configuration
 
 
-def mask_resources(configuration: dict, resource_mask: set) -> dict:
+class ResourceCollection:
     """
-    mask_resources(configuration, resource_mask)
+    ResourceCollection
 
-    Removes resources from 'configuration' that are not present in
-    'resource_mask'.
-
-    Args:
-        configuration (dict): resource configuration information for the
-            connect_equipment function.
-        resource_mask (set): a set of resources that are to be kept in the
-            configuration information.
-
-    Returns:
-        dict: configuration information with the items not present in
-            resource_mask removed.
-    """
-
-    for resource in set(configuration).difference(resource_mask):
-        configuration.pop(resource)
-
-    return configuration
-
-
-class EquipmentCollection:
-    """
-    EquipmentCollection
-
-    Test environment Base-Class returned by connect_equipment
-
-    Attributes of the EquipmentCollection instance depend on the configuration
-    passed into the connect_equipment
+    Object containing a multiple resources as properties of the instance,
+    returned by connect_resources. The specific names and values of the
+    properties of a ResourceCollection instance depend on the configuration
+    passed into the connect_resources function.
     """
 
     pass
 
 
 # Update expected/assumed format of json file
-def connect_equipment(config: Union[str, Path, dict],
-                      **kwargs) -> EquipmentCollection:
+def connect_resources(config: Union[str, Path, dict],
+                      **kwargs) -> ResourceCollection:
     """
-    connect_equipment(config, **kwargs)
+    connect_resources(config, **kwargs)
 
-    Returns in instance of an EquipmentCollection object; an object containing
+    Returns in instance of an ResourceCollection object; an object containing
     multiple equipment instances as instance attributes. This simplifies the
     overhead needed to instantiate connections to an entire set of devices.
 
     This can be useful when repeatedly connecting to the same set of devices,
     or for ensuring different sets of equipment are instantiated as
-    EquipmentCollection objects with the same attributes; allowing for easy
+    ResourceCollection objects with the same attributes; allowing for easy
     reuse of the same test scripts using differents setups.
 
-    The information required to configure the returned EquipmentCollection
+    The information required to configure the returned ResourceCollection
     object is provided using the 'config' arguement which is either a
     path to a file or a dictionary containing the required information.
 
@@ -104,7 +84,7 @@ def connect_equipment(config: Union[str, Path, dict],
             False.
 
     Returns:
-        EquipmentCollection: An object containing the device instances
+        ResourceCollection: An object containing the device instances
             specified in 'config' as attributes.
 
     Examples:
@@ -181,20 +161,23 @@ def connect_equipment(config: Union[str, Path, dict],
     """
 
     # read/process configuration information
-    env_config = read_configuration(config)
+    collection_config = read_configuration(config)
 
     object_mask = set(kwargs.get('object_mask', {}))
     if object_mask:
-        env_config = mask_resources(env_config, object_mask)
 
-        if env_config.keys() != object_mask:
-            missing = object_mask.difference(env_config.keys())
-            raise errors.EnvironmentSetupError("Required Equipment Missing",
-                                               missing)
+        # remove resources that are not needed
+        for resource in set(collection_config).difference(object_mask):
+            collection_config.pop(resource)
 
-    # build EquipmentCollection instance
-    env = EquipmentCollection()
-    for name, meta_info in env_config.items():
+        # check if something is missing
+        if collection_config.keys() != object_mask:
+            missing = object_mask.difference(collection_config.keys())
+            raise ResourceConnectionError("Required resource missing", missing)
+
+    # build ResourceCollection instance
+    resources = ResourceCollection()
+    for name, meta_info in collection_config.items():
 
         try:
             # get object to instantate from it's source module
@@ -206,14 +189,14 @@ def connect_equipment(config: Union[str, Path, dict],
 
             # create instance of Resource called 'name', any remaining items in
             # meta_info will be passed as kwargs
-            setattr(env, name, Resource(**meta_info))
+            setattr(resources, name, Resource(**meta_info))
 
             if kwargs.get('verbose', True):
                 print(f'[CONNECTED] {name}')
 
             if kwargs.get('init', False) and (init_sequence):
                 # get the instance in question
-                resource_instance = getattr(env, name)
+                resource_instance = getattr(resources, name)
 
                 initiaize_device(resource_instance, init_sequence)
                 if kwargs.get('verbose', True):
@@ -225,7 +208,7 @@ def connect_equipment(config: Union[str, Path, dict],
                 print(f'[FAILED CONNECTION] {name}')
 
             if object_mask:  # failed resource connection is required
-                raise errors.ResourceConnectionError(error)
+                raise ResourceConnectionError(error)
 
         except (ModuleNotFoundError, AttributeError) as error:
 
@@ -233,9 +216,9 @@ def connect_equipment(config: Union[str, Path, dict],
                 print(f'[UNSUPPORTED DEVICE] {name}\t{error}')
 
             if object_mask:  # unknown resource is required equipment
-                raise errors.UnsupportedResourceError(error)
+                raise UnsupportedResourceError(error)
 
-    return env
+    return resources
 
 
 def get_callable_methods(instance) -> Tuple:
