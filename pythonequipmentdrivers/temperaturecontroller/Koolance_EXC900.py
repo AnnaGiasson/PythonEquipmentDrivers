@@ -44,7 +44,7 @@ class Koolance_EXC900(Scpi_Instrument):
         """
         Read binary data from the device and return bytes
         Since the serial commands are slow, the read data is buffered and only
-        refreshed when the age of the buffered data > _read_data_max_age or 
+        refreshed when the age of the buffered data > _read_data_max_age or
         when a write has occured.
         """
         DATA_REQUEST_COMMAND = [0xCF, 0x01, 0x08]
@@ -86,9 +86,9 @@ class Koolance_EXC900(Scpi_Instrument):
         """
         update_settings(**kwargs)
 
-        Update settings to the values provided leaving other parameters 
-        unchanged. Using this method is the most efficient way to update several
-        parameters at once.
+        Update settings to the values provided leaving other parameters
+        unchanged. Using this method is the most efficient way to update
+        several parameters at once.
 
         args:
             kwargs: Each kwarg should correspond to a writeable supported
