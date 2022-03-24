@@ -1,6 +1,6 @@
 # PythonEquipmentDrivers
 The purpose of this module is to provide a collection of classes for controlling various electronics laboratory instruments.
-The library of supported devices is categorized into 7 sub-categories that are accessed as sub-modules:
+The library of supported devices is categorized into 8 sub-categories that are accessed as sub-modules:
 * Voltage Sources (`pythonequipmentdrivers.source`)
 * Electronic Loads (`pythonequipmentdrivers.sink`)
 * Multimeters (`pythonequipmentdrivers.multimeter`)
@@ -8,6 +8,7 @@ The library of supported devices is categorized into 7 sub-categories that are a
 * Function Generators (`pythonequipmentdrivers.functiongenerator`)
 * Power Meters/Analyzers (`pythonequipmentdrivers.powermeter`)
 * Network Analyzers (`pythonequipmentdrivers.networkanalyzer`)
+* Temperature Controllers (`pythonequipmentdrivers.temperaturecontroller`)
 
 ### Installation
 This library utilizes the NI-VISA (or compatible) hardware drivers, this should be installed prior to using this libray.
@@ -39,7 +40,6 @@ Here is an example test which measures the efficiency of a power converter over 
 ```python
 import pythonequipmentdrivers as ped
 from time import sleep
-import csv
 
 # connect to equipment
 source = ped.source.Chroma_62012P('GPIB0::14::INSTR')
@@ -60,7 +60,7 @@ v_in_meter.set_mode('VDC')
 v_out_meter.set_mode('VDC')
 
 # conditions to test
-v_in_conditions = [40, 48, 54, 60]
+v_in_conditions = (40, 48, 54, 60)
 i_out_conditions = range(0, 120+1, 10)
 measure_delay = 0.5
 cooldown_delay = 5
@@ -90,7 +90,7 @@ for v_in_set in v_in_conditions:
         # add to data
         datum.append(eff)
         data.append(datum)
-        
+
         sleep(cooldown_delay) # cool down unit
 
 # shutdown test setup
@@ -101,9 +101,10 @@ sink.set_current(0)
 sink.off()
 
 # log data
-with open(data_file_name, "w", newline='') as file:
-    writer = csv.writer(file)
+with open(data_file_name, "w") as file:
     for row in data:
-        writer.writerow(row)
+        print(*row, sep=',', end='\n')
 print(f'data saved to: {data_file_name}')
 ```
+
+See the examples folder within this repository for additional examples.
