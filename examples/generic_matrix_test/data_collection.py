@@ -386,9 +386,9 @@ class Matrix_Test():
         # create data table / add header row
         self.data_file = kwargs.get('file_name', 'data')
         if self.test_config.get("data_columns", False):
-            ped.utility.log_data(self.test_dir.joinpath(self.data_file),
-                                 *self.test_config["data_columns"],
-                                 init=True)
+            ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
+                                   *self.test_config["data_columns"],
+                                   init=True)
 
     def read_test_config(self, test_config: Union[str, Path]) -> None:
         if isinstance(test_config, (str, Path)):
@@ -438,8 +438,8 @@ class Matrix_Test():
                                                    image_name=fpath)
 
                 # save data to file
-                ped.utility.log_data(self.test_dir.joinpath(self.data_file),
-                                     v_o, v_i, i_o, *datum)
+                ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
+                                       v_o, v_i, i_o, *datum)
                 self.user_fb.test_data_logged(fpath)
 
                 # prepare for next iteration

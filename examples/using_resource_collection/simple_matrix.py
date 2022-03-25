@@ -1,7 +1,7 @@
 from time import sleep
 
 from pythonequipmentdrivers import connect_resources
-from pythonequipmentdrivers.utility import log_data
+from pythonequipmentdrivers.utility import log_to_csv
 
 # see file for equipment details and initialization
 equipment = connect_resources(config='.\\equipment.config', init=True)
@@ -17,9 +17,9 @@ output_data_file = 'C:\\top_sneaky\\test_data.csv'
 
 # create file to store test data. When initiailizing we can pass the columns
 # names so they're added when the file is created
-log_data(output_data_file,
-         'v_in_set', 'i_out_set', 'v_in', 'i_in', 'v_out', 'i_out', 'eff',
-         init=True)
+log_to_csv(output_data_file,
+           'v_in_set', 'i_out_set', 'v_in', 'i_in', 'v_out', 'i_out', 'eff',
+           init=True)
 
 # run test
 equipment.source.on()
@@ -45,7 +45,7 @@ for v_in_set in v_in_conditions:
         eff = (v_out*i_out)/(v_in*i_in)
         measurement.append(eff)
 
-        log_data(output_data_file, *measurement)
+        log_to_csv(output_data_file, *measurement)
 
         sleep(cooldown_delay)  # cool down unit
 

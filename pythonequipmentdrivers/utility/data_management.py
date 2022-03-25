@@ -1,13 +1,17 @@
 import json
+from dataclasses import dataclass, field
 from itertools import zip_longest
 from pathlib import Path
-from time import strftime
-from typing import Any, Iterable, Optional
+from time import asctime, strftime
+from typing import Any, Dict, Iterable, List, Optional
+
+__all__ = ("log_to_csv", "dump_data", "dump_array_data", "create_test_log",
+           "Logger")
 
 
-def log_data(file_path: Path, *data: Any, init: bool = False) -> None:
+def log_to_csv(file_path: Path, *data: Any, init: bool = False) -> None:
     """
-    log_data(file_path, *data, init=False)
+    log_to_csv(file_path, *data, init=False)
 
     Writes an iterable to a row of a csv file. Useful for logging data row by
     row while a test or measurement is in progress.
@@ -28,15 +32,15 @@ def log_data(file_path: Path, *data: Any, init: bool = False) -> None:
     not as an iterable. For example:
 
         Correct:
-            log_data("my_data", 1, 2, 3, 4, 5)
-            log_data("my_data", *list_of_data)
-            log_data("my_data", *['a', 'b', 'c', 4, 5, 6])
-            log_data("my_data", *(1, 2, 3, 4, 5))
-            log_data("my_data", 'column 1', 'column 2', init=True)
+            log_to_csv("my_data", 1, 2, 3, 4, 5)
+            log_to_csv("my_data", *list_of_data)
+            log_to_csv("my_data", *['a', 'b', 'c', 4, 5, 6])
+            log_to_csv("my_data", *(1, 2, 3, 4, 5))
+            log_to_csv("my_data", 'column 1', 'column 2', init=True)
 
         Incorrect:
-            log_data("my_data", [1, 2, 3, 4, 5])
-            log_data("my_data", ('a', 'b', 'c', 'd'))
+            log_to_csv("my_data", [1, 2, 3, 4, 5])
+            log_to_csv("my_data", ('a', 'b', 'c', 'd'))
 
     In the case of the incorrect examples the entire iterable "data" would be
     stored in a single cell of the csv file.
@@ -55,10 +59,10 @@ def log_data(file_path: Path, *data: Any, init: bool = False) -> None:
         file = cwd.joinpath('my_data')
         mydata = [3, 4, 5]
         moredata = {6, 7, 8}
-        log_data(file, "column A", "column B", "column C", init=True)
-        log_data(file, 1, 2, 3)
-        log_data(file, *mydata)  # note use of list unpacking
-        log_data(file, *moredata)  # note use of set unpacking
+        log_to_csv(file, "column A", "column B", "column C", init=True)
+        log_to_csv(file, 1, 2, 3)
+        log_to_csv(file, *mydata)  # note use of list unpacking
+        log_to_csv(file, *moredata)  # note use of set unpacking
     """
 
     file_path = Path(file_path)
@@ -291,3 +295,178 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
                       sort_keys=False)
 
     return test_dir  # return newly created directory
+
+
+@dataclass
+class LoggerFileDirectory:
+    """file directory structure object for a Logger instance"""
+    root_dir: Path
+    message_log_path: Path = field(init=False)
+    data_log_path: Path = field(init=False)
+    image_dir: Path = field(init=False)
+    raw_data_dir: Path = field(init=False)
+    metadata_path: Path = field(init=False)
+
+    def __post_init__(self):
+        self.root_dir = Path(self.root_dir).resolve()
+
+        self.message_log_path = self.root_dir.joinpath('message_log.txt')
+        self.data_log_path = self.root_dir.joinpath('data.csv')
+        self.image_dir = self.root_dir.joinpath('images')
+        self.raw_data_dir = self.root_dir.joinpath('raw_data')
+        self.metadata_path = self.root_dir.joinpath('metadata.json')
+
+
+class Logger:
+
+    def __init__(self, root_dir: Path,
+                 print_messages: bool = True,
+                 log_table_data: bool = False,
+                 log_images: bool = False,
+                 log_raw_data: bool = False,
+                 **metadata) -> None:
+        """
+        Creates a file logging object that can log information to file while
+        also printing it to screen (optional)
+
+        Args:
+            root_dir (str or Path-like object): root directory in which to
+                create the directory structure for the logger.
+            log_table_data (bool, optional): If true it will create a csv to
+                log tabular data. Defaults to False.
+            log_images (bool, optional): If true it will create a subdirectory
+                at root_dir called images store any image files. Defaults to
+                False.
+            log_raw_data (bool, optional): If true it will create a
+                subdirectory called "raw_data" to large unprocessed blocks of
+                data such as waveforms. Defaults to False.
+            print_messages (bool, optional): Whether or not to print the log
+                messages to the terminal in addition to writing them to file.
+                Defaults to True.
+        Kwargs:
+            If any kwargs are passed, will be logged to a json file titled
+            metadata.json at the specified root_dir. If no kwargs are passed a
+            file will not be created
+        """
+
+        self.print_messages = print_messages
+        self.log_table_data = log_table_data
+        self.log_images = log_images
+        self.log_raw_data = log_raw_data
+
+        # setup directory structure
+        self.file_directory = LoggerFileDirectory(root_dir)
+
+        # check whether the directory structure exists already (resuming a
+        # session), or if they need to be created
+
+        messages: List[str] = []  # batch messages so file can be opened once
+
+        if self._is_existing_log_present():
+            if not self._can_resume_log():
+                raise Exception('Logging session can only be resumed if the '
+                                'same directory structure is used')
+
+            messages.append(f'({asctime()}) Resuming existing logging session')
+        else:
+            parent_dir = self.file_directory.root_dir.parent
+            self.file_directory.message_log_path.touch(exist_ok=False)
+            messages.append(
+                f'({asctime()}) Message Log Created\n\t'
+                f'{self.file_directory.message_log_path.relative_to(parent_dir)}')
+
+            if log_table_data:
+                self.file_directory.data_log_path.touch(exist_ok=False)
+                messages.append(
+                    'Tabular data log created Log Created: \n\t'
+                    f'{self.file_directory.data_log_path.relative_to(parent_dir)}'
+                    )
+
+            if log_images:
+                self.file_directory.image_dir.mkdir(exist_ok=False)
+                messages.append(
+                    'Image subdirectory created: \n\t'
+                    f'{self.file_directory.image_dir.relative_to(parent_dir)}'
+                    )
+
+            if log_raw_data:
+                self.file_directory.raw_data_dir.mkdir(exist_ok=False)
+                messages.append(
+                    'Raw Data subdirectory created: \n\t'
+                    f'{self.file_directory.raw_data_dir.relative_to(parent_dir)}'
+                    )
+
+        if metadata:
+            self.log_metadata(**metadata)
+
+        self.log_message(*messages)
+
+    def _can_resume_log(self) -> bool:
+        """
+        Checks to see if an logging session can be resumed, for this to be
+        true the specified directory structure must already exist, and none of
+        the needed files/directories can be missing from self.root_dir
+        """
+        # if the full directory structure is there then the log can be resumed
+
+        criteria = (
+            self.log_table_data ^ self.file_directory.data_log_path.exists(),
+            self.log_images ^ self.file_directory.image_dir.exists(),
+            self.log_raw_data ^ self.file_directory.raw_data_dir.exists()
+        )
+
+        can_resume = not any(criteria)
+        return can_resume
+
+    def _is_existing_log_present(self) -> bool:
+        """
+        Checks self.root_dir to see if there's an existing logging
+        session
+        """
+        return self.file_directory.message_log_path.exists()
+
+    def log_message(self, *messages: str) -> None:
+        """
+        Logs an arbitrary number of arguments to the log file as str, arguments
+        are written to file/printed seperated by newline chars. If the argument
+        is not of type str it will be cast to str before writing to file.
+        """
+
+        with open(self.file_directory.message_log_path, 'a') as file:
+            print(*messages, sep='\n', end='\n', file=file)
+
+        if self.print_messages:
+            print(*messages, sep='\n')
+
+    def log_data(self, *data: Any) -> None:
+        """logs an arbitrary number of arguments to a new row in a csv file"""
+
+        if not self.log_table_data:
+            message = ('Attempted to log data to non-existing file. '
+                       'Configure logger with "log_table_data" when '
+                       'instantiating to log data')
+            self.log_message(message)
+            raise IOError(message)
+
+        log_to_csv(self.file_directory.data_log_path, *data)
+
+    def log_metadata(self, **metadata) -> None:
+        existing_metadata = self.get_metadata()  # could be empty dict
+
+        # add new metadata to existing metadata
+        # allowing new values to overwrite the old ones
+        for key, value in metadata.items():
+            existing_metadata[key] = value
+
+        # save to file
+        with open(self.file_directory.metadata_path, 'w') as file:
+            json.dump(existing_metadata, file, indent=4, check_circular=True,
+                      allow_nan=True, sort_keys=False)
+
+    def get_metadata(self) -> Dict[str, Any]:
+        if not self.file_directory.metadata_path.exists():
+            return dict()
+
+        with open(self.file_directory.metadata_path, 'r') as file:
+            metadata = json.load(file)
+        return metadata
