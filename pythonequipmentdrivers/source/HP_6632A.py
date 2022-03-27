@@ -1,10 +1,10 @@
 from typing import Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from time import sleep
 import numpy as np
 
 
-class HP_6632A(Scpi_Instrument):
+class HP_6632A(VisaResource):
     """
     HP_6632A(address)
 

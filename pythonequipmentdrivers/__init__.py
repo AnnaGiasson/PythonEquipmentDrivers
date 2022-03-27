@@ -1,4 +1,4 @@
-from .core import (Scpi_Instrument, get_devices_addresses, identify_devices,
+from .core import (VisaResource, find_visa_resources, identify_visa_resources,
                    VisaIOError)
 
 from .resource_collections import connect_resources, ResourceCollection
@@ -19,7 +19,7 @@ from . import functiongenerator
 from . import temperaturecontroller
 
 
-__all__ = ['Scpi_Instrument', 'get_devices_addresses', 'identify_devices',
+__all__ = ['VisaResource', 'find_visa_resources', 'identify_visa_resources',
            'VisaIOError',
 
            'connect_resources', 'ResourceCollection',

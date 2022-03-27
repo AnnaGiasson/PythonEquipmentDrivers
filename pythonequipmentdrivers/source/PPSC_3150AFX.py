@@ -1,8 +1,8 @@
 from typing import Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class PPSC_3150AFX(Scpi_Instrument):
+class PPSC_3150AFX(VisaResource):
     """
     PPSC_3150AFX(address)
 

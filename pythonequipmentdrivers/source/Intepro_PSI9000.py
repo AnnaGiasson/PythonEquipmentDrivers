@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from typing import Union
 
 
-class Intepro_PSI9000(Scpi_Instrument):
+class Intepro_PSI9000(VisaResource):
     """
     note: with this supply, the device must be locked before it will respond to
           commands

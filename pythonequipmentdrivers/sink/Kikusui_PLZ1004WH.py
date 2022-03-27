@@ -1,10 +1,10 @@
 from typing import Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 from time import sleep
 
 
-class Kikusui_PLZ1004WH(Scpi_Instrument):  # 1 kW
+class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     """
     Kikusui_PLZ1004WH(address)
 

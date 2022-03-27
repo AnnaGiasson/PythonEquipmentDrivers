@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Yokogawa_760401(Scpi_Instrument):  # single phase
+class Yokogawa_760401(VisaResource):  # single phase
     """
     Programmers Manual:
     https://www.yokogawa.com/pdf/provide/E/GW/IM/0000027039/0/IMWT310-17EN.pdf

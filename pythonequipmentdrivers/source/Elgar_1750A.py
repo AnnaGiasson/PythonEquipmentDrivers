@@ -1,9 +1,9 @@
 from typing import Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from time import sleep
 
 
-class Elgar_1750A(Scpi_Instrument):
+class Elgar_1750A(VisaResource):
     """
     Elgar_1750A(address)
 

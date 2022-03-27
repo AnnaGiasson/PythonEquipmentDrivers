@@ -1,10 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 from time import sleep
 from typing import Union, Tuple
 
 
-class Chroma_63206A(Scpi_Instrument):  # 6 kW
+class Chroma_63206A(VisaResource):  # 6 kW
     """
     Chroma_63206A(address)
 

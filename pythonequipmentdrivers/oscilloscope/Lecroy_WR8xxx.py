@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Tuple, Union
 
 import numpy as np
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Lecroy_WR8xxx(Scpi_Instrument):
+class Lecroy_WR8xxx(VisaResource):
     """
     Lecroy_WR8xxx(address)
 

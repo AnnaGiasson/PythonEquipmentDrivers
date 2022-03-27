@@ -1,10 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 from time import sleep
 from typing import List, Union
 
 
-class Sorensen_SGA(Scpi_Instrument):
+class Sorensen_SGA(VisaResource):
     """
     Sorensen_SGA(address)
 

@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from pythonequipmentdrivers import VisaIOError
 
 
-class Fluke_45(Scpi_Instrument):
+class Fluke_45(VisaResource):
     """
     Fluke_45(address, factor=1)
 

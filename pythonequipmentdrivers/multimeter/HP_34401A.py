@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from time import sleep
 
 
-class HP_34401A(Scpi_Instrument):
+class HP_34401A(VisaResource):
     """
     HP_34401A()
 

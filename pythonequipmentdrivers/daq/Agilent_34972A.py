@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import (Scpi_Instrument, VisaIOError)
+from pythonequipmentdrivers import (VisaResource, VisaIOError)
 from time import sleep
 
 
-class Agilent_34972A(Scpi_Instrument):
+class Agilent_34972A(VisaResource):
     """
     Agilent_34972A()
 

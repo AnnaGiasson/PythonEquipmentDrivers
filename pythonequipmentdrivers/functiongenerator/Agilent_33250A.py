@@ -1,8 +1,8 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 
 
-class Agilent_33250A(Scpi_Instrument):
+class Agilent_33250A(VisaResource):
     """
     Agilent_33250A(address)
 

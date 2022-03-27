@@ -1,9 +1,9 @@
 from typing import Sequence
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 
 
-class Keysight_33500B(Scpi_Instrument):
+class Keysight_33500B(VisaResource):
     """
     Keysight_33500B(address)
 

@@ -1,10 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 from time import sleep
 import numpy as np
 from typing import Tuple, Dict, List, Union
 
 
-class Chroma_62012P(Scpi_Instrument):
+class Chroma_62012P(VisaResource):
     """
     Chroma_62012P(address)
 

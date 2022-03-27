@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Chroma_66204(Scpi_Instrument):  # 3 phase + neutral / output
+class Chroma_66204(VisaResource):  # 3 phase + neutral / output
     """
     Chroma_66204(address)
 

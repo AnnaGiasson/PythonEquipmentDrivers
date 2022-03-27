@@ -33,7 +33,7 @@ print(source.measure_voltage())
 PythonEquipmentDrivers comes with a built in utility for identifing (most) connected instruments if the addresses are not known.
 ```python
 import pythonequipmentdrivers as ped
-ped.identify_devices()
+ped.identify_visa_resources()
 ```
 By instantiating multiple instruments simple tests can be scripted to automatically log data for a "device under test" (DUT)
 Here is an example test which measures the efficiency of a power converter over multiple operating points and logs the resulting data to file:

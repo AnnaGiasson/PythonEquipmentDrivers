@@ -1,11 +1,11 @@
 import logging
 from time import time
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 logger = logging.getLogger(__name__)
 
 
-class Koolance_EXC900(Scpi_Instrument):
+class Koolance_EXC900(VisaResource):
     """
     Koolance_EXC900(address)
 

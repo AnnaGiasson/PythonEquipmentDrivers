@@ -1,5 +1,5 @@
 from typing import Tuple, Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import numpy as np
 from time import sleep
 
@@ -9,7 +9,7 @@ from time import sleep
 
 # add set/get methods for the current and resistance ranges
 
-class Chroma_63600(Scpi_Instrument):
+class Chroma_63600(VisaResource):
     """
     Chroma_63600(address)
 

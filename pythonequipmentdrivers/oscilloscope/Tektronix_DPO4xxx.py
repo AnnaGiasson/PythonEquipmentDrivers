@@ -1,4 +1,4 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import struct
 import numpy as np
 from time import sleep
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Union, Tuple
 
 
-class Tektronix_DPO4xxx(Scpi_Instrument):
+class Tektronix_DPO4xxx(VisaResource):
     """
     Tektronix_DPO4xxx(address)
 

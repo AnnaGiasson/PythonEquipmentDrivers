@@ -1,11 +1,11 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import struct
 import numpy as np
 from pathlib import Path
 from typing import Union, Tuple
 
 
-class Tektronix_MSO5xxx(Scpi_Instrument):
+class Tektronix_MSO5xxx(VisaResource):
     """
     Tektronix_MSO5xxx(address)
 

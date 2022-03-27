@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Fluke_DMM(Scpi_Instrument):
+class Fluke_DMM(VisaResource):
     """
     Fluke_DMM(address, factor=1)
 

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import pyvisa
 from pyvisa import VisaIOError
@@ -8,49 +8,80 @@ rm = pyvisa.ResourceManager()
 
 
 # Utility Functions
-def get_devices_addresses() -> Tuple[str]:
+def find_visa_resources(query: str = "?*::INSTR") -> Tuple[str]:
     """
-    returns a list of the addresses of peripherals connected to the computer
+    find_visa_resources()
+
+    Returns connected Visa resources addresses.
+
+    Returns:
+        Tuple[str]: Address strings for the connected Visa resources
     """
-    return rm.list_resources()
+    return rm.list_resources(query=query)
 
 
-def identify_devices(verbose: bool = False) -> List[Tuple[str]]:
+def identify_visa_resources(resources: Optional[Iterable[str]] = None,
+                            verbose: bool = False,
+                            **kwargs) -> List[Tuple[str, str]]:
     """
     identify_connections(verbose=False)
 
-    Queries devices connected to the machine for with and IDN query, return
-    those with a valid response response. The IDN query is a IEEE 488.2 Common
-    Command and should be supported by all SCPI compatible instruments.
+    Queries the specified Visa resource connections with an IDN query, which is
+    a str identifing the resouce. If no resources are specified the function
+    will attempt to find connected Visa resources to query. A list of resource
+    (address, response) tuples is returned for those resources that respond to
+    the query. The IDN query is a IEEE 488.2 Common Command and should be
+    supported by all SCPI compatible instruments.
 
     Args:
-        verbose (bool, optional): if True device addresses and responses, or,
-            lack thereof are printed to stdout as they are queried. Defaults to
-            False.
+        resources (Iterable[str], optional): a list of Visa resource addresses
+            (str) to identify, if None the find_visa_resources function will be
+            internally called to get a list of Visa resources. Defaults to None
+        verbose (bool, optional): if True resource addresses and idn strings
+            are printed to screen as their query responses are recieved and an
+            error message is printed for resources which could not be reached
+            or didn't return a response. Defaults to False.
+    Kwargs:
+        open_timeout (int, optional): The time to wait (in milliseconds) when
+            trying to connect to a resource before this operation returns an
+            error. Defaults to 1000.
+        timeout (int, optional): Timeout (in milliseconds) for I/O operations
+            with the connected resource. Defaults to 1000.
 
     Returns:
-        List[Tuple[str]]: A list of tuples containing address, IDN response
-            pairs for each detected device that responded to the query with a
-            valid response.
+        List[Tuple[str, str]]: list of resource (address, response) tuples is
+            returned for those resources that respond to the query
     """
 
-    scpi_devices = []
-    for address in rm.list_resources():
+    # resources to query
+    resource_addrs = find_visa_resources() if resources is None else resources
+
+    # timeout config
+    resource_config = {'open_timeout': 1000, 'timeout': 1000}  # defaults
+    resource_config.update(kwargs)  # update based on any user input
+
+    if verbose and (len(resource_addrs) > 0):
+        print("Querying resource id's, may take a few seconds...")
+
+    visa_resources: List[Tuple[str, str]] = []
+    for addr in resource_addrs:
         try:
-            device = Scpi_Instrument(address, open_timeout=1000, timeout=1000)
-            scpi_devices.append((address, device.idn))
+            resource = VisaResource(addr, **resource_config)
+            resource_id = resource.idn
+
         except (pyvisa.Error, pyvisa.VisaIOError):
-            if verbose:
-                print(f"Invalid IDN query reponse from address {address}\n")
+            resource_id = "No response/Failed to connect"
         else:
-            if verbose:
-                print("address: {}\nresponse: {}\n".format(*scpi_devices[-1]))
-            del device
+            visa_resources.append((addr, resource_id))
+            del resource
 
-    return scpi_devices
+        if verbose:
+            print(f"\taddress: {addr}\n\tresponse: {resource_id}\n")
+
+    return visa_resources
 
 
-class Scpi_Instrument:
+class VisaResource:
     def __init__(self, address: str, **kwargs) -> None:
         self.address = address
         open_timeout = int(kwargs.get("open_timeout", 1000))
@@ -75,7 +106,7 @@ class Scpi_Instrument:
             str: uniquely identifies the instrument
         """
 
-        return self.instrument.query("*IDN?")
+        return self.instrument.query("*IDN?").strip()
 
     def cls(self, **kwargs) -> None:
         """
@@ -145,12 +176,12 @@ class Scpi_Instrument:
             obj (object): object to compare
 
         Returns:
-            bool: True if the objects are both instances of Scpi_Instrument
-                (or any class that inherits from Scpi_Instrument) and have the
+            bool: True if the objects are both instances of VisaResource
+                (or any class that inherits from VisaResource) and have the
                 same address and class name. Otherwise False.
         """
 
-        if not isinstance(obj, Scpi_Instrument):
+        if not isinstance(obj, VisaResource):
             return False
 
         if not (self.__class__.__name__ == obj.__class__.__name__):
@@ -217,7 +248,3 @@ class Scpi_Instrument:
         """
 
         return self.instrument.read(**kwargs)
-
-
-if __name__ == "__main__":
-    pass

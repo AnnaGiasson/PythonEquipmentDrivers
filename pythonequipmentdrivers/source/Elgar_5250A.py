@@ -1,8 +1,8 @@
 from typing import Union
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Elgar_5250A(Scpi_Instrument):
+class Elgar_5250A(VisaResource):
     """
     Programmers Manual
         http://www.programmablepower.com/products/SW/downloads/SW_A_and_AE_Series_SCPI_Programing_Manual_M162000-03-RvF.PDF

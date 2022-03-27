@@ -1,7 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 
 
-class Yokogawa_760203(Scpi_Instrument):  # 3 phase
+class Yokogawa_760203(VisaResource):  # 3 phase
     """
     Yokogawa_760203(address)
 
