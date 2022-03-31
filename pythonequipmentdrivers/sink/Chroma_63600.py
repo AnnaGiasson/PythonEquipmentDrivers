@@ -58,7 +58,7 @@ class Chroma_63600(VisaResource):
             state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"LOAD {1 if state else 0}")
+        self._resource.write(f"LOAD {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -70,7 +70,7 @@ class Chroma_63600(VisaResource):
             bool: Load state (True == enabled, False == disabled)
         """
 
-        if self.instrument.query("LOAD?").rstrip('\n') == "ON":
+        if self._resource.query("LOAD?").rstrip('\n') == "ON":
             return True
         return False
 
@@ -129,11 +129,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:STAT:L1 {float(current)}')
-            self.instrument.write(f'CURR:STAT:L2 {float(current)}')
+            self._resource.write(f'CURR:STAT:L1 {float(current)}')
+            self._resource.write(f'CURR:STAT:L2 {float(current)}')
         else:
             command_str = f'CURR:STAT:L{int(level)} {float(current)}'
-            self.instrument.write(command_str)
+            self._resource.write(command_str)
 
     def get_current(self, level: int) -> Union[float, Tuple[float]]:
         """
@@ -153,10 +153,10 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.instrument.query('CURR:STAT:L1?')),
-                    float(self.instrument.query('CURR:STAT:L2?'))
+            return (float(self._resource.query('CURR:STAT:L1?')),
+                    float(self._resource.query('CURR:STAT:L2?'))
                     )
-        response = self.instrument.query(f'CURR:STAT:L{int(level)}?')
+        response = self._resource.query(f'CURR:STAT:L{int(level)}?')
         return float(response)
 
     def set_current_slew_rate(self, slew_rate: float,
@@ -181,11 +181,11 @@ class Chroma_63600(VisaResource):
         slew_rate = float(slew_rate)*(1e-6)  # A/s --> A/us
 
         if edge_polarity == 'BOTH':
-            self.instrument.write(f'CURR:STAT:RISE {slew_rate}')
-            self.instrument.write(f'CURR:STAT:FALL {slew_rate}')
+            self._resource.write(f'CURR:STAT:RISE {slew_rate}')
+            self._resource.write(f'CURR:STAT:FALL {slew_rate}')
             return None
 
-        self.instrument.write(f'CURR:STAT:{edge_polarity} {slew_rate}')
+        self._resource.write(f'CURR:STAT:{edge_polarity} {slew_rate}')
 
     def get_current_slew_rate(self, edge_polarity: str) -> Union[float, Tuple[float]]:
         """
@@ -208,11 +208,11 @@ class Chroma_63600(VisaResource):
             raise ValueError(f'Invalid edge_polarity: "{edge_polarity}"')
 
         if edge_polarity == 'BOTH':
-            responses = (self.instrument.query('CURR:STAT:RISE?'),
-                         self.instrument.query('CURR:STAT:FALL?'))
+            responses = (self._resource.query('CURR:STAT:RISE?'),
+                         self._resource.query('CURR:STAT:FALL?'))
             return tuple(map(lambda r: float(r)*(1e6), responses))
 
-        response = self.instrument.query(f'CURR:STAT:{edge_polarity}?')
+        response = self._resource.query(f'CURR:STAT:{edge_polarity}?')
         return float(response)*(1e6)  # A/us --> A/s
 
     def set_dynamic_current(self, current, level=0):
@@ -229,11 +229,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:DYN:L1 {float(current)}')
-            self.instrument.write(f'CURR:DYN:L2 {float(current)}')
+            self._resource.write(f'CURR:DYN:L1 {float(current)}')
+            self._resource.write(f'CURR:DYN:L2 {float(current)}')
         else:
             command_str = f'CURR:DYN:L{int(level)} {float(current)}'
-            self.instrument.write(command_str)
+            self._resource.write(command_str)
         return None
 
     def get_dynamic_current(self, level):
@@ -249,11 +249,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            currents = (float(self.instrument.query('CURR:DYN:L1?')),
-                        float(self.instrument.query('CURR:DYN:L2?')))
+            currents = (float(self._resource.query('CURR:DYN:L1?')),
+                        float(self._resource.query('CURR:DYN:L2?')))
             return currents
         else:
-            response = self.instrument.query(f'CURR:DYN:L{int(level)}?')
+            response = self._resource.query(f'CURR:DYN:L{int(level)}?')
             return float(response)
 
     def set_dynamic_current_slew(self, slew, edge_polarity):
@@ -270,12 +270,12 @@ class Chroma_63600(VisaResource):
         """
 
         if edge_polarity == 'rise':
-            self.instrument.write(f'CURR:DYN:RISE {slew}')
+            self._resource.write(f'CURR:DYN:RISE {slew}')
         elif edge_polarity == 'fall':
-            self.instrument.write(f'CURR:DYN:FALL {slew}')
+            self._resource.write(f'CURR:DYN:FALL {slew}')
         elif edge_polarity == 'both':
-            self.instrument.write(f'CURR:DYN:RISE {slew}')
-            self.instrument.write(f'CURR:DYN:FALL {slew}')
+            self._resource.write(f'CURR:DYN:RISE {slew}')
+            self._resource.write(f'CURR:DYN:FALL {slew}')
         else:
             raise IOError('Invalid option for arg "edge_polarity"')
         return None
@@ -298,18 +298,18 @@ class Chroma_63600(VisaResource):
         """
 
         if edge_polarity == 'rise':
-            resp = self.instrument.query('CURR:DYN:RISE?')
+            resp = self._resource.query('CURR:DYN:RISE?')
             return float(resp)
 
         elif edge_polarity == 'fall':
-            resp = self.instrument.query('CURR:DYN:FALL?')
+            resp = self._resource.query('CURR:DYN:FALL?')
             return float(resp)
 
         elif edge_polarity == 'both':
             slews = []
-            resp = self.instrument.query('CURR:DYN:RISE?')
+            resp = self._resource.query('CURR:DYN:RISE?')
             slews.append(float(resp))
-            resp = self.instrument.query('CURR:DYN:FALL?')
+            resp = self._resource.query('CURR:DYN:FALL?')
             slews.append(float(resp))
             return slews
         else:
@@ -330,11 +330,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:DYN:T1 {float(on_time)}')
-            self.instrument.write(f'CURR:DYN:T2 {float(on_time)}')
+            self._resource.write(f'CURR:DYN:T1 {float(on_time)}')
+            self._resource.write(f'CURR:DYN:T2 {float(on_time)}')
         else:
             command_str = f'CURR:DYN:T{int(level)} {float(on_time)}'
-            self.instrument.write(command_str)
+            self._resource.write(command_str)
         return None
 
     def get_dynamic_current_time(self, level):
@@ -352,11 +352,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            times = (float(self.instrument.query('CURR:DYN:T1?')),
-                     float(self.instrument.query('CURR:DYN:T2?')))
+            times = (float(self._resource.query('CURR:DYN:T1?')),
+                     float(self._resource.query('CURR:DYN:T2?')))
             return times
         else:
-            response = self.instrument.query(f'CURR:DYN:T{int(level)}?')
+            response = self._resource.query(f'CURR:DYN:T{int(level)}?')
             return float(response)
 
     def set_dynamic_current_repeat(self, count):
@@ -369,7 +369,7 @@ class Chroma_63600(VisaResource):
         set-points
         """
 
-        self.instrument.write(f'CURR:DYN:REP {count}')
+        self._resource.write(f'CURR:DYN:REP {count}')
         return None
 
     def get_dynamic_current_repeat(self):
@@ -383,7 +383,7 @@ class Chroma_63600(VisaResource):
         set-points
         """
 
-        resp = self.instrument.query('CURR:DYN:REP?')
+        resp = self._resource.query('CURR:DYN:REP?')
 
         return int(resp)
 
@@ -401,11 +401,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.instrument.write(f'RES:STAT:L1 {float(resistance)}')
-            self.instrument.write(f'RES:STAT:L2 {float(resistance)}')
+            self._resource.write(f'RES:STAT:L1 {float(resistance)}')
+            self._resource.write(f'RES:STAT:L2 {float(resistance)}')
         else:
             command_str = f'RES:STAT:L{int(level)} {float(resistance)}'
-            self.instrument.write(command_str)
+            self._resource.write(command_str)
         return None
 
     def get_resistance(self, level):
@@ -421,11 +421,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            resistances = (float(self.instrument.query('RES:STAT:L1?')),
-                           float(self.instrument.query('RES:STAT:L2?')))
+            resistances = (float(self._resource.query('RES:STAT:L1?')),
+                           float(self._resource.query('RES:STAT:L2?')))
             return resistances
         else:
-            response = self.instrument.query(f'RES:STAT:L{int(level)}?')
+            response = self._resource.query(f'RES:STAT:L{int(level)}?')
             return float(response)
 
     def set_channel(self, channel):
@@ -439,7 +439,7 @@ class Chroma_63600(VisaResource):
 
         """
         idx = self._channel_index(channel)
-        self.instrument.write(f'CHAN {idx}')
+        self._resource.write(f'CHAN {idx}')
         return None
 
     def get_channel(self):
@@ -450,7 +450,7 @@ class Chroma_63600(VisaResource):
 
         returns: int
         """
-        resp = self.instrument.query('CHAN?')
+        resp = self._resource.query('CHAN?')
         channel = self._channel_index(int(resp), reverse=True)
         return channel
 
@@ -475,7 +475,7 @@ class Chroma_63600(VisaResource):
         if (mode in self.valid_modes) and (range_setting in [0, 1, 2]):
             ranges = ["L", "M", "H"]
             self.set_channel(channel)
-            self.instrument.write(f'MODE {mode}{ranges[range_setting]}')
+            self._resource.write(f'MODE {mode}{ranges[range_setting]}')
         else:
             err_str = f"Invalid mode/range combo: ({mode}, {range_setting})"
             raise ValueError(err_str)
@@ -504,7 +504,7 @@ class Chroma_63600(VisaResource):
         ranges = {"L": 0, "M": 1, "H": 2}
 
         self.set_channel(channel)
-        resp = self.instrument.query('MODE?')
+        resp = self._resource.query('MODE?')
         resp = resp.strip()
 
         mode, range_setting = resp[0:-1], resp[-1]
@@ -521,7 +521,7 @@ class Chroma_63600(VisaResource):
         the load.
         """
 
-        self.instrument.write(f'CONF:PARA:INIT {state}')
+        self._resource.write(f'CONF:PARA:INIT {state}')
         return None
 
     def get_parallel_state(self):
@@ -530,7 +530,7 @@ class Chroma_63600(VisaResource):
 
         Returns the state of the loads parallel operation.
         """
-        resp = self.instrument.query('CONF:PARA:INIT?')
+        resp = self._resource.query('CONF:PARA:INIT?')
         resp = resp.strip()
         if resp == "ON":
             return True
@@ -554,7 +554,7 @@ class Chroma_63600(VisaResource):
         Sets parallel mode for each channel
         """
         self.set_channel(channel)
-        self.instrument.write(f'CONF:PARA:MODE {mode}')
+        self._resource.write(f'CONF:PARA:MODE {mode}')
         return None
 
     def get_parallel_mode(self, channel):
@@ -572,7 +572,7 @@ class Chroma_63600(VisaResource):
                     2: Slave
         """
         self.set_channel(channel)
-        resp = self.instrument.query('CONF:PARA:MODE?')
+        resp = self._resource.query('CONF:PARA:MODE?')
         resp = resp.strip()
 
         if resp == "NONE":
@@ -596,7 +596,7 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        self.instrument.write(f'CHAN:ACT {state}')
+        self._resource.write(f'CHAN:ACT {state}')
         return None
 
     def get_channel_state(self, channel):
@@ -610,7 +610,7 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('CHAN:ACT?')
+        resp = self._resource.query('CHAN:ACT?')
         resp = resp.strip()
         if resp == "ON":
             return True
@@ -642,11 +642,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.instrument.write(f'VOLT:STAT:L1 {float(voltage)}')
-            self.instrument.write(f'VOLT:STAT:L2 {float(voltage)}')
+            self._resource.write(f'VOLT:STAT:L1 {float(voltage)}')
+            self._resource.write(f'VOLT:STAT:L2 {float(voltage)}')
         else:
             command_str = f'VOLT:STAT:L{int(level)} {float(voltage)}'
-            self.instrument.write(command_str)
+            self._resource.write(command_str)
         return None
 
     def get_voltage(self, level):
@@ -662,11 +662,11 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            voltages = (float(self.instrument.query('VOLT:STAT:L1?')),
-                        float(self.instrument.query('VOLT:STAT:L2?')))
+            voltages = (float(self._resource.query('VOLT:STAT:L1?')),
+                        float(self._resource.query('VOLT:STAT:L2?')))
             return voltages
         else:
-            response = self.instrument.query(f'VOLT:STAT:L{int(level)}?')
+            response = self._resource.query(f'VOLT:STAT:L{int(level)}?')
             return float(response)
 
     def set_cv_current_limit(self, current):
@@ -679,7 +679,7 @@ class Chroma_63600(VisaResource):
         constant voltage mode.
         """
 
-        self.instrument.write(f'VOLT:STAT:ILIM {current}')
+        self._resource.write(f'VOLT:STAT:ILIM {current}')
         return None
 
     def get_cv_current_limit(self):
@@ -693,7 +693,7 @@ class Chroma_63600(VisaResource):
         mode.
         """
 
-        resp = self.instrument.query('VOLT:STAT:ILIM?')
+        resp = self._resource.query('VOLT:STAT:ILIM?')
 
         return float(resp)
 
@@ -711,7 +711,7 @@ class Chroma_63600(VisaResource):
             freq {float} -- desired frequency in Hz
         """
 
-        self.instrument.write(f'ADV:SINE:FREQ {freq}')
+        self._resource.write(f'ADV:SINE:FREQ {freq}')
         return None
 
     def get_dynamic_sine_frequency(self, flag=''):
@@ -740,7 +740,7 @@ class Chroma_63600(VisaResource):
         if flag not in ['MIN', 'MAX', '']:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        resp = self.instrument.query(f'ADV:SINE:FREQ? {flag}')
+        resp = self._resource.query(f'ADV:SINE:FREQ? {flag}')
         freq = float(resp)
         return freq
 
@@ -759,7 +759,7 @@ class Chroma_63600(VisaResource):
         """
 
         amp_peak2peak = amp*2  # convert Amplitude to peak-to-peak
-        self.instrument.write(f'ADV:SINE:IAC {amp_peak2peak}')
+        self._resource.write(f'ADV:SINE:IAC {amp_peak2peak}')
         return None
 
     def get_dynamic_sine_amplitude_ac(self, flag=''):
@@ -788,7 +788,7 @@ class Chroma_63600(VisaResource):
         if flag not in ['MIN', 'MAX', '']:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        resp = self.instrument.query(f'ADV:SINE:IAC? {flag}')
+        resp = self._resource.query(f'ADV:SINE:IAC? {flag}')
         amp_peak2peak = float(resp)
         amp = amp_peak2peak/2  # convert peak-to-peak to Amplitude
         return amp
@@ -807,7 +807,7 @@ class Chroma_63600(VisaResource):
             freq {float} -- desired DC level in A_DC
         """
 
-        self.instrument.write(f'ADV:SINE:IDC {amp}')
+        self._resource.write(f'ADV:SINE:IDC {amp}')
         return None
 
     def get_dynamic_sine_dc_level(self, flag=''):
@@ -836,7 +836,7 @@ class Chroma_63600(VisaResource):
         if flag not in ['MIN', 'MAX', '']:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        resp = self.instrument.query(f'ADV:SINE:IDC? {flag}')
+        resp = self._resource.query(f'ADV:SINE:IDC? {flag}')
         amp = float(resp)
         return amp
 
@@ -847,7 +847,7 @@ class Chroma_63600(VisaResource):
         Resets all registers to default settings
         """
 
-        self.instrument.write('*RST')
+        self._resource.write('*RST')
         return None
 
     def clear_errors(self):
@@ -857,7 +857,7 @@ class Chroma_63600(VisaResource):
         Resets status of load and clears errors
         """
 
-        self.instrument.write('LOAD:PROT:CLE')
+        self._resource.write('LOAD:PROT:CLE')
         return None
 
     def get_errors(self, channel, decode=False):
@@ -877,7 +877,7 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('STAT:CHAN:COND?')
+        resp = self._resource.query('STAT:CHAN:COND?')
         status = int(resp.strip())
         status &= 255  # 2 Byte response only has 1 Byte of information
         if not decode:
@@ -899,7 +899,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:VOLT?')
+        response = self._resource.query('MEAS:VOLT?')
         return float(response)
 
     def measure_current(self):
@@ -910,7 +910,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:CURR?')
+        response = self._resource.query('MEAS:CURR?')
         return float(response)
 
     def measure_power(self):
@@ -921,7 +921,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query('FETC:POW?')
+        response = self._resource.query('FETC:POW?')
         return float(response)
 
     def measure_total_voltage(self, return_average=False):
@@ -936,7 +936,7 @@ class Chroma_63600(VisaResource):
         returns: list of floats or float
         """
 
-        response = self.instrument.query('MEAS:ALLV?')
+        response = self._resource.query('MEAS:ALLV?')
         voltages = list(map(float, response.split(',')))
 
         if return_average:
@@ -956,7 +956,7 @@ class Chroma_63600(VisaResource):
         returns: list of floats or float
         """
 
-        response = self.instrument.query('MEAS:ALLC?')
+        response = self._resource.query('MEAS:ALLC?')
         currents = list(map(float, response.split(',')))
 
         if return_sum:
@@ -976,7 +976,7 @@ class Chroma_63600(VisaResource):
         returns: list of floats or float
         """
 
-        response = self.instrument.query('MEAS:ALLP?')
+        response = self._resource.query('MEAS:ALLP?')
         powers = list(map(float, response.split(',')))
 
         if return_sum:

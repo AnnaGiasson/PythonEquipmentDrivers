@@ -25,7 +25,7 @@ class Elgar_1750A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f'OUTP:STAT {1 if state else 0}')
+        self._resource.write(f'OUTP:STAT {1 if state else 0}')
 
     def get_state(self) -> bool:
         """
@@ -37,7 +37,7 @@ class Elgar_1750A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query('OUTP:STAT?')
+        response = self._resource.query('OUTP:STAT?')
         return ('1' in response)
 
     def on(self) -> None:
@@ -83,49 +83,49 @@ class Elgar_1750A(VisaResource):
             return self.get_state()
 
     def set_current(self, current):
-        self.instrument.write("SOUR:CURR {}".format(current))
+        self._resource.write("SOUR:CURR {}".format(current))
         return None
 
     def get_current(self):
-        return float(self.instrument.query("SOUR:CURR?"))
+        return float(self._resource.query("SOUR:CURR?"))
 
     def set_frequency(self, frequency):
-        self.instrument.write("SOUR:FREQ {}".format(frequency))
+        self._resource.write("SOUR:FREQ {}".format(frequency))
         return None
 
     def get_frequency(self):
-        return float(self.instrument.query("SOUR:FREQ?"))
+        return float(self._resource.query("SOUR:FREQ?"))
 
     def get_phase(self):
-        return float(self.instrument.query("SOUR:PHAS?"))
+        return float(self._resource.query("SOUR:PHAS?"))
 
     def set_phase(self, phase):  # phase in deg
         # wraps phase around 0 to 360 deg
-        self.instrument.write(f"SOUR:PHAS {phase % 360}")
+        self._resource.write(f"SOUR:PHAS {phase % 360}")
         return None
 
     def set_voltage(self, voltage, change_range=False):
         if change_range:
             self.auto_range(voltage)
-        self.instrument.write(f"SOUR:VOLT {voltage}")
+        self._resource.write(f"SOUR:VOLT {voltage}")
         return None
 
     def get_voltage(self):
-        return float(self.instrument.query("SOUR:VOLT?"))
+        return float(self._resource.query("SOUR:VOLT?"))
 
     def set_voltage_limit(self, voltage_limit):
-        self.instrument.write(f"SOUR:VOLT:PROT {voltage_limit}")
+        self._resource.write(f"SOUR:VOLT:PROT {voltage_limit}")
         return None
 
     def get_voltage_limit(self):
-        return float(self.instrument.query("SOUR:VOLT:PROT?"))
+        return float(self._resource.query("SOUR:VOLT:PROT?"))
 
     def set_voltage_range(self, voltage_range):
-        self.instrument.write(f"SOUR:VOLT:RANG {voltage_range}")
+        self._resource.write(f"SOUR:VOLT:RANG {voltage_range}")
         return None
 
     def get_voltage_range(self):
-        return float(self.instrument.query("SOUR:VOLT:RANG?"))
+        return float(self._resource.query("SOUR:VOLT:RANG?"))
 
     def generate_sequence(self, conditions, run=False):
         """
@@ -136,35 +136,35 @@ class Elgar_1750A(VisaResource):
         # ----- Create Segment 0 -----
         # Clear sequence scratchpad. Take advantage of defaults and only
         # set changed params
-        self.instrument.write('Edit:seq:clear')
+        self._resource.write('Edit:seq:clear')
 
         for index, segment in enumerate(conditions):
             if not('dur' in segment.keys() or 'cycl' in segment.keys()):
                 return False
 
-            self.instrument.write(f'Edit:seq:seg {index}')
+            self._resource.write(f'Edit:seq:seg {index}')
             for key in segment.keys():
                 command_str = f'Edit:seq:{key} {f"{segment[key]:3.1f}"}'
-                self.instrument.write(command_str)
+                self._resource.write(command_str)
 
             if not(index + 1 == len(conditions)):
                 # Create segment 1. Segment pointer is automatically
                 # incremented to seg 1.
-                self.instrument.write('Edit:seq:insert {}'.format(index + 1))
+                self._resource.write('Edit:seq:insert {}'.format(index + 1))
                 sleep(0.1)
 
         # ----- setup sequence execution parameters -----
         # execute sequence once and stop
-        self.instrument.write('Sour:seq:mode:run single')
+        self._resource.write('Sour:seq:mode:run single')
         # set output voltage to 0 when seq stops
-        self.instrument.write('Sour:seq:mode:stop ZERO')
+        self._resource.write('Sour:seq:mode:stop ZERO')
         # load seq scratchpad
-        self.instrument.write('Sour:seq:load "SCRATCH"')
+        self._resource.write('Sour:seq:load "SCRATCH"')
 
         if run:
             self.on()
             sleep(1)
-            self.instrument.write('Source:seq run')  # execute sequence
+            self._resource.write('Source:seq run')  # execute sequence
 
         return True
 

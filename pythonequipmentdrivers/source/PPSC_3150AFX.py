@@ -28,7 +28,7 @@ class PPSC_3150AFX(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP:STAT {1 if state else 0}")
+        self._resource.write(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -40,7 +40,7 @@ class PPSC_3150AFX(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        state = self.instrument.query("OUTP:STAT?")
+        state = self._resource.query("OUTP:STAT?")
         return (int(state) == 1)
 
     def on(self) -> None:
@@ -96,7 +96,7 @@ class PPSC_3150AFX(VisaResource):
         if self.get_state():
             self.off()
 
-        self.instrument.write("OUTPUT:ALL OFF")
+        self._resource.write("OUTPUT:ALL OFF")
 
     def set_range(self, voltage_range):
         """
@@ -109,7 +109,7 @@ class PPSC_3150AFX(VisaResource):
         by "voltage_range"
         """
 
-        self.instrument.write(f"RANG {voltage_range}")
+        self._resource.write(f"RANG {voltage_range}")
         return None
 
     def get_range(self):
@@ -121,7 +121,7 @@ class PPSC_3150AFX(VisaResource):
         returns: int, 0 for low range and 1 for high range
         """
 
-        response = self.instrument.query("RANG?")
+        response = self._resource.query("RANG?")
         return int(response)
 
     def set_voltage(self, voltage, phase=''):
@@ -136,7 +136,7 @@ class PPSC_3150AFX(VisaResource):
         set the voltage of one or all phases to specifed value
         """
 
-        self.instrument.write(f"SOUR:VOLT{phase} {voltage}")
+        self._resource.write(f"SOUR:VOLT{phase} {voltage}")
         return None
 
     def get_voltage(self, phase=''):
@@ -150,7 +150,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'SOUR:VOLT{phase}?')
+        response = self._resource.query(f'SOUR:VOLT{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -166,7 +166,7 @@ class PPSC_3150AFX(VisaResource):
         sets the frequency of the output voltage
         """
 
-        self.instrument.write(f"SOUR:FREQ {frequency}")
+        self._resource.write(f"SOUR:FREQ {frequency}")
         return None
 
     def get_frequency(self):
@@ -178,7 +178,7 @@ class PPSC_3150AFX(VisaResource):
         returns : float
         """
 
-        data = self.instrument.query("SOUR:FREQ?")
+        data = self._resource.query("SOUR:FREQ?")
         return float(data)
 
     def measure_voltage_rms(self, phase=''):
@@ -193,7 +193,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:VOLT:AC{phase}?')
+        response = self._resource.query(f'MEAS:VOLT:AC{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -212,7 +212,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:VLL{phase}?')
+        response = self._resource.query(f'MEAS:VLL{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -231,7 +231,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:VOLT:DC{phase}?')
+        response = self._resource.query(f'MEAS:VOLT:DC{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -246,7 +246,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:FREQ?')
+        response = self._resource.query('MEAS:FREQ?')
         return float(response)
 
     def measure_current_rms(self, phase=''):
@@ -261,7 +261,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:CURR{phase}?')
+        response = self._resource.query(f'MEAS:CURR{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -280,7 +280,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:CURR:DC{phase}?')
+        response = self._resource.query(f'MEAS:CURR:DC{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -299,7 +299,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:CURR:PEAK{phase}?')
+        response = self._resource.query(f'MEAS:CURR:PEAK{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -318,7 +318,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:CURR:CREST{phase}?')
+        response = self._resource.query(f'MEAS:CURR:CREST{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -337,7 +337,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:POW{phase}?')
+        response = self._resource.query(f'MEAS:POW{phase}?')
 
         if phase == '':
             # convert from kW to W
@@ -357,7 +357,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:KVA{phase}?')
+        response = self._resource.query(f'MEAS:KVA{phase}?')
 
         if phase == '':
             # convert from kVA to VA
@@ -377,7 +377,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.instrument.query(f'MEAS:PF{phase}?')
+        response = self._resource.query(f'MEAS:PF{phase}?')
 
         if phase == '':
             return [float(x) for x in response.split(',')]
@@ -393,7 +393,7 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:TEMP:AMB?')
+        response = self._resource.query('MEAS:TEMP:AMB?')
         return float(response)
 
     def store_waveform(self, waveform_number, data):
@@ -409,7 +409,7 @@ class PPSC_3150AFX(VisaResource):
 
         wvfm_str = ','.join([str(x) for x in data])
         command_str = f"WAVEFORM:DEF {waveform_number},{wvfm_str}"
-        self.instrument.write(command_str)
+        self._resource.write(command_str)
         return None
 
     def run_sequence(self):
@@ -419,7 +419,7 @@ class PPSC_3150AFX(VisaResource):
         executes the currently loaded transient sequence
         """
 
-        self.instrument.write('PROG:TRAN RUN')
+        self._resource.write('PROG:TRAN RUN')
         return None
 
     def build_sequence(self, sequence_list, sequence_num=1,
@@ -455,7 +455,7 @@ class PPSC_3150AFX(VisaResource):
         if v_steady_state is None:
             v_steady_state = self.get_voltage(1)
 
-        self.instrument.write(f'PROG:NAME {sequence_num}')
+        self._resource.write(f'PROG:NAME {sequence_num}')
 
         sequence_str = f"""
                         FORM,3,COUPL,DIRECT,VOLT:MODE,0,
@@ -497,8 +497,8 @@ class PPSC_3150AFX(VisaResource):
         sequence_str = sequence_str.replace('    ', '')
 
         command_str = f"PROG:DEF {int(sequence_num)},INTERNAL,{sequence_str}"
-        self.instrument.write(command_str)
-        self.instrument.write(f'PROG:EXEC {int(sequence_num)}')
+        self._resource.write(command_str)
+        self._resource.write(f'PROG:EXEC {int(sequence_num)}')
         return None
 
 

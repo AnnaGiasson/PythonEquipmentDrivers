@@ -27,7 +27,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"LOAD {1 if state else 0}")
+        self._resource.write(f"LOAD {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -39,7 +39,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             bool: Load state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query("LOAD?")
+        response = self._resource.query("LOAD?")
 
         if response.rstrip('\n') == "ON":
             return True
@@ -98,7 +98,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             state (bool): True == Enable, False == Disable
         """
 
-        self.instrument.write(f"LOAD:SHOR {1 if state else 0}")
+        self._resource.write(f"LOAD:SHOR {1 if state else 0}")
 
     def get_short_state(self) -> bool:
         """
@@ -110,7 +110,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             bool: True == Enabled, False == Disabled
         """
 
-        response = self.instrument.query("LOAD:SHOR?")
+        response = self._resource.query("LOAD:SHOR?")
         return (int(response) == 1)
 
     def set_mode(self, mode: str, range_setting: Union[int, str] = 2) -> None:
@@ -149,7 +149,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
         else:
             raise TypeError('Expected range_setting to be of type str or int')
 
-        self.instrument.write(f"MODE {mode}{range_string}")
+        self._resource.write(f"MODE {mode}{range_string}")
 
     def get_mode(self) -> Tuple[str, str]:
         """
@@ -164,7 +164,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
                 "CR", "CP", and "CCD".
         """
 
-        response = self.instrument.query("MODE?")
+        response = self._resource.query("MODE?")
 
         response = response.strip()
         mode = response[:-1]
@@ -188,11 +188,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f'CURR:STAT:L1 {float(current)}')
-            self.instrument.write(f'CURR:STAT:L2 {float(current)}')
+            self._resource.write(f'CURR:STAT:L1 {float(current)}')
+            self._resource.write(f'CURR:STAT:L2 {float(current)}')
         else:
             cmd_str = f'CURR:STAT:L{int(channel)} {float(current)}'
-            self.instrument.write(cmd_str)
+            self._resource.write(cmd_str)
 
     def get_current(self, channel: int) -> Union[float, Tuple[float]]:
         """
@@ -213,11 +213,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query('CURR:STAT:L1?')
-            response2 = self.instrument.query('CURR:STAT:L2?')
+            response1 = self._resource.query('CURR:STAT:L1?')
+            response2 = self._resource.query('CURR:STAT:L2?')
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f'CURR:STAT:L{int(channel)}?')
+            response = self._resource.query(f'CURR:STAT:L{int(channel)}?')
             return float(response)
 
     def set_dynamic_current(self, current: float, channel: int = 0) -> None:
@@ -236,10 +236,10 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f'CURR:DYN:L1 {float(current)}')
-            self.instrument.write(f'CURR:DYN:L2 {float(current)}')
+            self._resource.write(f'CURR:DYN:L1 {float(current)}')
+            self._resource.write(f'CURR:DYN:L2 {float(current)}')
         else:
-            self.instrument.write(f'CURR:DYN:L{int(channel)} {float(current)}')
+            self._resource.write(f'CURR:DYN:L{int(channel)} {float(current)}')
 
     def get_dynamic_current(self, channel: int) -> Union[float, Tuple[float]]:
         """
@@ -260,11 +260,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query('CURR:DYN:L1?')
-            response2 = self.instrument.query('CURR:DYN:L2?')
+            response1 = self._resource.query('CURR:DYN:L1?')
+            response2 = self._resource.query('CURR:DYN:L2?')
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f'CURR:DYN:L{int(channel)}?')
+            response = self._resource.query(f'CURR:DYN:L{int(channel)}?')
             return float(response)
 
     def set_dynamic_current_time(self, t: float, channel: int = 0) -> None:
@@ -283,10 +283,10 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f'CURR:DYN:T1 {float(t)}')
-            self.instrument.write(f'CURR:DYN:T2 {float(t)}')
+            self._resource.write(f'CURR:DYN:T1 {float(t)}')
+            self._resource.write(f'CURR:DYN:T2 {float(t)}')
         else:
-            self.instrument.write(f'CURR:DYN:T{int(channel)} {float(t)}')
+            self._resource.write(f'CURR:DYN:T{int(channel)} {float(t)}')
 
     def get_dynamic_current_time(self,
                                  channel: int) -> Union[float, Tuple[float]]:
@@ -308,11 +308,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query('CURR:DYN:T1?')
-            response2 = self.instrument.query('CURR:DYN:T2?')
+            response1 = self._resource.query('CURR:DYN:T1?')
+            response2 = self._resource.query('CURR:DYN:T2?')
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f'CURR:DYN:T{int(channel)}?')
+            response = self._resource.query(f'CURR:DYN:T{int(channel)}?')
             return float(response)
 
     def set_dynamic_current_repeat(self, n: int) -> None:
@@ -329,7 +329,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             n (int): Desired number of periods of the dynamic current waveform.
         """
 
-        self.instrument.write(f"CURR:DYN:REP {int(n)}")
+        self._resource.write(f"CURR:DYN:REP {int(n)}")
 
     def get_dynamic_current_repeat(self) -> int:
         """
@@ -345,7 +345,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             int: Number of periods of the dynamic current waveform.
         """
 
-        response = self.instrument.query("CURR:DYN:REP?")
+        response = self._resource.query("CURR:DYN:REP?")
         return int(response)
 
     def set_dynamic_current_rise_rate(self, slew_rate: float) -> None:
@@ -361,7 +361,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         # actually needs to be sent in A/us
-        self.instrument.write(f"CURR:DYN:RISE {float(slew_rate)/1e6}")
+        self._resource.write(f"CURR:DYN:RISE {float(slew_rate)/1e6}")
 
     def get_dynamic_current_rise_rate(self) -> float:
         """
@@ -374,7 +374,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             float: Slew-rate in Amps/sec.
         """
 
-        response = self.instrument.query("CURR:DYN:RISE?")
+        response = self._resource.query("CURR:DYN:RISE?")
 
         # actually returned in A/us
         return float(response)*1e6
@@ -392,7 +392,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         # actually needs to be sent in A/us
-        self.instrument.write(f"CURR:DYN:FALL {float(slew_rate)/1e6}")
+        self._resource.write(f"CURR:DYN:FALL {float(slew_rate)/1e6}")
 
     def get_dynamic_current_fall_rate(self) -> float:
         """
@@ -405,7 +405,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             float: Slew-rate in Amps/sec.
         """
 
-        response = self.instrument.query("CURR:DYN:FALL?")
+        response = self._resource.query("CURR:DYN:FALL?")
 
         # actually returned in A/us
         return float(response)*1e6
@@ -426,11 +426,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f"RES:STAT:L1 {float(resistance)}")
-            self.instrument.write(f"RES:STAT:L2 {float(resistance)}")
+            self._resource.write(f"RES:STAT:L1 {float(resistance)}")
+            self._resource.write(f"RES:STAT:L2 {float(resistance)}")
         else:
             cmd_str = f"RES:STAT:L{int(channel)} {float(resistance)}"
-            self.instrument.write(cmd_str)
+            self._resource.write(cmd_str)
 
     def get_resistance(self, channel: int) -> Union[float, Tuple[float]]:
         """
@@ -450,11 +450,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query("RES:STAT:L1?")
-            response2 = self.instrument.query("RES:STAT:L2?")
+            response1 = self._resource.query("RES:STAT:L1?")
+            response2 = self._resource.query("RES:STAT:L2?")
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f"RES:STAT:L{int(channel)}?")
+            response = self._resource.query(f"RES:STAT:L{int(channel)}?")
             return float(response)
 
     def set_voltage(self, voltage: float, channel: int = 0) -> None:
@@ -473,11 +473,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f"VOLT:STAT:L1 {float(voltage)}")
-            self.instrument.write(f"VOLT:STAT:L2 {float(voltage)}")
+            self._resource.write(f"VOLT:STAT:L1 {float(voltage)}")
+            self._resource.write(f"VOLT:STAT:L2 {float(voltage)}")
         else:
             cmd_str = f"VOLT:STAT:L{int(channel)} {float(voltage)}"
-            self.instrument.write(cmd_str)
+            self._resource.write(cmd_str)
 
     def get_voltage(self, channel: int) -> Union[float, Tuple[float]]:
         """
@@ -497,11 +497,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query("VOLT:STAT:L1?")
-            response2 = self.instrument.query("VOLT:STAT:L2?")
+            response1 = self._resource.query("VOLT:STAT:L1?")
+            response2 = self._resource.query("VOLT:STAT:L2?")
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f"VOLT:STAT:L{int(channel)}?")
+            response = self._resource.query(f"VOLT:STAT:L{int(channel)}?")
             return float(response)
 
     def set_cv_current(self, current: float) -> None:
@@ -514,7 +514,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             current (float): Desired current setpoint in Amps DC.
         """
 
-        self.instrument.write(f"VOLT:STAT:ILIM {float(current)}")
+        self._resource.write(f"VOLT:STAT:ILIM {float(current)}")
 
     def get_cv_current(self) -> float:
         """
@@ -526,7 +526,7 @@ class Chroma_63206A(VisaResource):  # 6 kW
             float: Current set-point in Amps DC.
         """
 
-        response = self.instrument.query("VOLT:STAT:ILIM?")
+        response = self._resource.query("VOLT:STAT:ILIM?")
         return float(response)
 
     def set_power(self, power: float, channel: int = 0) -> None:
@@ -545,10 +545,10 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            self.instrument.write(f'POW:STAT:L1 {float(power)}')
-            self.instrument.write(f'POW:STAT:L2 {float(power)}')
+            self._resource.write(f'POW:STAT:L1 {float(power)}')
+            self._resource.write(f'POW:STAT:L2 {float(power)}')
         else:
-            self.instrument.write(f'POW:STAT:L{int(channel)} {float(power)}')
+            self._resource.write(f'POW:STAT:L{int(channel)} {float(power)}')
 
     def get_power(self, channel: int) -> Union[float, Tuple[float]]:
         """
@@ -568,11 +568,11 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if int(channel) == 0:
-            response1 = self.instrument.query('POW:STAT:L1?')
-            response2 = self.instrument.query('POW:STAT:L2?')
+            response1 = self._resource.query('POW:STAT:L1?')
+            response2 = self._resource.query('POW:STAT:L2?')
             return (float(response1), float(response2))
         else:
-            response = self.instrument.query(f'POW:STAT:L{int(channel)}?')
+            response = self._resource.query(f'POW:STAT:L{int(channel)}?')
             return float(response)
 
     def measure_voltage(self, fetch: bool = True) -> float:
@@ -591,9 +591,9 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if fetch:
-            response = self.instrument.query('FETC:VOLT?')
+            response = self._resource.query('FETC:VOLT?')
         else:
-            response = self.instrument.query('MEAS:VOLT?')
+            response = self._resource.query('MEAS:VOLT?')
 
         return float(response)
 
@@ -613,9 +613,9 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if fetch:
-            response = self.instrument.query('FETC:CURR?')
+            response = self._resource.query('FETC:CURR?')
         else:
-            response = self.instrument.query('MEAS:CURR?')
+            response = self._resource.query('MEAS:CURR?')
 
         return float(response)
 
@@ -635,9 +635,9 @@ class Chroma_63206A(VisaResource):  # 6 kW
         """
 
         if fetch:
-            response = self.instrument.query('FETC:POW?')
+            response = self._resource.query('FETC:POW?')
         else:
-            response = self.instrument.query('MEAS:POW?')
+            response = self._resource.query('MEAS:POW?')
 
         return float(response)
 

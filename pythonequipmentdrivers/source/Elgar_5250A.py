@@ -19,7 +19,7 @@ class Elgar_5250A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP:STAT {1 if state else 0}")
+        self._resource.write(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -31,7 +31,7 @@ class Elgar_5250A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query('OUTP:STAT?')
+        response = self._resource.query('OUTP:STAT?')
         return ('1' in response)
 
     def on(self) -> None:
@@ -73,41 +73,41 @@ class Elgar_5250A(VisaResource):
             return self.get_state()
 
     def set_voltage(self, voltage, phase=0):
-        self.instrument.write(f"SOUR{phase}:VOLT {voltage}")
+        self._resource.write(f"SOUR{phase}:VOLT {voltage}")
         return None
 
     def get_voltage(self, phase=1):
-        response = self.instrument.query(f"SOUR{phase}:VOLT?")
+        response = self._resource.query(f"SOUR{phase}:VOLT?")
         return float(response)
 
     def set_current(self, current, phase=0):
-        self.instrument.write(f"SOUR{phase}:CURR {current}")
+        self._resource.write(f"SOUR{phase}:CURR {current}")
         return None
 
     def get_current(self, phase=1):
-        response = self.instrument.query(f"SOUR{phase}:CURR?")
+        response = self._resource.query(f"SOUR{phase}:CURR?")
         return float(response)
 
     def set_frequency(self, frequency):
-        self.instrument.write(f"SOUR:FREQ {frequency}")
+        self._resource.write(f"SOUR:FREQ {frequency}")
         return None
 
     def get_frequency(self):
-        response = self.instrument.query("SOUR:FREQ?")
+        response = self._resource.query("SOUR:FREQ?")
         return float(response)
 
     def set_voltage_limit(self, voltage_limit):
-        self.instrument.write(f"SOUR:VOLT:PROT {voltage_limit}")
+        self._resource.write(f"SOUR:VOLT:PROT {voltage_limit}")
         return None
 
     def get_voltage_limit(self):
-        response = self.instrument.query("SOUR:VOLT:PROT?")
+        response = self._resource.query("SOUR:VOLT:PROT?")
         return float(response)
 
     def set_voltage_range(self, voltage_range):
-        self.instrument.write(f"SOUR:VOLT:RANG {voltage_range}")
+        self._resource.write(f"SOUR:VOLT:RANG {voltage_range}")
         return None
 
     def get_voltage_range(self):
-        response = self.instrument.query("SOUR:VOLT:RANG?")
+        response = self._resource.query("SOUR:VOLT:RANG?")
         return float(response)

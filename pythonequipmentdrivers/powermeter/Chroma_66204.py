@@ -30,16 +30,16 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         return data
 
     def get_voltage_rms(self, channel=0):
-        v_rms = self.instrument.query(f'FETC:VOLT:RMS? {channel}')
+        v_rms = self._resource.query(f'FETC:VOLT:RMS? {channel}')
 
         return self.format_data(v_rms)
 
     def get_voltage_peak(self, channel=0, polarity='positive'):
 
         if polarity == 'positive':
-            v_pk = self.instrument.query(f'FETC:VOLT:PEAK+? {channel}')
+            v_pk = self._resource.query(f'FETC:VOLT:PEAK+? {channel}')
         elif polarity == 'negative':
-            v_pk = self.instrument.query(f'FETC:VOLT:PEAK-? {channel}')
+            v_pk = self._resource.query(f'FETC:VOLT:PEAK-? {channel}')
         else:
             raise ValueError("invalid option for polarity"
                              + "(should be 'positive' or 'negative')")
@@ -47,26 +47,26 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         return self.format_data(v_pk)
 
     def get_voltage_dc(self, channel=0):
-        v_dc = self.instrument.query(f'FETC:VOLT:DC? {channel}')
+        v_dc = self._resource.query(f'FETC:VOLT:DC? {channel}')
 
         return self.format_data(v_dc)
 
     def get_voltage_thd(self, channel=0):
-        v_thd = self.instrument.query(f'FETC:VOLT:THD? {channel}')
+        v_thd = self._resource.query(f'FETC:VOLT:THD? {channel}')
 
         return self.format_data(v_thd)
 
     def get_current_rms(self, channel=0):
-        i_rms = self.instrument.query(f'FETC:CURR:RMS? {channel}')
+        i_rms = self._resource.query(f'FETC:CURR:RMS? {channel}')
 
         return self.format_data(i_rms)
 
     def get_current_peak(self, channel=0, polarity='positive'):
 
         if polarity == 'positive':
-            i_pk = self.instrument.query(f'FETC:CURR:PEAK+? {channel}')
+            i_pk = self._resource.query(f'FETC:CURR:PEAK+? {channel}')
         elif polarity == 'negative':
-            i_pk = self.instrument.query(f'FETC:CURR:PEAK-? {channel}')
+            i_pk = self._resource.query(f'FETC:CURR:PEAK-? {channel}')
         else:
             raise ValueError("invalid option for polarity"
                              + "(should be 'positive' or 'negative')")
@@ -74,62 +74,62 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         return self.format_data(i_pk)
 
     def get_current_dc(self, channel=0):
-        i_dc = self.instrument.query(f'FETC:CURR:DC? {channel}')
+        i_dc = self._resource.query(f'FETC:CURR:DC? {channel}')
 
         return self.format_data(i_dc)
 
     def get_current_inrush(self, channel=0):
-        i_inrush = self.instrument.query(f'FETC:CURR:INR? {channel}')
+        i_inrush = self._resource.query(f'FETC:CURR:INR? {channel}')
 
         return self.format_data(i_inrush)
 
     def get_current_crestfactor(self, channel=0):
-        i_crestfactor = self.instrument.query(f'FETC:CURR:CRES? {channel}')
+        i_crestfactor = self._resource.query(f'FETC:CURR:CRES? {channel}')
 
         return self.format_data(i_crestfactor)
 
     def get_current_thd(self, channel=0):
-        i_thd = self.instrument.query(f'FETC:CURR:THD? {channel}')
+        i_thd = self._resource.query(f'FETC:CURR:THD? {channel}')
 
         return self.format_data(i_thd)
 
     def get_power_real(self, channel=0):
-        p_real = self.instrument.query(f'FETC:POW:REAL? {channel}')
+        p_real = self._resource.query(f'FETC:POW:REAL? {channel}')
 
         return self.format_data(p_real)
 
     def get_power_reactive(self, channel=0):
-        p_reactive = self.instrument.query(f'FETC:POW:REAC? {channel}')
+        p_reactive = self._resource.query(f'FETC:POW:REAC? {channel}')
 
         return self.format_data(p_reactive)
 
     def get_power_apparent(self, channel=0):
-        p_apparent = self.instrument.query(f'FETC:POW:APP? {channel}')
+        p_apparent = self._resource.query(f'FETC:POW:APP? {channel}')
 
         return self.format_data(p_apparent)
 
     def get_power_factor(self, channel=0):
-        pf = self.instrument.query(f'FETC:POW:PFAC? {channel}')
+        pf = self._resource.query(f'FETC:POW:PFAC? {channel}')
 
         return self.format_data(pf)
 
     def get_power_dc(self, channel=0):
-        p_dc = self.instrument.query(f'FETC:POW:DC? {channel}')
+        p_dc = self._resource.query(f'FETC:POW:DC? {channel}')
 
         return self.format_data(p_dc)
 
     def get_power_energy(self, channel=0):
-        p_energy = self.instrument.query(f'FETC:POW:ENER? {channel}')
+        p_energy = self._resource.query(f'FETC:POW:ENER? {channel}')
 
         return self.format_data(p_energy)
 
     def get_frequency(self, channel=0):
-        frequency = self.instrument.query(f'FETC:FREQ? {channel}')
+        frequency = self._resource.query(f'FETC:FREQ? {channel}')
 
         return self.format_data(frequency)
 
     def get_efficiency(self):
-        eff = self.instrument.query('FETC:EFF?')
+        eff = self._resource.query('FETC:EFF?')
 
         return self.format_data(eff)
 
@@ -142,7 +142,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         (max 101)
         """
         command_str = f"FETC:CURR:HARM:ARR? {str(mode).upper()},{int(channel)}"
-        harmoincs = self.instrument.query(command_str)
+        harmoincs = self._resource.query(command_str)
 
         return self.format_data(harmoincs)
 
@@ -156,27 +156,27 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         """
 
         command_str = f"FETC:VOLT:HARM:ARR? {str(mode).upper()},{int(channel)}"
-        harmoincs = self.instrument.query(command_str)
+        harmoincs = self._resource.query(command_str)
 
         return self.format_data(harmoincs)
 
     def get_3phase_power_real(self):
-        p_real = self.instrument.query('FETC:SIGM:POW:REAL?')
+        p_real = self._resource.query('FETC:SIGM:POW:REAL?')
 
         return self.format_data(p_real)
 
     def get_3phase_power_reactive(self):
-        p_reactive = self.instrument.query('FETC:SIGM:POW:REAC?')
+        p_reactive = self._resource.query('FETC:SIGM:POW:REAC?')
 
         return self.format_data(p_reactive)
 
     def get_3phase_power_apparent(self):
-        p_apparent = self.instrument.query('FETC:SIGM:POW:APP?')
+        p_apparent = self._resource.query('FETC:SIGM:POW:APP?')
 
         return self.format_data(p_apparent)
 
     def get_3phase_power_factor(self):
-        pf = self.instrument.query('FETC:SIGM:POW:PFAC?')
+        pf = self._resource.query('FETC:SIGM:POW:PFAC?')
 
         return self.format_data(pf)
 
@@ -190,11 +190,11 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
                     configuration[idx] = "OFF"
 
         command_str = 'CONF:INP:SHUN {},{},{},{}'.format(*configuration)
-        self.instrument.write(command_str)
+        self._resource.write(command_str)
         return None
 
     def get_input_shunt_configuration(self):
-        resp = self.instrument.query('CONF:INP:SHUN?')
+        resp = self._resource.query('CONF:INP:SHUN?')
         resp = resp.rstrip('\n')
         resp = resp.split(',')
 
@@ -211,12 +211,12 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         return config
 
     def get_external_input_shunt_res(self):
-        resistance = self.instrument.query('CONF:INP:SHUN:RESIS?')
+        resistance = self._resource.query('CONF:INP:SHUN:RESIS?')
 
         return self.format_data(resistance)
 
     def set_external_input_shunt_res(self, resistance):
 
         command_str = 'CONF:INP:SHUN:RESIS {},{},{},{}'.format(*resistance)
-        self.instrument.write(command_str)
+        self._resource.write(command_str)
         return None

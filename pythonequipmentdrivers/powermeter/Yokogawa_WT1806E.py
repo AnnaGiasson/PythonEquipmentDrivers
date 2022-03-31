@@ -27,15 +27,15 @@ class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
 
         index = self._channel_data_separation_index*(channel - 1)
         index += self._channel_measurement_codes[measurment_type]
-        response = self.instrument.query(f"NUM:VAL? {index}")
+        response = self._resource.query(f"NUM:VAL? {index}")
 
         return float(response)
 
     def set_harmonic_order(self, order_min, order_max) -> None:
-        self.instrument.write(f"HARM1:ORD {order_min},{order_max}")
+        self._resource.write(f"HARM1:ORD {order_min},{order_max}")
 
     def get_harmonic_order(self) -> Tuple[int]:
-        response = self.instrument.query("HARM1:ORD?")
+        response = self._resource.query("HARM1:ORD?")
         response = response.split(' ')[-1].rstrip('\n')
 
         return tuple(map(int, response.split(',')))

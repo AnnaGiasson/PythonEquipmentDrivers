@@ -1,7 +1,8 @@
 from typing import Iterable, List, Optional, Tuple
 
 import pyvisa
-from pyvisa import VisaIOError
+
+from pythonequipmentdrivers.errors import ResourceConnectionError
 
 # Globals
 rm = pyvisa.ResourceManager()
@@ -24,14 +25,14 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
                             verbose: bool = False,
                             **kwargs) -> List[Tuple[str, str]]:
     """
-    identify_connections(verbose=False)
+    identify_connections(resources=None, verbose=False)
 
-    Queries the specified Visa resource connections with an IDN query, which is
-    a str identifing the resouce. If no resources are specified the function
-    will attempt to find connected Visa resources to query. A list of resource
-    (address, response) tuples is returned for those resources that respond to
-    the query. The IDN query is a IEEE 488.2 Common Command and should be
-    supported by all SCPI compatible instruments.
+    Attempts to connect to and query the specified Visa resource connections
+    with an IDN query, which is a str identifing the resouce. If no resources
+    are specified the function will attempt to find connected Visa resources to
+    query. A list of resource (address, response) tuples is returned for those
+    resources that respond to the query. The IDN query is a IEEE 488.2 Common
+    Command and should be supported by all SCPI compatible instruments.
 
     Args:
         resources (Iterable[str], optional): a list of Visa resource addresses
@@ -69,8 +70,10 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
             resource = VisaResource(addr, **resource_config)
             resource_id = resource.idn
 
-        except (pyvisa.Error, pyvisa.VisaIOError):
-            resource_id = "No response/Failed to connect"
+        except ResourceConnectionError:
+            resource_id = "Failed to connect"
+        except IOError:
+            resource_id = "No response"
         else:
             visa_resources.append((addr, resource_id))
             del resource
@@ -82,35 +85,56 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
 
 
 class VisaResource:
+    """
+    VisaResource
+
+    Base class used to institate a Visa resource connection. The connection
+    can be used to read/write data to the resource, including sending
+    commands and querying information from the resource.
+
+    Arg:
+        address (str): Visa resource address to connect to
+
+    Kwargs:
+        open_timeout (float, optional): The time to wait (in seconds) when
+            trying to connect to a resource before this operation returns an
+            error; resolves to the nearest millisecond. Defaults to 1.0.
+        timeout (float, optional): Timeout (in seconds) for I/O operations
+            with the connected resource; resolves to the nearest millisecond.
+            Defaults to 1.0.
+        query_delay (float, optional): the time to wait after each write
+            operation when performing a query in seconds. Defaults to 0.1
+    """
+
+    idn: str  # str: Description which uniquely identifies the instrument
+
     def __init__(self, address: str, **kwargs) -> None:
         self.address = address
-        open_timeout = int(kwargs.get("open_timeout", 1000))
 
-        self.instrument = rm.open_resource(
-            self.address, open_timeout=open_timeout
-        )
+        default_settings = {
+            'open_timeout': int(1000*kwargs.get("open_timeout", 1.0)),  # ms
+            'timeout': int(1000*kwargs.get("timeout", 1.0)),  # ms
+            'delay': kwargs.get('query_delay', 0.1),  # s
+        }
+
+        try:
+            self._resource = rm.open_resource(self.address, **default_settings)
+
+            self.idn = self._resource.query("*IDN?").strip()
+        except pyvisa.VisaIOError as error:
+            raise IOError(
+                f"Error communicating with resource at: {address}", error
+                )
+        except (pyvisa.Error) as error:
+            raise ResourceConnectionError(
+                f"Could not connect to resource at: {address}", error
+                )
+
         self.timeout = int(kwargs.get("timeout", 1000))  # ms
 
-    @property
-    def idn(self) -> str:
+    def clear_status(self, **kwargs) -> None:
         """
-        idn
-
-        Identify Query
-
-        Returns a string that uniquely identifies the instrument. The IDN query
-        sent to the instrument is one of the IEEE 488.2 Common Commands and
-        should be supported by all SCPI compatible instruments.
-
-        Returns:
-            str: uniquely identifies the instrument
-        """
-
-        return self.instrument.query("*IDN?").strip()
-
-    def cls(self, **kwargs) -> None:
-        """
-        cls(**kwargs)
+        clear_status(**kwargs)
 
         Clear Status Command
 
@@ -119,16 +143,13 @@ class VisaResource:
         or query. The CLS command sent to the instrument is one of the
         IEEE 488.2 Common Commands and should be supported by all SCPI
         compatible instruments.
-
-        Returns:
-            None
         """
 
-        self.instrument.write("*CLS", **kwargs)
+        self._resource.write("*CLS", **kwargs)
 
-    def rst(self, **kwargs) -> None:
+    def reset(self, **kwargs) -> None:
         """
-        rst()
+        reset()
 
         Reset Command
 
@@ -137,25 +158,33 @@ class VisaResource:
         Commands and should be supported by all SCPI compatible instruments.
         """
 
-        self.instrument.write("*RST", **kwargs)
+        self._resource.write("*RST", **kwargs)
 
     @property
     def timeout(self) -> int:
-        return self.instrument.timeout
+        """
+        timeout
+
+        Returns:
+            int: Timeout (in milliseconds) for I/O operations with the
+                connected resource.
+        """
+
+        return self._resource.timeout
 
     @timeout.setter
     def timeout(self, timeout: int) -> None:
-        self.instrument.timeout = int(timeout)  # ms
+        """
+        timeout
+
+        Args:
+            timeout (int): timeout (in milliseconds) for I/O operations with
+                the connected resource.
+        """
+        self._resource.timeout = int(timeout)  # ms
 
     def __del__(self) -> None:
-        try:
-            # if connection has been estabilished terminate it
-            if hasattr(self, "instrument"):
-                self.instrument.close()
-        except VisaIOError:
-            # if connection not connection has been estabilished (such as if an
-            # error is throw in __init__) do nothing
-            pass
+        self._resource.close()
 
     def __repr__(self) -> str:
 
@@ -165,86 +194,62 @@ class VisaResource:
         return def_str
 
     def __str__(self) -> str:
-        return f"Instrument ID: {self.idn}\nAddress: {self.address}"
+        return f"Rource ID: {self.idn}\nAddress: {self.address}"
 
-    def __eq__(self, obj) -> bool:
-
+    def write_resource(self, message: str, **kwargs) -> None:
         """
-        __eq__(obj)
+        write_resource(message, **kwargs)
+
+        Writes data to the connected resource.
 
         Args:
-            obj (object): object to compare
-
-        Returns:
-            bool: True if the objects are both instances of VisaResource
-                (or any class that inherits from VisaResource) and have the
-                same address and class name. Otherwise False.
+            message (str): data to write to the connected resource, string of
+                ascii characters
         """
 
-        if not isinstance(obj, VisaResource):
-            return False
+        try:
+            self._resource.write(message, **kwargs)
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with resource\n", error)
 
-        if not (self.__class__.__name__ == obj.__class__.__name__):
-            return False
-
-        if not (self.address == obj.address):
-            return False
-        return True
-
-    def __ne__(self, obj) -> bool:
-        """
-        __ne__(obj)
-
-        Args:
-            obj (object): object to compare
-
-        Returns:
-            bool: whether or not to object are not equal. Defined as the
-                inverse of the result from __eq__
-        """
-
-        return not self.__eq__(obj)
-
-    def send_raw_scpi(self, command_str: str, **kwargs) -> None:
-        """
-        send_raw_scpi(command_str, **kwargs)
-
-        Pass-through function which forwards the contents of 'command_str' to
-        the device. This function is intended to be used for API calls for
-        functionally that is not currently supported. Can only be used for
-        commands, will not return queries.
-
-        Args:
-            command_str: string, scpi command to be passed through to the
-                device.
-        """
-
-        self.instrument.write(str(command_str), **kwargs)
-
-    def query_raw_scpi(self, query_str: str, **kwargs) -> str:
+    def query_resource(self, message: str, **kwargs) -> str:
         """
         query_raw_scpi(query, **kwargs)
 
-        Pass-through function which forwards the contents of 'query_str' to
-        the device, returning the response without any processing. This
-        function is intended to be used for API calls for functionally that is
-        not currently supported. Only to be used for queries.
+        Writes data to the connected resource before reading data back from the
+        resource. The duration of the delay between the write and read
+        operations can be adjusted by the "query_delay" kwarg passed when
+        instantiating a resource connection.
 
         Args:
-            query_str: string, scpi query to be passed through to the device.
-
+            message (str): data to write to the connected resource before
+                issueing a read, string of ascii characters
+        Returns:
+            str: data recieved from a connected resource, as string of
+                ascii characters
         """
 
-        return self.instrument.query(str(query_str), **kwargs)
+        try:
+            response: str = self._resource.query(message, **kwargs)
+            return response.strip()
 
-    def read_raw_scpi(self, **kwargs) -> str:
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with resource\n", error)
+
+    def read_resource(self, **kwargs) -> str:
         """
-        read_raw_scpi(**kwargs)
+        read_resource(**kwargs)
 
-        Pass-through function which reads the device, returning the response
-        without any processing. This function is intended to be used for API
-        calls for functionally that is not currently supported.
-        Only to be used for read.
+        Reads data back from the connected resource.
+
+        Returns:
+            str: data recieved from a connected resource, as string of
+                ascii characters
         """
 
-        return self.instrument.read(**kwargs)
+        try:
+            response: str = self._resource.read(**kwargs)
+            return response.strip()
+
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with resource\n", error)

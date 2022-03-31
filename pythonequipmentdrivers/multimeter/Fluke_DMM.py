@@ -34,7 +34,7 @@ class Fluke_DMM(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("VAL1?")
+        response = self._resource.query("VAL1?")
         return self.factor*float(response)
 
     def set_range(self, n, auto_range=False):
@@ -55,10 +55,10 @@ class Fluke_DMM(VisaResource):
         """
 
         if auto_range:
-            self.instrument.write("AUTO")
+            self._resource.write("AUTO")
 
         if n in range(0, 7):
-            self.instrument.write(f"RANGE {n}")
+            self._resource.write(f"RANGE {n}")
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
@@ -75,7 +75,7 @@ class Fluke_DMM(VisaResource):
         returns: int
         """
 
-        response = self.instrument.query("RANGE1?")
+        response = self._resource.query("RANGE1?")
         return int(response)
 
     def set_rate(self, rate):
@@ -91,7 +91,7 @@ class Fluke_DMM(VisaResource):
 
         rate = rate.upper()
         if rate in ['S', 'M', 'F']:
-            self.instrument.write(f"RATE {rate}")
+            self._resource.write(f"RATE {rate}")
         else:
             raise ValueError("Invalid rate option, should be 'S', 'M', or 'F'")
         return None
@@ -104,7 +104,7 @@ class Fluke_DMM(VisaResource):
         returns: str
         """
 
-        response = self.instrument.query("RATE?")
+        response = self._resource.query("RATE?")
         return response
 
     def set_mode(self, mode):
@@ -122,7 +122,7 @@ class Fluke_DMM(VisaResource):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self.instrument.write(f"FUNC1 {mode}")
+            self._resource.write(f"FUNC1 {mode}")
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
@@ -138,7 +138,7 @@ class Fluke_DMM(VisaResource):
         returns: str
         """
 
-        response = self.instrument.query("FUNC1?")
+        response = self._resource.query("FUNC1?")
         return response
 
     def measure_voltage(self):

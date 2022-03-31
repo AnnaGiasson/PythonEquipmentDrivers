@@ -34,10 +34,10 @@ class Keysight_34461A(HP_34401A):
                      '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
 
     def set_display_text(self, text: str) -> None:
-        self.instrument.write(f'DISP:TEXT "{text}"')
+        self._resource.write(f'DISP:TEXT "{text}"')
 
     def get_display_text(self) -> str:
-        response = self.instrument.query('DISP:TEXT?')
+        response = self._resource.query('DISP:TEXT?')
         text = response.strip().replace('"', '')
         return text
 
@@ -46,12 +46,12 @@ class Keysight_34461A(HP_34401A):
 
     def set_display_state(self, state: bool) -> None:
         if state:
-            self.instrument.write('DISP ON')
+            self._resource.write('DISP ON')
         else:
-            self.instrument.write('DISP OFF')
+            self._resource.write('DISP OFF')
 
     def get_display_state(self) -> bool:
-        response = self.instrument.query('DISP?')
+        response = self._resource.query('DISP?')
         return bool(int(response))
 
     def set_display_mode(self, mode: str) -> None:
@@ -60,17 +60,17 @@ class Keysight_34461A(HP_34401A):
         if mode not in ['NUM', 'HIST', 'TCH', 'MET']:
             raise ValueError(f'Invalid mode for arg "mode" ({mode})')
 
-        self.instrument.write(f'DISP:VIEW {mode}')
+        self._resource.write(f'DISP:VIEW {mode}')
 
     def get_display_mode(self) -> str:
-        response = self.instrument.query('DISP:VIEW?')
+        response = self._resource.query('DISP:VIEW?')
         return response.strip()
 
     def set_label_text(self, label: str) -> None:
-        self.instrument.write(f'SYSTEM:LABEL "{label}"')
+        self._resource.write(f'SYSTEM:LABEL "{label}"')
 
     def get_label_text(self) -> str:
-        response = self.instrument.query('SYSTEM:LABEL?')
+        response = self._resource.query('SYSTEM:LABEL?')
         label = response.strip().replace('"', '')
         return label
 

@@ -27,7 +27,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP {1 if state else 0}")
+        self._resource.write(f"OUTP {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -39,7 +39,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             bool: Load state (True == enabled, False == disabled)
         """
 
-        if int(self.instrument.query("OUTP?")) == 1:
+        if int(self._resource.query("OUTP?")) == 1:
             return True
         return False
 
@@ -98,9 +98,9 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         if mode in ("CC", "CR", "CV", "CP"):
 
             if (mode in ("CC", "CR")) and cv:
-                self.instrument.write(f"FUNC {mode}CV")
+                self._resource.write(f"FUNC {mode}CV")
             else:
-                self.instrument.write(f"FUNC {mode}")
+                self._resource.write(f"FUNC {mode}")
         else:
             raise ValueError("Invalid mode option")
 
@@ -112,7 +112,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         returns current configuration of the electronic load.
         """
-        response = self.instrument.query("FUNC?")
+        response = self._resource.query("FUNC?")
         return response.rstrip("\n")
 
     def set_voltage(self, voltage: float) -> None:
@@ -125,7 +125,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             voltage (float): Desired voltage setpoint in Volts DC.
         """
 
-        self.instrument.write(f"VOLT {float(voltage)}")
+        self._resource.write(f"VOLT {float(voltage)}")
 
     def get_voltage(self) -> None:
         """
@@ -137,7 +137,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Voltage setpoint in Volts DC.
         """
 
-        response = self.instrument.query("VOLT?")
+        response = self._resource.query("VOLT?")
         return float(response)
 
     def set_cc_range(self, cc_range):
@@ -154,7 +154,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         cc_range = cc_range.upper()
         if cc_range in ("LOW", "MED", "HIGH"):
-            self.instrument.write(f"CURR:RANG {cc_range}")
+            self._resource.write(f"CURR:RANG {cc_range}")
         else:
             raise ValueError("Invalid range option")
         return None
@@ -166,7 +166,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         returns the current range of allowable currents for CC mode.
         """
 
-        response = self.instrument.query("CURR:RANG?")
+        response = self._resource.query("CURR:RANG?")
         return response.rstrip('\n')
 
     def set_cr_range(self, cr_range):
@@ -183,7 +183,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         cr_range = cr_range.upper()
         if cr_range in ("LOW", "MED", "HIGH"):
-            self.instrument.write(f"COND:RANG {cr_range}")
+            self._resource.write(f"COND:RANG {cr_range}")
         else:
             raise ValueError("Invalid range option")
 
@@ -196,7 +196,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         returns the current range of allowable conductances for CR mode.
         """
 
-        response = self.instrument.query("COND:RANG?")
+        response = self._resource.query("COND:RANG?")
         return response.rstrip('\n')
 
     def set_slew_rate(self, slew_rate: Union[float, str]) -> None:
@@ -214,9 +214,9 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         if isinstance(slew_rate, (float, int)):
             # set-point needs to be sent in A/us
-            self.instrument.write(f"CURR:SLEW {slew_rate*1e-6}")
+            self._resource.write(f"CURR:SLEW {slew_rate*1e-6}")
         elif isinstance(slew_rate, str) and (slew_rate.upper() == "MAX"):
-            self.instrument.write(f"CURR:SLEW {slew_rate}")
+            self._resource.write(f"CURR:SLEW {slew_rate}")
         else:
             raise ValueError('slew_rate must be a float or the str "max"')
 
@@ -232,7 +232,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: slew-rate currently used in A/S
         """
 
-        response = self.instrument.query("CURR:SLEW?")
+        response = self._resource.query("CURR:SLEW?")
         slew_rate = float(response)*1e6  # return is in A/us
         return slew_rate
 
@@ -246,7 +246,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             current (float): Desired current setpoint in Amps DC.
         """
 
-        self.instrument.write(f"CURR {float(current)}")
+        self._resource.write(f"CURR {float(current)}")
 
     def get_current(self) -> float:
         """
@@ -258,7 +258,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Current setpoint in Amps DC.
         """
 
-        response = self.instrument.query("CURR?")
+        response = self._resource.query("CURR?")
         return float(response)
 
     def set_conductance(self, conductance):
@@ -270,7 +270,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         changes the conductance setpoint of the load
         """
 
-        self.instrument.write(f"COND {conductance}")
+        self._resource.write(f"COND {conductance}")
         return None
 
     def get_conductance(self):
@@ -281,7 +281,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         returns: float
         """
-        response = self.instrument.query("COND?")
+        response = self._resource.query("COND?")
         return float(response)
 
     def set_switching_state(self, state):
@@ -294,7 +294,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         enable/disable the switching function on the load
         """
-        self.instrument.write(f"SOUR:PULS:STAT {state}")
+        self._resource.write(f"SOUR:PULS:STAT {state}")
         return None
 
     def get_switching_state(self):
@@ -305,7 +305,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         returns: int
         """
 
-        response = self.instrument.query("SOUR:PULS:STAT?")
+        response = self._resource.query("SOUR:PULS:STAT?")
         return int(response)
 
     def set_duty_cycle(self, duty_cycle):
@@ -319,7 +319,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         is enabled
         """
 
-        self.instrument.write(f"SOUR:PULS:DCYC {duty_cycle}")
+        self._resource.write(f"SOUR:PULS:DCYC {duty_cycle}")
         return None
 
     def get_duty_cycle(self):
@@ -332,7 +332,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         returns: float
         """
 
-        response = self.instrument.query("SOUR:PULS:DCYC?")
+        response = self._resource.query("SOUR:PULS:DCYC?")
         return float(response)
 
     def set_frequency(self, frequency):
@@ -345,7 +345,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         is enabled
         """
 
-        self.instrument.write(f"SOUR:PULS:FREQ {frequency}")
+        self._resource.write(f"SOUR:PULS:FREQ {frequency}")
         return None
 
     def get_frequency(self):
@@ -356,7 +356,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         is enabled in Hz
         """
 
-        response = self.instrument.query("SOUR:PULS:FREQ?")
+        response = self._resource.query("SOUR:PULS:FREQ?")
         return float(response)
 
     def measure_voltage(self) -> float:
@@ -369,7 +369,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured Voltage in Volts DC
         """
 
-        response = self.instrument.query('MEAS:VOLT?')
+        response = self._resource.query('MEAS:VOLT?')
         return float(response)
 
     def measure_current(self) -> float:
@@ -382,7 +382,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured Current in Amps DC.
         """
 
-        response = self.instrument.query('MEAS:CURR?')
+        response = self._resource.query('MEAS:CURR?')
         return float(response)
 
     def measure_power(self) -> float:
@@ -395,7 +395,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured power in Watts.
         """
 
-        response = self.instrument.query('MEAS:POW?')
+        response = self._resource.query('MEAS:POW?')
         return float(response)
 
     def pulse(self, level: float, duration: float) -> None:

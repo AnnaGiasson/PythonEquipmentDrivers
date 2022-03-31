@@ -32,9 +32,9 @@ class Keithley_2231A(VisaResource):
         """
 
         if mode.lower() == 'remote':
-            self.instrument.write('SYSTem:RWLock')
+            self._resource.write('SYSTem:RWLock')
         elif mode.lower() == 'local':
-            self.instrument.write('SYSTem:LOCal')
+            self._resource.write('SYSTem:LOCal')
 
     def set_channel(self, channel):  # check
         """
@@ -47,7 +47,7 @@ class Keithley_2231A(VisaResource):
 
         """
 
-        self.instrument.write(f'INST:NSEL {channel}')
+        self._resource.write(f'INST:NSEL {channel}')
         return None
 
     def get_channel(self):  # check
@@ -59,7 +59,7 @@ class Keithley_2231A(VisaResource):
         returns: int
         """
 
-        resp = self.instrument.query('INST:NSEL?')
+        resp = self._resource.query('INST:NSEL?')
         channel = int(resp)
         return channel
 
@@ -76,7 +76,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self.instrument.write(f"CHAN:OUTP {1 if state else 0}")
+        self._resource.write(f"CHAN:OUTP {1 if state else 0}")
 
     def get_state(self, channel: int) -> bool:
         """
@@ -93,7 +93,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        response = self.instrument.query("CHAN:OUTP?")
+        response = self._resource.query("CHAN:OUTP?")
         if response.rstrip('\n') not in ("ON", '1'):
             return False
         return True
@@ -164,7 +164,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self.instrument.write(f"SOUR:VOLT {voltage}")
+        self._resource.write(f"SOUR:VOLT {voltage}")
         return None
 
     def get_voltage(self, channel):  # check
@@ -179,7 +179,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query("SOUR:VOLT?")
+        resp = self._resource.query("SOUR:VOLT?")
         return float(resp)
 
     def set_current(self, current, channel):  # check
@@ -194,7 +194,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self.instrument.write(f"SOUR:CURR {current}")
+        self._resource.write(f"SOUR:CURR {current}")
         return None
 
     def get_current(self, channel):  # check
@@ -209,7 +209,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query("SOUR:CURR?")
+        resp = self._resource.query("SOUR:CURR?")
         return float(resp)
 
     def measure_voltage(self, channel):
@@ -223,7 +223,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('MEAS:VOLT?')
+        resp = self._resource.query('MEAS:VOLT?')
         return float(resp)
 
     def measure_current(self, channel):
@@ -237,7 +237,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('MEAS:CURR?')
+        resp = self._resource.query('MEAS:CURR?')
         return float(resp)
 
     def pulse(self, level, duration, channel):

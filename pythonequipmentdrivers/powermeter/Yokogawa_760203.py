@@ -53,9 +53,9 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         """
 
         if option.lower() == "ascii":
-            self.instrument.write('NUM:FORM ASC')
+            self._resource.write('NUM:FORM ASC')
         elif option.lower() == "float":
-            self.instrument.write('NUM:FORM FLO')
+            self._resource.write('NUM:FORM FLO')
         else:
             raise AttributeError
         return None
@@ -69,7 +69,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         return: str
         """
 
-        response = self.instrument.query('NUM:FORM?')
+        response = self._resource.query('NUM:FORM?')
 
         data_format = response.split(' ')[-1]
         data_format = data_format.rstrip('\n')
@@ -85,14 +85,14 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.instrument.write(f'NUM:NORM:PRES {pattern_number}')
+        self._resource.write(f'NUM:NORM:PRES {pattern_number}')
         return None
 
     def set_numeric_list_data_pattern(self, pattern_number):
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.instrument.write(f'NUM:LIST:PRES {pattern_number}')
+        self._resource.write(f'NUM:LIST:PRES {pattern_number}')
         return None
 
     def set_harmonic_pll_source(self, channel, source_type):
@@ -100,7 +100,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
                         'current': 'I'}
 
         command_str = f"HARM:PLLS {source_codes[source_type]}{channel}"
-        self.instrument.write(command_str)
+        self._resource.write(command_str)
         return None
 
     def get_channel_data(self, channel, measurment_type: str) -> float:
@@ -110,20 +110,20 @@ class Yokogawa_760203(VisaResource):  # 3 phase
 
         index = self._channel_data_separation_index*(channel - 1)
         index += self._channel_measurement_codes[measurment_type]
-        response = self.instrument.query(f"NUM:VAL? {index}")
+        response = self._resource.query(f"NUM:VAL? {index}")
 
         return float(response)
 
     def get_harmonic_pll_source(self):
-        response = self.instrument.query("HARM:PLLS?")
+        response = self._resource.query("HARM:PLLS?")
         return response.split(' ')[-1].rstrip('\n')
 
     def set_harmonic_order(self, order_min, order_max):
-        self.instrument.write(f"HARM:ORD {order_min},{order_max}")
+        self._resource.write(f"HARM:ORD {order_min},{order_max}")
         return None
 
     def get_harmonic_order(self):
-        response = self.instrument.query("HARM:ORD?")
+        response = self._resource.query("HARM:ORD?")
         response = response.split(' ')[-1].rstrip('\n')
 
         return [int(x) for x in response.split(',')]
@@ -145,7 +145,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         # get data
         index = self._list_data_separation_index*(channel - 1)
         index += self._list_measurement_codes[harmonic_type]
-        response = self.instrument.query(f"NUM:LIST:VAL? {index}")
+        response = self._resource.query(f"NUM:LIST:VAL? {index}")
 
         harmonics = [float(x) for x in response.split(',')]
         if return_total:
@@ -168,7 +168,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         is sent.
         """
 
-        self.instrument.write(f'CURR:RANG:ALL {int(current)}')
+        self._resource.write(f'CURR:RANG:ALL {int(current)}')
         return None
 
     def get_current_range(self):
@@ -181,7 +181,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         get the current range of all phases to use for current measurements.
         each range returns the current level for the top of the range.
         """
-        resp = self.instrument.query('CURR:RANG?')
+        resp = self._resource.query('CURR:RANG?')
         current_ranges = [float(chan.split()[-1]) for chan in resp.split(';')]
         return tuple(current_ranges)
 

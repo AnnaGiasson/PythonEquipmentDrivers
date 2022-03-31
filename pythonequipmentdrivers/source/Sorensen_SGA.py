@@ -23,7 +23,7 @@ class Sorensen_SGA(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f'OUTP:STAT {1 if state else 0}')
+        self._resource.write(f'OUTP:STAT {1 if state else 0}')
 
     def get_state(self) -> bool:
         """
@@ -35,7 +35,7 @@ class Sorensen_SGA(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query('OUTP:STAT?')
+        response = self._resource.query('OUTP:STAT?')
         return ('1' in response)
 
     def on(self) -> None:
@@ -90,7 +90,7 @@ class Sorensen_SGA(VisaResource):
             voltage (float): output voltage setpoint in Volts DC.
         """
 
-        self.instrument.write(f'SOUR:VOLT {float(voltage)}')
+        self._resource.write(f'SOUR:VOLT {float(voltage)}')
 
     def get_voltage(self) -> float:
         """
@@ -102,7 +102,7 @@ class Sorensen_SGA(VisaResource):
             float: Output voltage setpoint in Volts DC.
         """
 
-        response = self.instrument.query('SOUR:VOLT?')
+        response = self._resource.query('SOUR:VOLT?')
         return float(response)
 
     def set_current(self, current: float) -> None:
@@ -115,7 +115,7 @@ class Sorensen_SGA(VisaResource):
             current (float): Current Limit setpoint in Amps DC.
         """
 
-        self.instrument.write(f'SOUR:CURR {float(current)}')
+        self._resource.write(f'SOUR:CURR {float(current)}')
 
     def get_current(self) -> float:
         """
@@ -127,7 +127,7 @@ class Sorensen_SGA(VisaResource):
             float: Current Limit setpoint in Amps DC.
         """
 
-        response = self.instrument.query('SOUR:CURR?')
+        response = self._resource.query('SOUR:CURR?')
         return float(response)
 
     def measure_voltage(self) -> float:
@@ -140,7 +140,7 @@ class Sorensen_SGA(VisaResource):
             float: Measured Voltage in Volts DC
         """
 
-        response = self.instrument.query('MEAS:VOLT?')
+        response = self._resource.query('MEAS:VOLT?')
         return float(response)
 
     def measure_current(self) -> float:
@@ -153,7 +153,7 @@ class Sorensen_SGA(VisaResource):
             float: Measured Current in Amps DC.
         """
 
-        response = self.instrument.query('MEAS:CURR?')
+        response = self._resource.query('MEAS:CURR?')
         return float(response)
 
     def measure_power(self) -> float:
@@ -167,7 +167,7 @@ class Sorensen_SGA(VisaResource):
             float: Measured power in Watts.
         """
 
-        response = self.instrument.query('MEAS:POW?')
+        response = self._resource.query('MEAS:POW?')
         return float(response)
 
     def set_over_voltage_protection(self, voltage: float) -> None:
@@ -180,7 +180,7 @@ class Sorensen_SGA(VisaResource):
             voltage (float): Over voltage protection set-point in Volts DC.
         """
 
-        self.instrument.write(f'SOUR:VOLT:PROT {float(voltage)}')
+        self._resource.write(f'SOUR:VOLT:PROT {float(voltage)}')
 
     def get_over_voltage_protection(self) -> float:
         """
@@ -192,7 +192,7 @@ class Sorensen_SGA(VisaResource):
             float: Over voltage protection set-point in Volts DC.
         """
 
-        response = self.instrument.query('SOUR:VOLT:PROT?')
+        response = self._resource.query('SOUR:VOLT:PROT?')
         return float(response)
 
     def set_over_current_protection(self, current: float) -> None:
@@ -205,7 +205,7 @@ class Sorensen_SGA(VisaResource):
             current (float): Over current protection set-point in Amps DC.
         """
 
-        self.instrument.write(f'SOUR:CURR:LIM {float(current)}')
+        self._resource.write(f'SOUR:CURR:LIM {float(current)}')
 
     def get_over_current_protection(self) -> float:
         """
@@ -217,7 +217,7 @@ class Sorensen_SGA(VisaResource):
             float: Over current protection set-point in Amps DC.
         """
 
-        response = self.instrument.query('SOUR:CURR:LIM?')
+        response = self._resource.query('SOUR:CURR:LIM?')
         return float(response)
 
     def pop_error_queue(self) -> Union[str, None]:
@@ -235,7 +235,7 @@ class Sorensen_SGA(VisaResource):
                 the error queue or None if the queue is empty.
         """
 
-        response = self.instrument.query('SYST:ERR?')
+        response = self._resource.query('SYST:ERR?')
         if response[0] == '0':
             return None
         return response.strip()
@@ -278,7 +278,7 @@ class Sorensen_SGA(VisaResource):
                 from manual use and the supply must be adjusted remotely.
         """
 
-        self.instrument.write(f'SYST:LOCAL {1 if state else 0}')
+        self._resource.write(f'SYST:LOCAL {1 if state else 0}')
 
     def get_local(self) -> bool:
         """
@@ -292,7 +292,7 @@ class Sorensen_SGA(VisaResource):
                 manual use and the supply must be adjusted remotely.
         """
 
-        response = self.instrument.query('SYST:LOCAL?')
+        response = self._resource.query('SYST:LOCAL?')
         return ('ON' in response)
 
     def pulse(self, level: float, duration: float) -> None:

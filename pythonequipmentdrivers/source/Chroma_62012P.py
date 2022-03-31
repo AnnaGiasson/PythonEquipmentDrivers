@@ -23,7 +23,7 @@ class Chroma_62012P(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"CONF:OUTP {1 if state else 0}")
+        self._resource.write(f"CONF:OUTP {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -35,7 +35,7 @@ class Chroma_62012P(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query("CONF:OUTP?").rstrip('\n')
+        response = self._resource.query("CONF:OUTP?").rstrip('\n')
         return ("ON" in response)
 
     def on(self) -> None:
@@ -90,7 +90,7 @@ class Chroma_62012P(VisaResource):
             voltage (float): output voltage setpoint in Volts DC.
         """
 
-        self.instrument.write(f"SOUR:VOLT {float(voltage)}")
+        self._resource.write(f"SOUR:VOLT {float(voltage)}")
 
     def get_voltage(self) -> float:
         """
@@ -102,7 +102,7 @@ class Chroma_62012P(VisaResource):
             float: Output voltage setpoint in Volts DC.
         """
 
-        response = self.instrument.query("SOUR:VOLT?")
+        response = self._resource.query("SOUR:VOLT?")
         return float(response)
 
     def set_current(self, current: float) -> None:
@@ -115,7 +115,7 @@ class Chroma_62012P(VisaResource):
             current (float): Current Limit setpoint in Amps DC.
         """
 
-        self.instrument.write(f"SOUR:CURR {float(current)}")
+        self._resource.write(f"SOUR:CURR {float(current)}")
 
     def get_current(self) -> float:
         """
@@ -127,7 +127,7 @@ class Chroma_62012P(VisaResource):
             float: Current Limit setpoint in Amps DC.
         """
 
-        response = self.instrument.query("SOUR:CURR?")
+        response = self._resource.query("SOUR:CURR?")
         return float(response)
 
     def set_current_slew_rate(self, slew_rate):
@@ -140,7 +140,7 @@ class Chroma_62012P(VisaResource):
         A/ms
         """
 
-        self.instrument.write(f"SOUR:CURR:SLEW {slew_rate}")
+        self._resource.write(f"SOUR:CURR:SLEW {slew_rate}")
         return None
 
     def get_current_slew_rate(self):
@@ -153,7 +153,7 @@ class Chroma_62012P(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:CURR:SLEW?")
+        response = self._resource.query("SOUR:CURR:SLEW?")
         return float(response)
 
     def set_voltage_slew_rate(self, slew_rate):
@@ -166,7 +166,7 @@ class Chroma_62012P(VisaResource):
         V/ms
         """
 
-        self.instrument.write(f"SOUR:VOLT:SLEW {slew_rate}")
+        self._resource.write(f"SOUR:VOLT:SLEW {slew_rate}")
         return None
 
     def get_voltage_slew_rate(self):
@@ -179,7 +179,7 @@ class Chroma_62012P(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:VOLT:SLEW?")
+        response = self._resource.query("SOUR:VOLT:SLEW?")
         return float(response)
 
     def set_voltage_limit(self, v_limit):
@@ -192,7 +192,7 @@ class Chroma_62012P(VisaResource):
         in Vdc
         """
 
-        self.instrument.write(f'SOUR:VOLT:LIM:HIGH {v_limit}')
+        self._resource.write(f'SOUR:VOLT:LIM:HIGH {v_limit}')
         return None
 
     def get_voltage_limit(self):
@@ -206,7 +206,7 @@ class Chroma_62012P(VisaResource):
         voltage in Vdc
         """
 
-        resp = self.instrument.query('SOUR:VOLT:LIM:HIGH?')
+        resp = self._resource.query('SOUR:VOLT:LIM:HIGH?')
         return float(resp)
 
     def measure_voltage(self) -> float:
@@ -219,7 +219,7 @@ class Chroma_62012P(VisaResource):
             float: Measured Voltage in Volts DC
         """
 
-        response = self.instrument.query("FETC:VOLT?")
+        response = self._resource.query("FETC:VOLT?")
         return float(response)
 
     def measure_current(self) -> float:
@@ -232,7 +232,7 @@ class Chroma_62012P(VisaResource):
             float: Measured Current in Amps DC.
         """
 
-        response = self.instrument.query("FETC:CURR?")
+        response = self._resource.query("FETC:CURR?")
         return float(response)
 
     def measure_power(self) -> float:
@@ -245,7 +245,7 @@ class Chroma_62012P(VisaResource):
             float: Measured power in Watts.
         """
 
-        response = self.instrument.query("FETC:POW?")
+        response = self._resource.query("FETC:POW?")
         return float(response)
 
     def get_status(self) -> Tuple[str, bool, str]:
@@ -290,7 +290,7 @@ class Chroma_62012P(VisaResource):
                              'Fold_Back_CC_to_CV', 'Reserved', 'Reserved',
                              'Reserved', 'Reserved')
 
-        response = self.instrument.query("FETC:STAT?")
+        response = self._resource.query("FETC:STAT?")
         response = response.strip('\n')
 
         message_code, state, mode = response.split(',')
@@ -316,14 +316,14 @@ class Chroma_62012P(VisaResource):
             raise ValueError('Invalid program type'
                              f', use: {valid_program_types}')
 
-        self.instrument.write(f'PROG:MODE {program_type}')
+        self._resource.write(f'PROG:MODE {program_type}')
 
     def set_program(self, n: int) -> None:
-        self.instrument.write(f'PROG:SEL {int(n)}')
+        self._resource.write(f'PROG:SEL {int(n)}')
 
     def get_program_type(self) -> str:
 
-        response = self.instrument.query('PROG:MODE?')
+        response = self._resource.query('PROG:MODE?')
         return response.lower()
 
     def build_program(self, *sequence: dict, **kwargs) -> None:
@@ -404,7 +404,7 @@ class Chroma_62012P(VisaResource):
         cmds.append(f'PROG:COUNT {int(kwargs.get("count", 1))}')
 
         for cmd in cmds:
-            self.instrument.write(cmd)
+            self._resource.write(cmd)
 
         # build program
         valid_sequence_types = ('AUTO',  # move to next sequence after "time"
@@ -461,10 +461,10 @@ class Chroma_62012P(VisaResource):
             cmds.append(f'PROG:SEQ:TTL {ttl}')
 
             for cmd in cmds:  # send commands in queue
-                self.instrument.write(cmd)
+                self._resource.write(cmd)
         else:
             if kwargs.get('save', False):
-                self.instrument.write('PROG:SAVE')
+                self._resource.write('PROG:SAVE')
 
     def get_program(self, program_type: str,
                     program_number: int) -> Tuple[Dict, List]:
@@ -474,11 +474,11 @@ class Chroma_62012P(VisaResource):
         self.set_program(program_number)
 
         # get program metadata
-        N = int(self.instrument.query('PROG:MAX?'))  # number of sequences
+        N = int(self._resource.query('PROG:MAX?'))  # number of sequences
 
         options = {'program_number': program_number,
-                   'count': int(self.instrument.query('PROG:COUNT?')),
-                   'link': int(self.instrument.query('PROG:LINK?'))}
+                   'count': int(self._resource.query('PROG:COUNT?')),
+                   'link': int(self._resource.query('PROG:LINK?'))}
 
         valid_sequence_types = ('AUTO',  # move to next sequence after "time"
                                 'MANUAL',  # wait until front panel pressed
@@ -491,9 +491,9 @@ class Chroma_62012P(VisaResource):
         seq = {}
         for n in range(1, N+1, 1):
             seq.clear()
-            self.instrument.write(f'PROG:SEQ:SEL {n}')  # select sequence
+            self._resource.write(f'PROG:SEQ:SEL {n}')  # select sequence
 
-            response = self.instrument.query('PROG:SEQ?')
+            response = self._resource.query('PROG:SEQ?')
             response = response.strip()
             type_, volt, volt_sr, curr, curr_sr, ttl, t = response.split(',')
 
@@ -528,7 +528,7 @@ class Chroma_62012P(VisaResource):
         if n != 0:
             self.set_program(n)
 
-        self.instrument.write('PROG:RUN ON')
+        self._resource.write('PROG:RUN ON')
 
     def halt_program(self) -> None:
         """
@@ -536,11 +536,11 @@ class Chroma_62012P(VisaResource):
 
         Ends execution of the current program if one is running.
         """
-        self.instrument.write('PROG:RUN OFF')
+        self._resource.write('PROG:RUN OFF')
 
     def get_program_state(self) -> bool:
 
-        response = self.instrument.query('PROG:RUN?')
+        response = self._resource.query('PROG:RUN?')
         response = response.strip()
 
         return (response == 'ON')
@@ -560,7 +560,7 @@ class Chroma_62012P(VisaResource):
                 f'PROG:STEP:TIME {int(h)},{int(m)},{float(s)}')
 
         for cmd in cmds:
-            self.instrument.write(cmd)
+            self._resource.write(cmd)
 
     def cp_program(self, voltage: float = 0, current: float = 0,
                    power: float = 0, tracking_speed: int = 50) -> None:
@@ -576,11 +576,11 @@ class Chroma_62012P(VisaResource):
                 f'PROG:CP:POW {float(power)}')
 
         for cmd in cmds:
-            self.instrument.write(cmd)
+            self._resource.write(cmd)
 
     def get_system_errors(self):
 
-        response = self.instrument.query('SYST:ERR?')
+        response = self._resource.query('SYST:ERR?')
         response = response.strip()
 
         error_status = response.split(',')

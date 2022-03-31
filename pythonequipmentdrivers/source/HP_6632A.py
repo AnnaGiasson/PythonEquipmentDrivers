@@ -24,7 +24,7 @@ class HP_6632A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f'OUTP:STAT {1 if state else 0}')
+        self._resource.write(f'OUTP:STAT {1 if state else 0}')
 
     def get_state(self) -> bool:
         """
@@ -36,7 +36,7 @@ class HP_6632A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.instrument.query("OUTP:STAT?").rstrip('\n')
+        response = self._resource.query("OUTP:STAT?").rstrip('\n')
         return (int(response) == 1)
 
     def on(self) -> None:
@@ -86,7 +86,7 @@ class HP_6632A(VisaResource):
         set the output voltage setpoint specified by "voltage"
         """
 
-        self.instrument.write(f"SOUR:VOLT:LEV {voltage}")
+        self._resource.write(f"SOUR:VOLT:LEV {voltage}")
         return None
 
     def get_voltage(self):
@@ -98,7 +98,7 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:VOLT:LEV?")
+        response = self._resource.query("SOUR:VOLT:LEV?")
         return float(response)
 
     def set_current(self, current):
@@ -109,7 +109,7 @@ class HP_6632A(VisaResource):
 
         sets the current limit setting for the power supply in Adc
         """
-        self.instrument.write(f"SOUR:CURR:LEV {current}")
+        self._resource.write(f"SOUR:CURR:LEV {current}")
         return None
 
     def get_current(self):
@@ -121,7 +121,7 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("SOUR:CURR:LEV?")
+        response = self._resource.query("SOUR:CURR:LEV?")
         return float(response)
 
     def get_voltage_limit(self):
@@ -135,7 +135,7 @@ class HP_6632A(VisaResource):
         potentiometer on the front panel
         """
 
-        resp = self.instrument.query('SOUR:VOLT:PROT?')
+        resp = self._resource.query('SOUR:VOLT:PROT?')
         return float(resp)
 
     def set_ocp_state(self, state):
@@ -151,7 +151,7 @@ class HP_6632A(VisaResource):
         """
 
         state = 1 if bool(state) else 0
-        self.instrument.write(f'SOUR:CURR:PROT:STATE {state}')
+        self._resource.write(f'SOUR:CURR:PROT:STATE {state}')
         return None
 
     def get_ocp_state(self):
@@ -165,7 +165,7 @@ class HP_6632A(VisaResource):
         Args:
             state (bool): Whether or not Over-Current Protection is active
         """
-        response = self.instrument.query('SOUR:CURR:PROT:STATE?')
+        response = self._resource.query('SOUR:CURR:PROT:STATE?')
         return int(response)
 
     def measure_voltage(self):
@@ -177,7 +177,7 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("MEAS:VOLT?")
+        response = self._resource.query("MEAS:VOLT?")
         return float(response)
 
     def measure_current(self):
@@ -188,7 +188,7 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self.instrument.query("MEAS:CURR?")
+        response = self._resource.query("MEAS:CURR?")
         return float(response)
 
     def pulse(self, level, duration):

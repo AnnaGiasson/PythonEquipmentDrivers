@@ -35,7 +35,7 @@ class Tektronix_DPO4xxx(VisaResource):
         """
 
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
-        self.instrument.write(cmd_str)
+        self._resource.write(cmd_str)
 
     def get_channel_data(self, *channels: int,
                          **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
@@ -86,22 +86,22 @@ class Tektronix_DPO4xxx(VisaResource):
         waves = []
         for channel in channels:
             # set up scope for data transfer
-            self.instrument.write(f'DATA:SOU CH{int(channel)}')  # Set source
-            self.instrument.write('DATA:WIDTH 1')  # ?? used in example
-            self.instrument.write('DATA:ENC RPB')  # Set data encoding type
-            self.instrument.write(f'DATA:START {int(start_idx)}')
-            self.instrument.write(f'DATA:STOP {int(stop_idx)}')
+            self._resource.write(f'DATA:SOU CH{int(channel)}')  # Set source
+            self._resource.write('DATA:WIDTH 1')  # ?? used in example
+            self._resource.write('DATA:ENC RPB')  # Set data encoding type
+            self._resource.write(f'DATA:START {int(start_idx)}')
+            self._resource.write(f'DATA:STOP {int(stop_idx)}')
 
             # get waveform metadata
-            dt = float(self.instrument.query('WFMPRE:XINCR?'))  # sampling time
-            y_offset = float(self.instrument.query('WFMPRE:YOFF?'))
-            y_scale = float(self.instrument.query('WFMPRE:YMULT?'))
+            dt = float(self._resource.query('WFMPRE:XINCR?'))  # sampling time
+            y_offset = float(self._resource.query('WFMPRE:YOFF?'))
+            y_scale = float(self._resource.query('WFMPRE:YMULT?'))
 
-            adc_offset = float(self.instrument.query('WFMPRE:YZERO?'))
+            adc_offset = float(self._resource.query('WFMPRE:YZERO?'))
 
             # get raw data, strip header
-            self.instrument.write('CURVE?')
-            raw_data = self.instrument.read_raw()
+            self._resource.write('CURVE?')
+            raw_data = self._resource.read_raw()
 
             header_len = 2 + int(raw_data[1])
             raw_data = raw_data[header_len:-1]
@@ -137,7 +137,7 @@ class Tektronix_DPO4xxx(VisaResource):
             label (str): text label to assign to the specified
         """
 
-        self.instrument.write(f'CH{int(channel)}:LAB "{label}"')
+        self._resource.write(f'CH{int(channel)}:LAB "{label}"')
 
     def get_channel_label(self, channel: int) -> str:
         """
@@ -152,7 +152,7 @@ class Tektronix_DPO4xxx(VisaResource):
             (str): specified channel label
         """
 
-        response = self.instrument.query(f'CH{int(channel)}:LAB?')
+        response = self._resource.query(f'CH{int(channel)}:LAB?')
         return response.rstrip('\n')
 
     def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
@@ -170,7 +170,7 @@ class Tektronix_DPO4xxx(VisaResource):
             bandwidth (float): desired bandwidth setting for "channel" in Hz
         """
 
-        self.instrument.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
+        self._resource.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
 
     def get_channel_bandwidth(self, channel: int) -> float:
         """
@@ -185,7 +185,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: channel bandwidth setting
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:BAN?")
+        response = self._resource.query(f"CH{int(channel)}:BAN?")
         return float(response)
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
@@ -200,7 +200,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        self.instrument.write(f'CH{int(channel)}:SCA {float(scale)}')
+        self._resource.write(f'CH{int(channel)}:SCA {float(scale)}')
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -216,7 +216,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        response = self.instrument.query(f'CH{int(channel)}:SCA?')
+        response = self._resource.query(f'CH{int(channel)}:SCA?')
         return float(response)
 
     def set_channel_offset(self, channel: int, off: float) -> None:
@@ -230,7 +230,7 @@ class Tektronix_DPO4xxx(VisaResource):
             off (float): vertical/amplitude offset
         """
 
-        self.instrument.write(f"CH{int(channel)}:OFFS {float(off)}")
+        self._resource.write(f"CH{int(channel)}:OFFS {float(off)}")
 
     def get_channel_offset(self, channel: int) -> float:
         """
@@ -245,7 +245,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: vertical/amplitude offset
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:OFFS?")
+        response = self._resource.query(f"CH{int(channel)}:OFFS?")
         return float(response)
 
     def set_channel_position(self, channel: int, position: float) -> None:
@@ -263,7 +263,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 the display of the specified channel waveform.
         """
 
-        self.instrument.write(f"CH{int(channel)}:POS {float(position)}")
+        self._resource.write(f"CH{int(channel)}:POS {float(position)}")
 
     def get_channel_position(self, channel: int) -> float:
         """
@@ -282,7 +282,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 of the specified channel waveform.
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:POS?")
+        response = self._resource.query(f"CH{int(channel)}:POS?")
         return float(response)
 
     def trigger_run_stop(self) -> None:
@@ -293,7 +293,7 @@ class Tektronix_DPO4xxx(VisaResource):
         whether or not it is acquiring new data.
         """
 
-        self.instrument.write("FPANEL:PRESS RUnstop")
+        self._resource.write("FPANEL:PRESS RUnstop")
 
     def trigger_force(self) -> None:
         """
@@ -301,7 +301,7 @@ class Tektronix_DPO4xxx(VisaResource):
 
         forces a trigger event to occur
         """
-        self.instrument.write("TRIG FORC")
+        self._resource.write("TRIG FORC")
 
     def trigger_single(self) -> None:
         """
@@ -309,7 +309,7 @@ class Tektronix_DPO4xxx(VisaResource):
 
         arms the oscilloscope to capture a single trigger event.
         """
-        self.instrument.write("FPANEL:PRESS SING")
+        self._resource.write("FPANEL:PRESS SING")
 
     def set_trigger_position(self, offset: float) -> None:
         """
@@ -326,7 +326,7 @@ class Tektronix_DPO4xxx(VisaResource):
         if not (0 <= float(offset) <= 100):
             raise ValueError('offset out of the valid range [0-100]')
 
-        self.instrument.write(f"HOR:POS {float(offset)}")
+        self._resource.write(f"HOR:POS {float(offset)}")
 
     def get_trigger_position(self) -> float:
         """
@@ -339,7 +339,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: Horizontal position of the trigger as a percentage of the
                 horizontal capture window.
         """
-        return float(self.instrument.query("HOR:POS?"))
+        return float(self._resource.query("HOR:POS?"))
 
     def set_trigger_mode(self, mode: str) -> None:
         """
@@ -357,7 +357,7 @@ class Tektronix_DPO4xxx(VisaResource):
         mode = str(mode).upper()
         if mode not in ["AUTO", "NORM", "NORMAL"]:
             raise ValueError(f"Invalid mode: {mode}")
-        self.instrument.write(f"TRIG:A:MOD {mode}")
+        self._resource.write(f"TRIG:A:MOD {mode}")
 
     def get_trigger_mode(self) -> str:
         """
@@ -372,7 +372,7 @@ class Tektronix_DPO4xxx(VisaResource):
             str: trigger mode. Valid modes are "AUTO" and "NORM"
         """
 
-        response = self.instrument.query("TRIG:A:MOD?")
+        response = self._resource.query("TRIG:A:MOD?")
         return response.rstrip("\n").lower()
 
     def set_trigger_level(self, level: float) -> None:
@@ -387,7 +387,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 the signal being triggered on.
         """
 
-        self.instrument.write(f"TRIG:A:LEV {float(level)}")
+        self._resource.write(f"TRIG:A:LEV {float(level)}")
 
     def get_trigger_level(self) -> float:
         """
@@ -401,7 +401,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 being triggered on.
         """
 
-        response = self.instrument.query("TRIG:A:LEV?")
+        response = self._resource.query("TRIG:A:LEV?")
         return float(response)
 
     def set_zoom_mode(self, state: bool) -> None:
@@ -416,7 +416,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 is disabled.
         """
 
-        self.instrument.write(f"ZOO:MODE {'ON' if state else 'OFF'}")
+        self._resource.write(f"ZOO:MODE {'ON' if state else 'OFF'}")
 
     def get_zoom_mode(self) -> bool:
         """
@@ -430,7 +430,7 @@ class Tektronix_DPO4xxx(VisaResource):
         """
         on_keywords = ('on', 'true', '1')
 
-        response = self.instrument.query("ZOO:MODE?")
+        response = self._resource.query("ZOO:MODE?")
         response = response.lower()
 
         return any(key in response for key in on_keywords)
@@ -448,7 +448,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 record length.
         """
 
-        self.instrument.write(f"ZOO:ZOOM:POS {float(position)}")
+        self._resource.write(f"ZOO:ZOOM:POS {float(position)}")
 
     def get_zoom_position(self) -> float:
         """
@@ -462,7 +462,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 length.
         """
 
-        response = self.instrument.query("ZOO:ZOOM:POS?")
+        response = self._resource.query("ZOO:ZOOM:POS?")
         return float(response)
 
     def set_zoom_scale(self, scale: float) -> None:
@@ -477,7 +477,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 division.
         """
 
-        self.instrument.write(f"ZOO:ZOOM:SCA {float(scale)}")
+        self._resource.write(f"ZOO:ZOOM:SCA {float(scale)}")
 
     def get_zoom_scale(self) -> float:
         """
@@ -489,7 +489,7 @@ class Tektronix_DPO4xxx(VisaResource):
         Returns:
             float: horizontal scale for Zoom Mode in seconds per division.
         """
-        response = self.instrument.query("ZOO:ZOOM:SCA?")
+        response = self._resource.query("ZOO:ZOOM:SCA?")
         return float(response)
 
     def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
@@ -513,7 +513,7 @@ class Tektronix_DPO4xxx(VisaResource):
         for idx in meas_idx:
 
             query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
-            response = self.instrument.query(query_cmd)
+            response = self._resource.query(query_cmd)
 
             try:
                 data.append(float(response))
@@ -553,12 +553,12 @@ class Tektronix_DPO4xxx(VisaResource):
             raise ValueError('image_title must be a str or path-like object')
 
         # initiate transfer
-        self.instrument.write("SAVE:IMAG:FILEF PNG")  # set filetype
-        self.instrument.write("HARDCOPY START")  # start converting to image
-        self.instrument.write('*OPC?')  # done yet?
+        self._resource.write("SAVE:IMAG:FILEF PNG")  # set filetype
+        self._resource.write("HARDCOPY START")  # start converting to image
+        self._resource.write('*OPC?')  # done yet?
         sleep(kwargs.get('buffering_delay', 0))
 
-        raw_data = self.instrument.read_raw()
+        raw_data = self._resource.read_raw()
 
         # save image
         with open(file_path, 'wb') as file:
@@ -578,7 +578,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 per scope trigger
         """
 
-        self.instrument.write(f"HOR:RECO {int(length)}")
+        self._resource.write(f"HOR:RECO {int(length)}")
 
     def get_record_length(self) -> int:
         """
@@ -590,7 +590,7 @@ class Tektronix_DPO4xxx(VisaResource):
             int: len of the waveform buffer
         """
 
-        return int(self.instrument.query("HOR:RECO?"))
+        return int(self._resource.query("HOR:RECO?"))
 
     def set_persistence_time(self, duration: Union[float, str]) -> None:
         """
@@ -612,7 +612,7 @@ class Tektronix_DPO4xxx(VisaResource):
         else:
             raise ValueError('invalid persistence option')
 
-        self.instrument.write(f'DIS:PERS {val}')
+        self._resource.write(f'DIS:PERS {val}')
 
     def get_persistence_time(self) -> float:
         """
@@ -624,7 +624,7 @@ class Tektronix_DPO4xxx(VisaResource):
             (float): persistence time
         """
 
-        response = self.instrument.query('DIS:PERS?')
+        response = self._resource.query('DIS:PERS?')
         return max([float(response), 0.0])
 
     def set_cursor_vertical_level(self, cursor: int, level: float) -> None:
@@ -639,7 +639,7 @@ class Tektronix_DPO4xxx(VisaResource):
             level (float): Vertical position in units of the selected waveform
         """
 
-        self.instrument.write(f"CURS:HBA:POSITION{int(cursor)} {float(level)}")
+        self._resource.write(f"CURS:HBA:POSITION{int(cursor)} {float(level)}")
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -653,7 +653,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 display in seconds.
         """
 
-        self.instrument.write(f'HOR:SCA {float(scale)}')
+        self._resource.write(f'HOR:SCA {float(scale)}')
 
     def get_horizontal_scale(self) -> float:
         """
@@ -665,7 +665,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: horizontal scale in seconds per division.
         """
 
-        response = self.instrument.query('HOR:SCA?')
+        response = self._resource.query('HOR:SCA?')
         return float(response)
 
 

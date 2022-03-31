@@ -106,7 +106,7 @@ class HP_34401A(VisaResource):
         if not (mode in self.valid_modes):
             raise ValueError("Invalid mode option")
 
-        self.instrument.write(f"CONF:{self.valid_modes[mode]}")
+        self._resource.write(f"CONF:{self.valid_modes[mode]}")
 
     def get_mode(self) -> str:
         """
@@ -118,7 +118,7 @@ class HP_34401A(VisaResource):
         returns: str
         """
 
-        response = self.instrument.query("FUNC?")
+        response = self._resource.query("FUNC?")
         return response.rstrip().replace('"', '')
 
     def get_error(self, **kwargs) -> str:
@@ -128,7 +128,7 @@ class HP_34401A(VisaResource):
         Returns:
             [list]: last error in the buffer
         """
-        response = self.instrument.query('SYSTem:ERRor?', **kwargs)
+        response = self._resource.query('SYSTem:ERRor?', **kwargs)
         return self.resp_format(response, str)
 
     def set_trigger(self, trigger: str, **kwargs) -> None:
@@ -160,7 +160,7 @@ class HP_34401A(VisaResource):
             if not ((delay in valid_delay) or isinstance(delay, (int, float))):
                 raise ValueError(f"Invalid trigger delay. Use: {valid_delay}")
 
-            self.instrument.write(f"TRIG:DELay {delay}")
+            self._resource.write(f"TRIG:DELay {delay}")
 
         if kwargs.get('count', False):
 
@@ -178,12 +178,12 @@ class HP_34401A(VisaResource):
                                      f' Use: {valid_count} or an int within'
                                      ' the range [1, 50000]')
 
-            self.instrument.write(f"TRIG:COUNt {count}")
+            self._resource.write(f"TRIG:COUNt {count}")
 
         trigger = str(trigger).upper()
         if not (trigger in self.valid_trigger):
             raise ValueError("Invalid trigger option")
-        self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
+        self._resource.write(f"TRIG:{self.valid_trigger[trigger]}")
 
     def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs) -> None:
         """
@@ -200,11 +200,11 @@ class HP_34401A(VisaResource):
             raise ValueError("Invalid trigger option")
 
         self.trigger_mode = self.valid_trigger[trigger]
-        self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
+        self._resource.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
 
     def get_trigger_source(self, **kwargs) -> str:
 
-        response = self.instrument.query("TRIG:SOUR?", **kwargs)
+        response = self._resource.query("TRIG:SOUR?", **kwargs)
         fmt_resp = self.resp_format(response, str)
 
         self.trigger_mode = self.valid_trigger[fmt_resp]
@@ -230,10 +230,10 @@ class HP_34401A(VisaResource):
                                  f' Use: {valid_count} or an int within'
                                  ' the range [1, 50000]')
 
-        self.instrument.write(f"TRIG:COUNt {count}", **kwargs)
+        self._resource.write(f"TRIG:COUNt {count}", **kwargs)
 
     def get_trigger_count(self, **kwargs) -> int:
-        response = self.instrument.query("TRIG:COUN?", **kwargs)
+        response = self._resource.query("TRIG:COUN?", **kwargs)
         return int(self.resp_format(response, float))
 
     def measure_voltage(self):
@@ -251,7 +251,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'VOLT':
             raise IOError("Multimeter is not configured to measure voltage")
         else:
-            response = self.instrument.query("MEAS:VOLT:DC?")
+            response = self._resource.query("MEAS:VOLT:DC?")
             return self.factor*float(response)
 
     def measure_voltage_rms(self):
@@ -269,7 +269,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'VOLT:AC':
             raise IOError("Multimeter is not configured to measure AC voltage")
         else:
-            response = self.instrument.query("MEAS:VOLT:AC?")
+            response = self._resource.query("MEAS:VOLT:AC?")
             return self.factor*float(response)
 
     def measure_current(self):
@@ -287,7 +287,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'CURR':
             raise IOError("Multimeter is not configured to measure current")
         else:
-            response = self.instrument.query("MEAS:CURR:DC?")
+            response = self._resource.query("MEAS:CURR:DC?")
             return self.factor*float(response)
 
     def measure_current_rms(self):
@@ -305,7 +305,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'CURR:AC':
             raise IOError("Multimeter is not configured to measure AC current")
         else:
-            response = self.instrument.query("MEAS:CURR:AC?")
+            response = self._resource.query("MEAS:CURR:AC?")
             return self.factor*float(response)
 
     def measure_resistance(self):
@@ -323,7 +323,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'RES':
             raise IOError("Multimeter is not configured to measure resistance")
         else:
-            response = self.instrument.query("MEAS:RES?")
+            response = self._resource.query("MEAS:RES?")
             return float(response)
 
     def measure_frequency(self):
@@ -341,7 +341,7 @@ class HP_34401A(VisaResource):
         if self.get_mode() != 'FREQ':
             raise IOError("Multimeter is not configured to measure frequency")
         else:
-            response = self.instrument.query("MEAS:FREQ?")
+            response = self._resource.query("MEAS:FREQ?")
             return float(response)
 
     def init(self, **kwargs) -> None:
@@ -352,7 +352,7 @@ class HP_34401A(VisaResource):
         Use fetch_data (FETCh) to get the data.
         """
 
-        self.instrument.write('INITiate', **kwargs)
+        self._resource.write('INITiate', **kwargs)
 
     def fetch_data(self, **kwargs) -> float:
         """
@@ -361,7 +361,7 @@ class HP_34401A(VisaResource):
         Returns:
             [list, float]: data in meter memory resulting from all scans
         """
-        response = self.instrument.query('FETC?', **kwargs)
+        response = self._resource.query('FETC?', **kwargs)
         return self.resp_format(response, float)
 
     def abort(self, **kwargs) -> None:
@@ -370,7 +370,7 @@ class HP_34401A(VisaResource):
 
         Send VISA ABORt, stop the scan!!
         """
-        self.instrument.write('ABORt', **kwargs)
+        self._resource.write('ABORt', **kwargs)
 
     def trigger(self, wait: bool = True, **kwargs) -> None:
         """
@@ -388,7 +388,7 @@ class HP_34401A(VisaResource):
         """
 
         if self.trigger_mode == self.valid_trigger['BUS']:
-            self.instrument.write('*TRG', **kwargs)
+            self._resource.write('*TRG', **kwargs)
         else:
             print(f"Trigger not configured, set as: {self.trigger_mode}"
                   f" should be {self.valid_trigger['BUS']}")
@@ -401,10 +401,10 @@ class HP_34401A(VisaResource):
             # then this will take way too long
 
     def set_sample_count(self, count: int, **kwargs) -> None:
-        self.instrument.write(f"SAMP:COUN {int(count)}", **kwargs)
+        self._resource.write(f"SAMP:COUN {int(count)}", **kwargs)
 
     def get_sample_count(self, **kwargs):
-        response = self.instrument.query("SAMP:COUN?", **kwargs)
+        response = self._resource.query("SAMP:COUN?", **kwargs)
         self.sample_count = int(self.resp_format(response, float))
         return self.sample_count
 
@@ -487,7 +487,7 @@ class HP_34401A(VisaResource):
         for cmd_str in cmds:
             if kwargs.get('verbose', False):
                 print(cmd_str)
-            self.instrument.write(cmd_str, **kwargs)
+            self._resource.write(cmd_str, **kwargs)
 
     def resp_format(self, response, resp_type: type = int):
         """resp_format(response(str data), type(int/float/etc))
@@ -527,4 +527,4 @@ class HP_34401A(VisaResource):
         return self.measure_time
 
     def set_local(self, **kwargs) -> None:
-        self.instrument.write("SYSTem:LOCal", **kwargs)
+        self._resource.write("SYSTem:LOCal", **kwargs)

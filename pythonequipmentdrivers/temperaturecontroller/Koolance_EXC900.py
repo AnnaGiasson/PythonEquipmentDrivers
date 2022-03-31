@@ -54,14 +54,14 @@ class Koolance_EXC900(VisaResource):
         ):
             logger.debug("fetched new data from the device")
             self._last_read_data_time = time()
-            self.instrument.write_raw(bytes(DATA_REQUEST_COMMAND))
-            self._last_read_data = self.instrument.read_bytes(51)
+            self._resource.write_raw(bytes(DATA_REQUEST_COMMAND))
+            self._last_read_data = self._resource.read_bytes(51)
         return self._last_read_data
 
     def _write_data(self, data: bytes) -> None:
         """Write bytes to the device"""
         self._last_read_data_time = None  # trigger a refresh on the next read
-        self.instrument.write_raw(data)
+        self._resource.write_raw(data)
 
     def read_settings(self) -> dict:
         """

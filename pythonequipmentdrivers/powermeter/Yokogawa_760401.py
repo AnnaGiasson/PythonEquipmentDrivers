@@ -12,7 +12,7 @@ class Yokogawa_760401(VisaResource):  # single phase
         return None
 
     def get_measurement_type(self, item_number):
-        response = self.instrument.query("NUM?")
+        response = self._resource.query("NUM?")
         resp_args = [arg for arg in response.split(";") if "ITEM" in arg]
         for arg in resp_args:
             if int(arg.split(" ")[0].replace("ITEM", "")) == item_number:
@@ -21,7 +21,7 @@ class Yokogawa_760401(VisaResource):  # single phase
 
     def get_measurement(self, item_number):
         if type(item_number) == int:
-            response = self.instrument.query("NUM:VAL?")
+            response = self._resource.query("NUM:VAL?")
             return float(response.split(",")[item_number - 1])
         elif type(item_number) == list:
             meas = []
