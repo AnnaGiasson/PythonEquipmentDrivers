@@ -1,5 +1,4 @@
 from pythonequipmentdrivers import VisaResource
-from pythonequipmentdrivers import VisaIOError
 
 
 class Fluke_45(VisaResource):
@@ -33,11 +32,11 @@ class Fluke_45(VisaResource):
             max_reads = 256
             read_cnt = 0
             while read_cnt <= max_reads:
-                self._resource.read()
+                self.read_resource()
                 read_cnt += 1
 
         # meter will not respond to reads if the buffer is empty
-        except VisaIOError:
+        except IOError:
             pass  # emptied
 
         return None
@@ -52,8 +51,8 @@ class Fluke_45(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("VAL?")
-        self._resource.read()  # to empty the buffer
+        response = self.query_resource("VAL?")
+        _ = self.read_resource()  # to empty the buffer
 
         return self.factor*float(response)
 
@@ -75,12 +74,12 @@ class Fluke_45(VisaResource):
         """
 
         if auto_range:
-            self._resource.write("AUTO")
-            self._resource.read()  # to empty the buffer
+            self.write_resource("AUTO")
+            _ = self.read_resource()  # to empty the buffer
 
         if n in range(0, 7):
-            self._resource.write(f"RANGE {n}")
-            self._resource.read()  # to empty the buffer
+            self.write_resource(f"RANGE {n}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
@@ -97,8 +96,8 @@ class Fluke_45(VisaResource):
         returns: int
         """
 
-        response = self._resource.query("RANGE1?")
-        self._resource.read()  # to empty the buffer
+        response = self.query_resource("RANGE1?")
+        _ = self.read_resource()  # to empty the buffer
         return int(response)
 
     def set_rate(self, rate):
@@ -114,8 +113,8 @@ class Fluke_45(VisaResource):
 
         rate = rate.upper()
         if rate in ['S', 'M', 'F']:
-            self._resource.write(f"RATE {rate}")
-            self._resource.read()  # to empty the buffer
+            self.write_resource(f"RATE {rate}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid rate option, should be 'S','M', or 'F'")
         return None
@@ -128,9 +127,9 @@ class Fluke_45(VisaResource):
         returns: str
         """
 
-        response = self._resource.query("RATE?")
-        self._resource.read()  # to empty the buffer
-        return response.rstrip('\r\n')
+        response = self.query_resource("RATE?")
+        _ = self.read_resource()  # to empty the buffer
+        return response
 
     def set_mode(self, mode):
         """
@@ -147,8 +146,8 @@ class Fluke_45(VisaResource):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self._resource.write(f"FUNC1 {mode}")
-            self._resource.read()  # to empty the buffer
+            self.write_resource(f"FUNC1 {mode}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
@@ -164,9 +163,9 @@ class Fluke_45(VisaResource):
         returns: str
         """
 
-        response = self._resource.query("FUNC1?")
-        self._resource.read()  # to empty the buffer
-        return response.rstrip('\r\n')
+        response = self.query_resource("FUNC1?")
+        _ = self.read_resource()  # to empty the buffer
+        return response
 
     def measure_voltage(self):
         """
