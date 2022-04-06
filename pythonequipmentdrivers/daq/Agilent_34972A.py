@@ -1,4 +1,4 @@
-from pythonequipmentdrivers import (VisaResource, VisaIOError)
+from pythonequipmentdrivers import VisaResource
 from time import sleep
 
 
@@ -94,7 +94,7 @@ class Agilent_34972A(VisaResource):
             list[type], or type: return is a list if more than 1 element
                                  otherwise returns the single element as type
         """
-        response = response.strip()
+
         if '@' in response:
             start = response.find('@')  # note this returns -1 if not found
             stop = -1
@@ -131,11 +131,10 @@ class Agilent_34972A(VisaResource):
         mode = mode.upper()
         if mode in self.valid_modes:
             chanstr, chanlist = self.format_channel_list(chan)
-            self._resource.write(f"CONF:{self.valid_modes[mode]} "
-                                  f"(@{chanstr})", **kwargs)
+            self.write_resource(f"CONF:{self.valid_modes[mode]} (@{chanstr})",
+                                **kwargs)
         else:
             raise ValueError("Invalid mode option")
-        return
 
     def get_mode(self, chan, **kwargs):
         """
@@ -147,8 +146,8 @@ class Agilent_34972A(VisaResource):
         returns: str
         """
         chanstr, chanlist = self.format_channel_list(chan)
-        response = self._resource.query(f"FUNC? (@{chanstr})", **kwargs)
-        response = response.rstrip().replace('"', '')
+        response = self.query_resource(f"FUNC? (@{chanstr})", **kwargs)
+        response = response.replace('"', '')
         return response
 
     def get_error(self, **kwargs):
@@ -157,7 +156,7 @@ class Agilent_34972A(VisaResource):
         Returns:
             [list]: last error in the buffer
         """
-        response = self._resource.query('SYSTem:ERRor?', **kwargs)
+        response = self.query_resource('SYSTem:ERRor?', **kwargs)
         return self.resp_format(response, str)
 
     def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs):
@@ -174,14 +173,14 @@ class Agilent_34972A(VisaResource):
         trigger = trigger.upper()
         if trigger in self.valid_trigger:
             self.trigger_mode = self.valid_trigger[trigger]
-            self._resource.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
+            self.write_resource(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
         else:
             raise ValueError("Invalid trigger option")
         return
 
     def get_trigger_source(self, **kwargs):
         self.trigger_mode = self.valid_trigger[self.resp_format(
-            self._resource.query("TRIG:SOUR?", **kwargs), str)]
+            self.query_resource("TRIG:SOUR?", **kwargs), str)]
         return self.trigger_mode
 
     def set_trigger_count(self, count: int = None, **kwargs):
@@ -196,14 +195,14 @@ class Agilent_34972A(VisaResource):
         if count is None:
             return self.get_trigger_count()
         elif isinstance(count, int):
-            self._resource.write(f"TRIG:COUN {count}", **kwargs)
+            self.write_resource(f"TRIG:COUN {count}", **kwargs)
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
 
     def get_trigger_count(self, **kwargs):
-        return int(self.resp_format(self._resource.query("TRIG:COUN?",
-                                                          **kwargs), float))
+        return int(self.resp_format(self.query_resource("TRIG:COUN?",
+                                                        **kwargs), float))
 
     def set_trigger_timer(self, delaytime: float = None, **kwargs):
         """set_trigger_count(delaytime)
@@ -219,14 +218,14 @@ class Agilent_34972A(VisaResource):
         if delaytime is None:
             return self.get_trigger_timer()
         if isinstance(delaytime, (float, int)):
-            self._resource.write(f"TRIG:TIM {delaytime}", **kwargs)
+            self.write_resource(f"TRIG:TIM {delaytime}", **kwargs)
         else:
             raise ValueError("Invalid trigger count number type, use int")
         return
 
     def get_trigger_timer(self, **kwargs):
-        return self.resp_format(self._resource.query("TRIG:TIM?",
-                                                      **kwargs), float)
+        return self.resp_format(self.query_resource("TRIG:TIM?",
+                                                    **kwargs), float)
 
     def trigger(self, wait: bool = True, **kwargs) -> None:
         """trigger(wait)
@@ -241,7 +240,7 @@ class Agilent_34972A(VisaResource):
             None
         """
         if self.trigger_mode == self.valid_trigger['BUS']:
-            self._resource.write('*TRG', **kwargs)
+            self.write_resource('*TRG', **kwargs)
         else:
             print(f"Trigger not configured, set as: {self.trigger_mode}"
                   f" should be {self.valid_trigger['BUS']}")
@@ -264,9 +263,8 @@ class Agilent_34972A(VisaResource):
         returns:
             list (int): channel numbers in scanlist
         """
-        response = self._resource.query("ROUT:SCAN?", **kwargs)
+        response = self.query_resource("ROUT:SCAN?", **kwargs)
         chanstr, self.scanlist = self.format_channel_list(response)
-        # response = response.strip()
         # start = response.find('@')
         # self.scanlist = list(map(int, response[start+1:-1].split(',')))
         return self.scanlist
@@ -322,7 +320,7 @@ class Agilent_34972A(VisaResource):
         chanstr, self.scanlist = self.format_channel_list(chan)
 
         # self.scanlist = ",".join(map(str, chan))  # old way
-        self._resource.write(f'ROUT:SCAN (@{chanstr})', **kwargs)
+        self.write_resource(f'ROUT:SCAN (@{chanstr})', **kwargs)
         if relaytime:
             self.relay_delay(n=len(self.scanlist))
 
@@ -340,15 +338,14 @@ class Agilent_34972A(VisaResource):
             float or list (float): channel measurement(s)
         """
         chanstr, chanlist = self.format_channel_list(chan)
-        response = self._resource.query(f'MEASure? (@{chanstr})', **kwargs)
-        # response = response.strip()
+        response = self.query_resource(f'MEASure? (@{chanstr})', **kwargs)
         # start = response.find('\'')
         try:
             # response = list(map(float, response[start+1:].split(',')))
             response = self.resp_format(response, float)
         except ValueError:  # usually when that channel can't do that!
             print(f"channel {chanstr} unable! Return 0.0")
-            print(f"{self._resource.query('SYSTem:ERRor?')}", **kwargs)
+            print(f"{self.query_resource('SYSTem:ERRor?')}", **kwargs)
             return float(0)
 
         return response
@@ -369,10 +366,9 @@ class Agilent_34972A(VisaResource):
         """
         if chan is not None:
             chanstr, chanlist = self.format_channel_list(chan)
-            response = self._resource.query(f'READ? (@{chanstr})', **kwargs)
+            response = self.query_resource(f'READ? (@{chanstr})', **kwargs)
         else:
-            response = self._resource.query('READ?', **kwargs)
-        # response = response.strip()
+            response = self.query_resource('READ?', **kwargs)
         # start = response.find('@')
         # response = list(map(int, response[start+1:-1].split(',')))
         return self.resp_format(response, float)
@@ -384,7 +380,7 @@ class Agilent_34972A(VisaResource):
         Returns:
             None
         """
-        self._resource.write('INITiate', **kwargs)
+        self.write_resource('INITiate', **kwargs)
 
     def fetch_data(self, **kwargs) -> float:
         """
@@ -394,7 +390,7 @@ class Agilent_34972A(VisaResource):
             [list, float]: data in meter memory resulting from all scans
         """
 
-        response = self._resource.query('FETC?', **kwargs)
+        response = self.query_resource('FETC?', **kwargs)
         return self.resp_format(response, float)
 
     def config_chan(self, chan, mode='volt', acdc='dc',
@@ -488,7 +484,7 @@ class Agilent_34972A(VisaResource):
         for cmd_str in cmds:
             if kwargs.get('verbose', False):
                 print(cmd_str)
-            self._resource.write(cmd_str, **kwargs)
+            self.write_resource(cmd_str, **kwargs)
 
     def close_chan(self, chan, **kwargs):
         """Close relay on channel #
@@ -496,14 +492,14 @@ class Agilent_34972A(VisaResource):
             chan (int): Channel to close
         """
         if isinstance(chan, int):
-            self._resource.write(f"ROUT:CLOS (@{chan})", **kwargs)
+            self.write_resource(f"ROUT:CLOS (@{chan})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
             if kwargs.get('verbose', False):
                 print(f"unable to close multiple channels, closing: "
                       f"{chanlist[0]}")
-            self._resource.write(f"ROUT:CLOS (@{chanstr})", **kwargs)
+            self.write_resource(f"ROUT:CLOS (@{chanstr})", **kwargs)
         return
 
     def open_chan(self, chan, **kwargs) -> None:
@@ -513,7 +509,7 @@ class Agilent_34972A(VisaResource):
         Args:
             chan (int): Channel to Open
         """
-        self._resource.write(f"ROUT:OPEN (@{chan})", **kwargs)
+        self.write_resource(f"ROUT:OPEN (@{chan})", **kwargs)
 
     def relay_delay(self, n: int = 1, ch_change_time=0.05) -> None:
         """relay_delay(n)
@@ -543,17 +539,17 @@ class Agilent_34972A(VisaResource):
         """
         if chan is None:
             chanstr, chanlist = self.format_channel_list(
-                self._resource.write("ROUT:MON?", **kwargs))
+                self.write_resource("ROUT:MON?", **kwargs))
         elif isinstance(chan, int):
             chanstr, chanlist = self.format_channel_list(chan)
-            self._resource.write(f"ROUT:MON (@{chanstr})", **kwargs)
+            self.write_resource(f"ROUT:MON (@{chanstr})", **kwargs)
         else:
             chanstr, chanlist = self.format_channel_list(chan)
             chanstr, chanlist = self.format_channel_list(chanlist[0])
             if verbose:
                 print(f"unable to close multiple channels, closing: "
                       f"{chanlist[0]}")
-            self._resource.write(f'ROUT:MON (@{chanstr})', **kwargs)
+            self.write_resource(f'ROUT:MON (@{chanstr})', **kwargs)
         return chanlist[0]
 
     def mon_data(self, chan: int = None, **kwargs):
@@ -570,13 +566,13 @@ class Agilent_34972A(VisaResource):
         """
         if chan is not None:
             chanstr, chanlist = self.format_channel_list(chan)
-            self._resource.write(f'ROUT:MON (@{chanstr})', **kwargs)
+            self.write_resource(f'ROUT:MON (@{chanstr})', **kwargs)
             self.relay_delay()
         try:
-            response = self._resource.query('ROUT:MON:DATA?', **kwargs)
-        except VisaIOError:  # usually when channel not configured
+            response = self.query_resource('ROUT:MON:DATA?', **kwargs)
+        except IOError:  # usually when channel not configured
             print(f"channel {chanstr} not configured?? Return 0.0")
-            print(f"{self._resource.query('SYSTem:ERRor?')}", **kwargs)
+            print(f"{self.query_resource('SYSTem:ERRor?')}", **kwargs)
             return float(0)
         return self.resp_format(response, float)
 
@@ -596,8 +592,8 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'VOLT':
             raise IOError("dac is not configured to measure voltage")
         else:
-            response = self._resource.query(f"MEAS:VOLT:DC? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:VOLT:DC? (@{chanstr})",
+                                           **kwargs)
             return self.resp_format(response, float)
 
     def measure_voltage_rms(self, chan, **kwargs):
@@ -616,8 +612,8 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'VOLT:AC':
             raise IOError("dac is not configured to measure AC voltage")
         else:
-            response = self._resource.query(f"MEAS:VOLT:AC? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:VOLT:AC? (@{chanstr})",
+                                           **kwargs)
             return self.resp_format(response, float)
 
     def measure_current(self, chan, **kwargs):
@@ -636,8 +632,8 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'CURR':
             raise IOError("dac is not configured to measure current")
         else:
-            response = self._resource.query(f"MEAS:CURR:DC? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:CURR:DC? (@{chanstr})",
+                                           **kwargs)
             return self.resp_format(response, float)
 
     def measure_current_rms(self, chan, **kwargs):
@@ -656,8 +652,8 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'CURR:AC':
             raise IOError("dac is not configured to measure AC current")
         else:
-            response = self._resource.query(f"MEAS:CURR:AC? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:CURR:AC? (@{chanstr})",
+                                           **kwargs)
             return self.resp_format(response, float)
 
     def measure_resistance(self, chan, **kwargs):
@@ -676,8 +672,7 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'RES':
             raise IOError("dac is not configured to measure resistance")
         else:
-            response = self._resource.query(f"MEAS:RES? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:RES? (@{chanstr})", **kwargs)
             return self.resp_format(response, float)
 
     def measure_frequency(self, chan, **kwargs):
@@ -696,8 +691,8 @@ class Agilent_34972A(VisaResource):
         if self.get_mode(chanstr) != 'FREQ':
             raise IOError("dac is not configured to measure frequency")
         else:
-            response = self._resource.query(f"MEAS:FREQ? (@{chanstr})",
-                                             **kwargs)
+            response = self.query_resource(f"MEAS:FREQ? (@{chanstr})",
+                                           **kwargs)
             return self.resp_format(response, float)
 
     def abort(self, **kwargs) -> None:
@@ -709,7 +704,7 @@ class Agilent_34972A(VisaResource):
             None
         """
 
-        self._resource.write('ABORt', **kwargs)
+        self.write_resource('ABORt', **kwargs)
 
     def set_source(self, chan, voltage: float = None, **kwargs):
         """set_source(chan, voltage)
@@ -726,8 +721,7 @@ class Agilent_34972A(VisaResource):
         if voltage is None:
             return self.get_source(chan, **kwargs)
         else:
-            self._resource.write(f"SOUR:VOLT {voltage},(@{chanstr})",
-                                  **kwargs)
+            self.write_resource(f"SOUR:VOLT {voltage},(@{chanstr})", **kwargs)
             return voltage
 
     def get_source(self, chan, **kwargs):
@@ -740,8 +734,7 @@ class Agilent_34972A(VisaResource):
             [list of float or float]: Voltage now output
         """
         chanstr, chanlist = self.format_channel_list(chan)
-        response = self._resource.query(f"SOUR:VOLT? (@{chanstr})",
-                                         **kwargs)
+        response = self.query_resource(f"SOUR:VOLT? (@{chanstr})", **kwargs)
         return self.resp_format(response, float)
 
     def set_measure_time(self, measure_time: float = None):
@@ -754,7 +747,7 @@ class Agilent_34972A(VisaResource):
         return self.measure_time
 
     def set_local(self, **kwargs) -> None:
-        self._resource.write("SYSTem:LOCal", **kwargs)
+        self.write_resource("SYSTem:LOCal", **kwargs)
 
 
 if __name__ == '__main__':
