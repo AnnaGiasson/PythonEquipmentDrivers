@@ -1,5 +1,4 @@
 from pythonequipmentdrivers import VisaResource
-import numpy as np
 
 
 class Agilent_33250A(VisaResource):
@@ -15,10 +14,10 @@ class Agilent_33250A(VisaResource):
     valid_wave_types = ('SIN', 'SQU', 'RAMP', 'PULSE', 'NOIS', 'DC', 'USER')
 
     def set_output_state(self, state: bool) -> None:
-        self._resource.write(f"OUTP {1 if state else 0}")
+        self.write_resource(f"OUTP {1 if state else 0}")
 
     def get_output_state(self) -> bool:
-        response = self._resource.query("OUTP?")
+        response = self.query_resource("OUTP?")
         return bool(int(response))
 
     def set_output_impedance(self, impedance) -> None:
@@ -29,99 +28,96 @@ class Agilent_33250A(VisaResource):
         valid_str = ('MIN', 'MAX', 'INF')
 
         if isinstance(impedance, (float, int)):
-            z = np.clip(impedance, 10, 10e3)
-            self._resource.write(f'OUTP:LOAD {z}')
+            z = min((max((impedance, 10)), 10e3))
+            self.write_resource(f'OUTP:LOAD {z}')
         elif isinstance(impedance, str) and (impedance.upper() in valid_str):
-            self._resource.write(f'OUTP:LOAD {impedance.upper()}')
+            self.write_resource(f'OUTP:LOAD {impedance.upper()}')
 
     def get_output_impedance(self) -> float:
-        response = self._resource.query('OUTP:LOAD?')
+        response = self.query_resource('OUTP:LOAD?')
         return float(response)
 
     def set_waveform_type(self, waveform: str) -> None:
 
         wave = str(waveform).upper()
         if (wave in self.valid_wave_types):
-            self._resource.write(f'FUNC {wave}')
+            self.write_resource(f'FUNC {wave}')
         else:
             raise ValueError('Invalide Waveform type. '
                              f'Supported: {self.valid_wave_types}')
 
     def get_waveform_type(self) -> str:
-        response = self._resource.query('FUNC?')
-        wave = response.strip()
-        return wave.upper()
+        response = self.query_resource('FUNC?')
+        return response.upper()
 
     def set_voltage_amplitude(self, voltage: float) -> None:
-        self._resource.write(f'VOLT {float(voltage)}')
+        self.write_resource(f'VOLT {float(voltage)}')
 
     def get_voltage_amplitude(self) -> float:
-        response = self._resource.query('VOLT?')
+        response = self.query_resource('VOLT?')
         return float(response)
 
     def set_voltage_offset(self, voltage: float) -> None:
-        self._resource.write(f'VOLT:OFFS {float(voltage)}')
+        self.write_resource(f'VOLT:OFFS {float(voltage)}')
 
     def get_voltage_offset(self) -> float:
-        response = self._resource.query('VOLT:OFFS?')
+        response = self.query_resource('VOLT:OFFS?')
         return float(response)
 
     def set_voltage_high(self, voltage: float) -> None:
-        self._resource.write(f'VOLT:HIGH {float(voltage)}')
+        self.write_resource(f'VOLT:HIGH {float(voltage)}')
 
     def get_voltage_high(self) -> float:
-        response = self._resource.query('VOLT:HIGH?')
+        response = self.query_resource('VOLT:HIGH?')
         return float(response)
 
     def set_voltage_low(self, voltage: float) -> None:
-        self._resource.write(f'VOLT:LOW {float(voltage)}')
+        self.write_resource(f'VOLT:LOW {float(voltage)}')
 
     def get_voltage_low(self) -> float:
-        response = self._resource.query('VOLT:LOW?')
+        response = self.query_resource('VOLT:LOW?')
         return float(response)
 
     def set_frequency(self, frequency: float) -> None:
-        self._resource.write(f'FREQ {float(frequency)}')
+        self.write_resource(f'FREQ {float(frequency)}')
 
     def get_frequency(self) -> float:
-        response = self._resource.query('FREQ?')
+        response = self.query_resource('FREQ?')
         return float(response)
 
     def set_voltage_auto_range(self, state: bool) -> None:
-        self._resource.write(f"VOLT:RANG:AUTO {'ON' if state else 'OFF'}")
+        self.write_resource(f"VOLT:RANG:AUTO {'ON' if state else 'OFF'}")
 
     def get_voltage_auto_range(self) -> bool:
-        response = self._resource.query('VOLT:RANG:AUTO?')
-        if '1' in response:
-            return True
-        return False
+        response = self.query_resource('VOLT:RANG:AUTO?')
+        return ('1' in response)
 
     def set_burst_state(self, state: bool) -> None:
-        self._resource.write('BURS:STAT {}'.format(1 if state else 0))
+        self.write_resource(f'BURS:STAT {1 if state else 0}')
 
     def set_pulse_period(self, period: float) -> None:
-        self._resource.write(f'PULSE:PER {float(period)}')
+        self.write_resource(f'PULSE:PER {period}')
 
     def get_pulse_period(self):
-        response = self._resource.query('PULSE:PER?')
+        response = self.query_resource('PULSE:PER?')
         return float(response)
 
-    def set_pulse_width(self, width) -> None:
-        self._resource.write(f'PULSE:WIDT {float(width)}')
+    def set_pulse_width(self, width: float) -> None:
+        self.write_resource(f'PULSE:WIDT {width}')
 
     def get_pulse_width(self) -> float:
-        response = self._resource.query('PULSE:WIDT?')
+        response = self.query_resource('PULSE:WIDT?')
         return float(response)
 
-    def set_square_duty_cycle(self, dc) -> None:
-        self._resource.write(f'FUNC:SQU:DCYCLE {float(dc)}')
+    def set_square_duty_cycle(self, dc: float) -> None:
+        self.write_resource(f'FUNC:SQU:DCYCLE {dc}')
 
     def get_square_duty_cycle(self) -> float:
-        response = self._resource.query('FUNC:SQU:DCYCLE?')
+        response = self.query_resource('FUNC:SQU:DCYCLE?')
         return float(response)
 
     def get_burst_state(self, source: int = 1) -> bool:
-        response = self._resource.query(f'SOUR{int(source)}:BURS:STAT?')
+        response = self.query_resource(f'SOUR{source}:BURS:STAT?')
         return bool(int(response))
 
     def set_burst_mode(self, mode: str) -> None:
@@ -129,24 +125,24 @@ class Agilent_33250A(VisaResource):
         burst_modes = ('TRIG', 'GAT')
         if mode not in burst_modes:
             raise ValueError(f'Invalid mode, valid modes are: {burst_modes}')
-        self._resource.write(f'BURS:MODE {mode}')
+        self.write_resource(f'BURS:MODE {mode}')
 
     def get_burst_mode(self) -> str:
-        response = self._resource.query('BURS:MODE?')
-        return response.strip().lower()
+        response = self.query_resource('BURS:MODE?')
+        return response.lower()
 
     def set_burst_ncycles(self, ncycles: int) -> None:
         str_options = ['INF', 'MIN', 'MAX']
         if isinstance(ncycles, int):
-            self._resource.write(f'BURS:NCYC {ncycles}')
+            self.write_resource(f'BURS:NCYC {ncycles}')
         elif isinstance(ncycles, str) and (ncycles.upper() in str_options):
-            self._resource.write(f'BURS:NCYC {ncycles.upper()}')
+            self.write_resource(f'BURS:NCYC {ncycles.upper()}')
         else:
             raise ValueError('invalid entry for ncycles')
 
     def get_burst_ncycles(self):
-        response = self._resource.query('BURS:NCYC?')
+        response = self.query_resource('BURS:NCYC?')
         return int(float(response))
 
     def trigger(self) -> None:
-        self._resource.write('TRIG')
+        self.write_resource('TRIG')
