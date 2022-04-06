@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Union
 from pythonequipmentdrivers import VisaResource
 import numpy as np
 
@@ -45,16 +45,16 @@ class Keysight_33500B(VisaResource):
         amplitude = kwargs.get('amplitude', self.get_voltage(source))
         offset = kwargs.get('offset', self.get_voltage_offset(source))
 
-        self._resource.write('SOUR{}:APPL:{} {}, {}, {}'.format(source,
-                                                                 wave_type,
-                                                                 frequency,
-                                                                 amplitude,
-                                                                 offset))
+        self.write_resource('SOUR{}:APPL:{} {}, {}, {}'.format(source,
+                                                               wave_type,
+                                                               frequency,
+                                                               amplitude,
+                                                               offset))
 
     def get_waveform_config(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:APPL?')
+        response = self.query_resource(f'SOUR{source}:APPL?')
 
-        response = response.strip().replace('"', '')
+        response = response.replace('"', '')
 
         wave_type, wave_info = response.split()
 
@@ -62,130 +62,124 @@ class Keysight_33500B(VisaResource):
         freq, amp, off = map(float, wave_info.split(','))
         return (wave_type, freq, amp, off)
 
-    def set_voltage(self, voltage: float, source: int = 1):
-        self._resource.write(f'SOUR{source}:VOLT {voltage}')
-        return None
+    def set_voltage(self, voltage: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:VOLT {voltage}')
 
-    def get_voltage(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:VOLT?')
+    def get_voltage(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:VOLT?')
         return float(response)
 
-    def set_voltage_offset(self, voltage: float, source: int = 1):
-        self._resource.write(f'SOUR{source}:VOLT:OFFS {voltage}')
-        return None
+    def set_voltage_offset(self, voltage: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:VOLT:OFFS {voltage}')
 
-    def get_voltage_offset(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:VOLT:OFFS?')
+    def get_voltage_offset(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:VOLT:OFFS?')
         return float(response)
 
-    def set_voltage_high(self, voltage: float, source: int = 1):
-        self._resource.write(f'SOUR{source}:VOLT:HIGH {voltage}')
-        return None
+    def set_voltage_high(self, voltage: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:VOLT:HIGH {voltage}')
 
-    def get_voltage_high(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:VOLT:HIGH?')
+    def get_voltage_high(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:VOLT:HIGH?')
         return float(response)
 
-    def set_voltage_low(self, voltage: float, source: int = 1):
-        self._resource.write(f'SOUR{source}:VOLT:LOW {voltage}')
-        return None
+    def set_voltage_low(self, voltage: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:VOLT:LOW {voltage}')
 
-    def get_voltage_low(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:VOLT:LOW?')
+    def get_voltage_low(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:VOLT:LOW?')
         return float(response)
 
-    def set_frequency(self, frequency: float, source: int = 1):
-        self._resource.write(f'SOUR{source}:FREQ {frequency}')
-        return None
+    def set_frequency(self, frequency: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FREQ {frequency}')
 
-    def get_frequency(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FREQ?')
+    def get_frequency(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FREQ?')
         return float(response)
 
-    def set_wave_type(self, wave_type: str, source: int = 1):
-        self._resource.write(f'SOUR{source}:FUNC {wave_type}')
-        return None
+    def set_wave_type(self, wave_type: str, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FUNC {wave_type}')
 
-    def get_wave_type(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC?')
-        return response.strip().lower()
+    def get_wave_type(self, source: int = 1) -> str:
+        response = self.query_resource(f'SOUR{source}:FUNC?')
+        return response.lower()
 
     def set_pulse_dc(self, duty_cycle, source: int = 1) -> None:
         dc = round(duty_cycle, 2)
-        self._resource.write(f'SOUR{source}:FUNC:PULSE:DCYC {dc}')
+        self.write_resource(f'SOUR{source}:FUNC:PULSE:DCYC {dc}')
 
-    def get_pulse_dc(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:PULSE:DCYC?')
+    def get_pulse_dc(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FUNC:PULSE:DCYC?')
         return float(response)
 
-    def set_pulse_width(self, width, source: int = 1):
-        self._resource.write(f'SOUR{source}:FUNC:PULSE:WIDT {width}')
-        return None
+    def set_pulse_width(self, width: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FUNC:PULSE:WIDT {width}')
 
-    def get_pulse_width(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:PULSE:WIDT?')
+    def get_pulse_width(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FUNC:PULSE:WIDT?')
         return float(response)
 
-    def set_pulse_period(self, period, source: int = 1):
-        self._resource.write(f'SOUR{source}:FUNC:PULSE:PER {period}')
-        return None
+    def set_pulse_period(self, period: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FUNC:PULSE:PER {period}')
 
-    def get_pulse_period(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:PULSE:PER?')
+    def get_pulse_period(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FUNC:PULSE:PER?')
         return float(response)
 
-    def set_pulse_edge_time(self, time, which: str = 'both', source: int = 1):
+    def set_pulse_edge_time(self, time: float, which: str = 'both',
+                            source: int = 1) -> None:
+
         which = which.upper()
         if which == 'BOTH':
-            self._resource.write(f'SOUR{source}:FUNC:PULSE:TRAN {time}')
+            self.write_resource(f'SOUR{source}:FUNC:PULSE:TRAN {time}')
+
         elif which in ['RISE', 'RISING', 'R', 'LEAD', 'LEADING']:
-            self._resource.write(f'SOUR{source}:FUNC:PULSE:TRAN:LEAD {time}')
+            self.write_resource(f'SOUR{source}:FUNC:PULSE:TRAN:LEAD {time}')
+
         elif which in ['FALL', 'FALLING', 'F', 'TRAIL', 'TRAILING']:
-            self._resource.write(f'SOUR{source}:FUNC:PULSE:TRAN:TRA {time}')
-        return None
+            self.write_resource(f'SOUR{source}:FUNC:PULSE:TRAN:TRA {time}')
+        else:
+            raise ValueError('Invalid arguement for arg "which"')
 
     def get_pulse_edge_time(self, which: str = 'both', source: int = 1):
         cmd_str = f'SOUR{source}:FUNC:PULSE:TRAN'
         which = which.upper()
         if which == 'BOTH':
-            response = [self._resource.query(cmd_str + 'LEAD?'),
-                        self._resource.query(cmd_str + 'TRA?')]
-        elif which in ['RISE', 'RISING', 'R', 'LEAD', 'LEADING']:
-            response = self._resource.query(cmd_str + 'LEAD?')
-        elif which in ['FALL', 'FALLING', 'F', 'TRAIL', 'TRAILING']:
-            response = self._resource.query(cmd_str + 'TRA?')
+            response = [self.query_resource(f'{cmd_str}LEAD?'),
+                        self.query_resource(f'{cmd_str}TRA?')]
+        elif which in {'RISE', 'RISING', 'R', 'LEAD', 'LEADING'}:
+            response = self.query_resource(f'{cmd_str}LEAD?')
+        elif which in {'FALL', 'FALLING', 'F', 'TRAIL', 'TRAILING'}:
+            response = self.query_resource(f'{cmd_str}TRA?')
         else:
             raise ValueError('Invalid option for "which" arg')
+
         if isinstance(response, list):
             return tuple(map(float, response))
-        else:
-            return float(response)
+        return float(response)
 
-    def set_pulse_hold(self, param: str, source: int = 1):
+    def set_pulse_hold(self, param: str, source: int = 1) -> None:
         param = param.upper()
         if param not in ['DCYC', 'WIDT']:
             raise ValueError(f"Invalid param {param}, must by 'DCYC'/'WIDT'")
-        self._resource.write(f'SOUR{source}:FUNC:PULSE:HOLD {param}')
-        return None
+        self.write_resource(f'SOUR{source}:FUNC:PULSE:HOLD {param}')
 
-    def get_pulse_hold(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:PULSE:HOLD?')
-        return response.strip().lower()
+    def get_pulse_hold(self, source: int = 1) -> str:
+        response = self.query_resource(f'SOUR{source}:FUNC:PULSE:HOLD?')
+        return response.lower()
 
-    def set_square_dc(self, duty_cycle, source: int = 1):
-        self._resource.write(f'SOUR{source}:FUNC:SQU:DCYC {duty_cycle}')
-        return None
+    def set_square_dc(self, duty_cycle: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FUNC:SQU:DCYC {duty_cycle}')
 
-    def get_square_dc(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:SQU:DCYC?')
+    def get_square_dc(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FUNC:SQU:DCYC?')
         return float(response)
 
-    def set_square_period(self, period, source: int = 1):
-        self._resource.write(f'SOUR{source}:FUNC:SQU:PER {period}')
-        return None
+    def set_square_period(self, period: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:FUNC:SQU:PER {period}')
 
-    def get_square_period(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:FUNC:SQU:PER?')
+    def get_square_period(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:FUNC:SQU:PER?')
         return float(response)
 
     def set_burst_mode(self, mode: str, source: int = 1) -> None:
@@ -193,161 +187,150 @@ class Keysight_33500B(VisaResource):
         burst_modes = ('TRIG', 'GAT')
         if mode not in burst_modes:
             raise ValueError(f'Invalid mode, valid modes are: {burst_modes}')
-        self._resource.write(f'SOUR{source}:BURS:MODE {mode}')
+        self.write_resource(f'SOUR{source}:BURS:MODE {mode}')
 
     def get_burst_mode(self, source: int = 1) -> str:
-        response = self._resource.query(f'SOUR{source}:BURS:MODE?')
-        return response.strip().lower()
+        response = self.query_resource(f'SOUR{source}:BURS:MODE?')
+        return response.lower()
 
-    def set_burst_gate_polarity(self, polarity: str, source: int = 1):
+    def set_burst_gate_polarity(self, polarity: str, source: int = 1) -> None:
         polarity = polarity.upper()
         if polarity not in ['NORM', 'INV']:
             raise ValueError('Invalid mode, valid modes are "NORM"/"INV"')
-        self._resource.write(f'SOUR{source}:BURS:GATE:POL {polarity}')
-        return None
+        self.write_resource(f'SOUR{source}:BURS:GATE:POL {polarity}')
 
-    def get_burst_gate_polarity(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:BURS:GATE:POL?')
-        return response.strip().lower()
+    def get_burst_gate_polarity(self, source: int = 1) -> str:
+        response = self.query_resource(f'SOUR{source}:BURS:GATE:POL?')
+        return response.lower()
 
-    def set_burst_ncycles(self, ncycles: int, source: int = 1):
+    def set_burst_ncycles(self, ncycles: int, source: int = 1) -> None:
         str_options = ['INF', 'MIN', 'MAX']
         if isinstance(ncycles, int):
-            self._resource.write(f'SOUR{source}:BURS:NCYC {ncycles}')
+            self.write_resource(f'SOUR{source}:BURS:NCYC {ncycles}')
         elif isinstance(ncycles, str) and (ncycles.upper() in str_options):
-            self._resource.write(f'SOUR{source}:BURS:NCYC {ncycles.upper()}')
+            self.write_resource(f'SOUR{source}:BURS:NCYC {ncycles.upper()}')
         else:
             raise ValueError('invalid entry for ncycles')
-        return None
 
-    def get_burst_ncycles(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:BURS:NCYC?')
+    def get_burst_ncycles(self, source: int = 1) -> int:
+        response = self.query_resource(f'SOUR{source}:BURS:NCYC?')
         return int(float(response))
 
-    def set_burst_phase(self, phase: float, source: int = 1):
+    def set_burst_phase(self, phase: float, source: int = 1) -> None:
         str_options = ['MIN', 'MAX']
         if isinstance(phase, (float, int)):
-            self._resource.write(f'SOUR{source}:BURS:PHASE {phase}')
+            self.write_resource(f'SOUR{source}:BURS:PHASE {phase}')
         elif isinstance(phase, str) and (phase.upper() in str_options):
-            self._resource.write(f'SOUR{source}:BURS:PHASE {phase.upper()}')
+            self.write_resource(f'SOUR{source}:BURS:PHASE {phase.upper()}')
         else:
             raise ValueError('invalid entry for phase')
-        return None
 
-    def get_burst_phase(self, source: int = 1):
-        response = self._resource.query(f'SOUR{source}:BURS:PHASE?')
+    def get_burst_phase(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:BURS:PHASE?')
         return float(response)
 
     def set_burst_state(self, state: bool, source: int = 1) -> None:
-        self._resource.write('SOUR{}:BURS:STAT {}'.format(int(source),
-                                                           1 if state else 0))
+        self.write_resource(f'SOUR{source}:BURS:STAT {1 if state else 0}')
 
     def get_burst_state(self, source: int = 1) -> bool:
-        response = self._resource.query(f'SOUR{int(source)}:BURS:STAT?')
+        response = self.query_resource(f'SOUR{int(source)}:BURS:STAT?')
         return bool(int(response))
 
     def trigger(self, source: int = 1) -> None:
-        self._resource.write(f'TRIG{int(source)}')
+        self.write_resource(f'TRIG{int(source)}')
 
-    def get_trigger_count(self, source: int = 1):
-        response = self._resource.query(f'TRIG{source}:COUN?')
+    def get_trigger_count(self, source: int = 1) -> int:
+        response = self.query_resource(f'TRIG{source}:COUN?')
         return int(float(response))
 
-    def set_trigger_delay(self, delay, source: int = 1):
+    def set_trigger_delay(self, delay: Union[float, int, str],
+                          source: int = 1) -> None:
         str_options = ['MIN', 'MAX']
         if isinstance(delay, (float, int)):
-            self._resource.write(f'TRIG{source}:DEL {delay}')
+            self.write_resource(f'TRIG{source}:DEL {delay}')
         elif isinstance(delay, str) and (delay.upper() in str_options):
-            self._resource.write(f'TRIG{source}:DEL {delay.upper()}')
+            self.write_resource(f'TRIG{source}:DEL {delay.upper()}')
         else:
             raise ValueError('invalid entry for delay')
-        return None
 
-    def get_trigger_delay(self, source: int = 1):
-        response = self._resource.query(f'TRIG{source}:DEL?')
+    def get_trigger_delay(self, source: int = 1) -> float:
+        response = self.query_resource(f'TRIG{source}:DEL?')
         return float(response)
 
-    def set_trigger_source(self, trig_source, source: int = 1):
-        trig_opts = ['IMM', 'IMMEDIATE', 'EXT', 'EXTERNAL',
-                     'TIM', 'TIMER', 'BUS']
+    def set_trigger_source(self, trig_source: str, source: int = 1) -> None:
+        trig_opts = {'IMM', 'IMMEDIATE', 'EXT', 'EXTERNAL',
+                     'TIM', 'TIMER', 'BUS'}
         trig_source = trig_source.upper()
         if trig_source in trig_opts:
-            self._resource.write(f'TRIG{source}:SOUR {trig_source}')
+            self.write_resource(f'TRIG{source}:SOUR {trig_source}')
         else:
             raise ValueError(f'Invalid arg for trig_source ({trig_opts})')
-        return None
 
-    def get_trigger_source(self, source: int = 1):
-        response = self._resource.query(f'TRIG{source}:SOUR?')
-        return response.strip().lower()
+    def get_trigger_source(self, source: int = 1) -> str:
+        response = self.query_resource(f'TRIG{source}:SOUR?')
+        return response.lower()
 
     @property
-    def angle_unit(self):
-        return self._resource.query('UNIT:ANGL?').strip().lower()
+    def angle_unit(self) -> str:
+        return self.query_resource('UNIT:ANGL?').strip().lower()
 
-    def set_voltage_display_mode(self, mode: str):
+    def set_voltage_display_mode(self, mode: str) -> None:
         mode = mode.upper()
-        if mode in ['AMPL', 'HIGH', 'AMPLITUDEOFF', 'HIGHLOW']:
-            self._resource.write(f'DISP:UNIT:VOLT {mode}')
+        if mode in {'AMPL', 'HIGH', 'AMPLITUDEOFF', 'HIGHLOW'}:
+            self.write_resource(f'DISP:UNIT:VOLT {mode}')
         else:
             raise ValueError('Invalid value for arg "mode"')
-        return None
 
     @property
-    def voltage_display_mode(self):
-        response = self._resource.query('DISP:UNIT:VOLT?')
-        return response.strip().lower()
+    def voltage_display_mode(self) -> str:
+        response = self.query_resource('DISP:UNIT:VOLT?')
+        return response.lower()
 
-    def set_pulse_duration_display_mode(self, mode: str):
+    def set_pulse_duration_display_mode(self, mode: str) -> None:
         mode = mode.upper()
-        if mode in ['WIDT', 'WIDTH', 'DUTY']:
-            self._resource.write(f'DISP:UNIT:PULS {mode}')
+        if mode in {'WIDT', 'WIDTH', 'DUTY'}:
+            self.write_resource(f'DISP:UNIT:PULS {mode}')
         else:
             raise ValueError('Invalid value for arg "mode"')
-        return None
 
     @property
-    def pulse_duration_display_mode(self):
-        response = self._resource.query('DISP:UNIT:PULS?')
-        return response.strip().lower()
+    def pulse_duration_display_mode(self) -> str:
+        response = self.query_resource('DISP:UNIT:PULS?')
+        return response.lower()
 
-    def set_horizontal_display_mode(self, mode: str):
+    def set_horizontal_display_mode(self, mode: str) -> None:
         mode = mode.upper()
-        if mode in ['FREQ', 'FREQUENCY', 'PER', 'PERIOD']:
-            self._resource.write(f'DISP:UNIT:RATE {mode}')
+        if mode in {'FREQ', 'FREQUENCY', 'PER', 'PERIOD'}:
+            self.write_resource(f'DISP:UNIT:RATE {mode}')
         else:
             raise ValueError('Invalid value for arg "mode"')
-        return None
 
     @property
-    def horizontal_display_mode(self):
-        response = self._resource.query('DISP:UNIT:RATE?')
-        return response.strip().lower()
+    def horizontal_display_mode(self) -> str:
+        response = self.query_resource('DISP:UNIT:RATE?')
+        return response.lower()
 
     def set_output_state(self, state: bool, source: int = 1) -> None:
-        self._resource.write(f"OUTP{int(source)} {1 if state else 0}")
+        self.write_resource(f"OUTP{source} {1 if state else 0}")
 
     def get_output_state(self, source: int = 1) -> bool:
-        response = self._resource.query(f"OUTP{int(source)}?")
+        response = self.query_resource(f"OUTP{int(source)}?")
         return bool(int(response))
 
-    def set_output_impedance(self, impedance, source=1):
+    def set_output_impedance(self, impedance, source: int = 1) -> None:
         """Valid options are 1-10k, min, max, and inf"""
-        self._resource.write(f'OUTP{source}:LOAD {impedance}')
-        return None
+        self.write_resource(f'OUTP{source}:LOAD {impedance}')
 
-    def get_output_impedance(self, source=1):
-        response = self._resource.query(f'OUTP{source}:LOAD?')
+    def get_output_impedance(self, source=1) -> float:
+        response = self.query_resource(f'OUTP{source}:LOAD?')
         return float(response)
 
-    def set_display_text(self, text: str):
-        self._resource.write(f'DISP:TEXT "{text}"')
-        return None
+    def set_display_text(self, text: str) -> None:
+        self.write_resource(f'DISP:TEXT "{text}"')
 
-    def get_display_text(self):
-        response = self._resource.query('DISP:TEXT?')
-        text = response.strip().replace('"', '')
-        return text
+    def get_display_text(self) -> str:
+        response = self.query_resource('DISP:TEXT?')
+        return response.replace('"', '')
 
     def clear_display_text(self):
         return self.set_display_text("")
@@ -366,10 +349,4 @@ class Keysight_33500B(VisaResource):
 
         # send data
         cmd_str = "SOUR:DATA:ARB1:DAC"
-        self._resource.write('{} {},{}'.format(cmd_str,
-                                                arb_name,
-                                                ",".join(map(str, data))))
-
-
-if __name__ == "__main__":
-    pass
+        self.write_resource(f'{cmd_str} {arb_name},{",".join(map(str, data))}')
