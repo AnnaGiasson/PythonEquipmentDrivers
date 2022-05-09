@@ -74,6 +74,8 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
             resource_id = "Failed to connect"
         except IOError:
             resource_id = "No response"
+        except Exception:
+            resource_id = f"Failed to instantiate resouce at: {addr}"
         else:
             visa_resources.append((addr, resource_id))
             del resource
@@ -184,7 +186,8 @@ class VisaResource:
         self._resource.timeout = int(timeout)  # ms
 
     def __del__(self) -> None:
-        self._resource.close()
+        if hasattr(self, '_resource'):
+            self._resource.close()
 
     def __repr__(self) -> str:
 

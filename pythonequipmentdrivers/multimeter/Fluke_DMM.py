@@ -1,3 +1,4 @@
+from typing import Set
 from pythonequipmentdrivers import VisaResource
 
 
@@ -16,13 +17,12 @@ class Fluke_DMM(VisaResource):
     shunt. This factor defaults to 1 (no effect on measurement).
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        self.factor = kwargs.get('factor', 1.0)
-        self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC',
-                            'OHMS', 'FREQ', 'CONT')
-
-        return None
+        self.factor: float = kwargs.get('factor', 1.0)
+        self.valid_modes: Set[str] = {
+            'AAC', 'ADC', 'VAC', 'VDC', 'OHMS', 'FREQ', 'CONT'
+            }
 
     def _measure_signal(self):
         """
@@ -34,10 +34,10 @@ class Fluke_DMM(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("VAL1?")
+        response = self.query_resource("VAL1?")
         return self.factor*float(response)
 
-    def set_range(self, n, auto_range=False):
+    def set_range(self, n: int, auto_range: bool = False) -> None:
         """
         set_range(n, auto_range=False)
 
@@ -55,14 +55,12 @@ class Fluke_DMM(VisaResource):
         """
 
         if auto_range:
-            self._resource.write("AUTO")
+            self.write_resource("AUTO")
 
-        if n in range(0, 7):
-            self._resource.write(f"RANGE {n}")
+        if 0 <= n < 7:
+            self.write_resource(f"RANGE {n}")
         else:
             raise ValueError("Invalid range option, should be 1-7")
-
-        return None
 
     def get_range(self):
         """
@@ -75,10 +73,10 @@ class Fluke_DMM(VisaResource):
         returns: int
         """
 
-        response = self._resource.query("RANGE1?")
+        response = self.query_resource("RANGE1?")
         return int(response)
 
-    def set_rate(self, rate):
+    def set_rate(self, rate: str) -> None:
         """
         set_rate(rate)
 
@@ -90,13 +88,12 @@ class Fluke_DMM(VisaResource):
         """
 
         rate = rate.upper()
-        if rate in ['S', 'M', 'F']:
-            self._resource.write(f"RATE {rate}")
+        if rate in {'S', 'M', 'F'}:
+            self.write_resource(f"RATE {rate}")
         else:
             raise ValueError("Invalid rate option, should be 'S', 'M', or 'F'")
-        return None
 
-    def get_rate(self):
+    def get_rate(self) -> str:
         """
         get_rate()
 
@@ -104,10 +101,10 @@ class Fluke_DMM(VisaResource):
         returns: str
         """
 
-        response = self._resource.query("RATE?")
+        response = self.query_resource("RATE?")
         return response
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: str) -> None:
         """
         set_mode(mode)
 
@@ -122,13 +119,12 @@ class Fluke_DMM(VisaResource):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self._resource.write(f"FUNC1 {mode}")
+            self.write_resource.write(f"FUNC1 {mode}")
         else:
             raise ValueError("Invalid mode option, valid options are: "
-                             + f"{', '.join(self.valid_modes)}")
-        return None
+                             + ', '.join(self.valid_modes))
 
-    def get_mode(self):
+    def get_mode(self) -> str:
         """
         get_mode()
 
@@ -138,7 +134,7 @@ class Fluke_DMM(VisaResource):
         returns: str
         """
 
-        response = self._resource.query("FUNC1?")
+        response = self.query_resource("FUNC1?")
         return response
 
     def measure_voltage(self):

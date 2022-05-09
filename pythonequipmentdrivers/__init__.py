@@ -1,5 +1,4 @@
-from .core import (VisaResource, find_visa_resources, identify_visa_resources,
-                   VisaIOError)
+from .core import VisaResource, find_visa_resources, identify_visa_resources
 
 from .resource_collections import connect_resources, ResourceCollection
 
@@ -20,7 +19,6 @@ from . import temperaturecontroller
 
 
 __all__ = ['VisaResource', 'find_visa_resources', 'identify_visa_resources',
-           'VisaIOError',
 
            'connect_resources', 'ResourceCollection',
 
