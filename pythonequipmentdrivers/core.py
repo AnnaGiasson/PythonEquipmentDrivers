@@ -98,6 +98,9 @@ class VisaResource:
         address (str): Visa resource address to connect to
 
     Kwargs:
+        clear (bool): whether or not to clear the VISA resource's input/output
+            buffers after instantiating the connection at class creation (see
+            self.clear() for more details). Defaults to False.
         open_timeout (float, optional): The time to wait (in seconds) when
             trying to connect to a resource before this operation returns an
             error; resolves to the nearest millisecond. Defaults to 1.0.
@@ -110,7 +113,7 @@ class VisaResource:
 
     idn: str  # str: Description which uniquely identifies the instrument
 
-    def __init__(self, address: str, **kwargs) -> None:
+    def __init__(self, address: str, clear: bool = False, **kwargs) -> None:
         self.address = address
 
         default_settings = {
@@ -122,15 +125,14 @@ class VisaResource:
         try:
             self._resource = rm.open_resource(self.address, **default_settings)
 
-            self.idn = self._resource.query("*IDN?").strip()
-        except pyvisa.VisaIOError as error:
-            raise IOError(
-                f"Error communicating with resource at: {address}", error
-                )
+            self.idn = self.query_resource("*IDN?")
         except (pyvisa.Error) as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
                 )
+
+        if clear:
+            self.clear()
 
         self.timeout = int(kwargs.get("timeout", 1000))  # ms
 
@@ -148,6 +150,36 @@ class VisaResource:
         """
 
         self._resource.write("*CLS", **kwargs)
+
+    def clear(self) -> None:
+        """
+        clear()
+
+        The clear() operation clears the device input and output buffers. The
+        bus-specific details are:
+
+        Clear for 488.2 Instruments (GPIB, VXI, TCPIP, and USB)
+
+        For a GPIB device, VISA sends the Selected Device Clear command.
+        For a VXI device, VISA sends the Word Serial Clear command.
+        For a USB device, VISA sends the INITIATE_CLEAR and CHECK_CLEAR_STATUS
+        commands on the control pipe.
+        Clear for Non-488.2 Instruments (Serial INSTR, TCPIP SOCKET, and USB
+        RAW)
+
+        For Serial INSTR sessions, VISA flushes (discards) the I/O output
+        buffer, sends a break, and then flushes (discards) the I/O input
+        buffer.
+        For TCPIP SOCKET sessions, VISA flushes (discards) the I/O buffers.
+        For USB RAW sessions, VISA resets the endpoints referred to by the
+        attributes VI_ATTR_USB_BULK_IN_PIPE and VI_ATTR_USB_BULK_OUT_PIPE.
+        Invoking viClear() also discards the read and write buffers used by the
+        formatted I/O services for that session.
+        """
+        try:
+            self._resource.clear()
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with the resource\n", error)
 
     def reset(self, **kwargs) -> None:
         """
@@ -213,7 +245,7 @@ class VisaResource:
         try:
             self._resource.write(message, **kwargs)
         except pyvisa.VisaIOError as error:
-            raise IOError("Error communicating with resource\n", error)
+            raise IOError("Error communicating with the resource\n", error)
 
     def query_resource(self, message: str, **kwargs) -> str:
         """
@@ -237,7 +269,7 @@ class VisaResource:
             return response.strip()
 
         except pyvisa.VisaIOError as error:
-            raise IOError("Error communicating with resource\n", error)
+            raise IOError("Error communicating with the resource\n", error)
 
     def read_resource(self, **kwargs) -> str:
         """
@@ -255,4 +287,23 @@ class VisaResource:
             return response.strip()
 
         except pyvisa.VisaIOError as error:
-            raise IOError("Error communicating with resource\n", error)
+            raise IOError("Error communicating with the resource\n", error)
+
+    def read_resource_raw(self, **kwargs) -> bytes:
+        """
+        read_resource_raw(**kwargs)
+
+        Reads data back from the connected resource and returns it in its
+        recieved raw byte format with no decoding. This can be useful for
+        responses which do not use a simple ASCII or UTF-8 encoding.
+
+        Returns:
+            bytes: data recieved from a connected resource
+        """
+
+        try:
+            response = self._resource.read_raw(**kwargs)
+            return response
+
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with the resource\n", error)
