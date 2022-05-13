@@ -1,3 +1,5 @@
+from typing import Tuple, Union
+
 from pythonequipmentdrivers import VisaResource
 
 
@@ -10,123 +12,444 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
     object for accessing basic functionallity of the Chroma_66204 power meter
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        return None
 
-    def format_data(self, data):
+        # sets units of energy to joules insterad of watt-hours
+        self.write_resource('ENER:MODE JOULE')
+
+    def format_data(self, query_response: str) -> Union[float, Tuple[float]]:
         """
-        type-casts query data to float
-        if data is a comma-separated list it will split the data typecast to
-        float and return a list
+        format_data(query_response)
+
+        Type-casts data contained in a query response to a float
+        if data is a comma-separated list it will split into a series of values
+        before then typecasting each
+
+        Args:
+            query_response (str): string of ascii characters containing a
+                encoded floating point/integer number, or a comma-separated
+                list of such values.
+
+        Returns:
+            Union[float, Tuple[float]]: The number, or series of numbers that
+                were encoded in the input string
         """
 
-        try:
-            data = float(data)
+        if query_response.count(',') > 0:  # multiple channels selected
+            return tuple(float(x) for x in query_response.split(','))
 
-        except ValueError:  # multiple channels selected
-            data = [float(x) for x in data.split(',')]
+        return float(query_response)
 
-        return data
+    def get_voltage_rms(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_voltage_rms(phase=0)
 
-    def get_voltage_rms(self, channel=0):
-        v_rms = self._resource.query(f'FETC:VOLT:RMS? {channel}')
+        Queries the measured value of the RMS voltage for the specified
+        phase(s).
 
-        return self.format_data(v_rms)
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
 
-    def get_voltage_peak(self, channel=0, polarity='positive'):
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the RMS voltage for the
+                given phase(s) in Vrms
+        """
 
-        if polarity == 'positive':
-            v_pk = self._resource.query(f'FETC:VOLT:PEAK+? {channel}')
-        elif polarity == 'negative':
-            v_pk = self._resource.query(f'FETC:VOLT:PEAK-? {channel}')
-        else:
-            raise ValueError("invalid option for polarity"
-                             + "(should be 'positive' or 'negative')")
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
 
-        return self.format_data(v_pk)
+        response = self.query_resource(f'FETC:VOLT:RMS? {phase}')
+        return self.format_data(response)
 
-    def get_voltage_dc(self, channel=0):
-        v_dc = self._resource.query(f'FETC:VOLT:DC? {channel}')
+    def get_voltage_peak(self, phase: int = 0,
+                         use_positive: bool = True
+                         ) -> Union[float, Tuple[float]]:
+        """
+        get_voltage_peak(phase=0, use_positive=True)
 
-        return self.format_data(v_dc)
+        Queries the measured value of the peak voltage for the specified
+        phase(s).
 
-    def get_voltage_thd(self, channel=0):
-        v_thd = self._resource.query(f'FETC:VOLT:THD? {channel}')
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+            use_positive (bool, optional): If true this will return the
+                positive peak voltage otherwise the peak negative voltage will
+                be returned. Defaults to True.
 
-        return self.format_data(v_thd)
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the Peak voltage for the
+                given phase(s) in Volts
+        """
 
-    def get_current_rms(self, channel=0):
-        i_rms = self._resource.query(f'FETC:CURR:RMS? {channel}')
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
 
-        return self.format_data(i_rms)
+        response = self.query_resource(
+            f'FETC:VOLT:PEAK{"+" if use_positive else "-"}? {phase}'
+            )
 
-    def get_current_peak(self, channel=0, polarity='positive'):
+        return self.format_data(response)
 
-        if polarity == 'positive':
-            i_pk = self._resource.query(f'FETC:CURR:PEAK+? {channel}')
-        elif polarity == 'negative':
-            i_pk = self._resource.query(f'FETC:CURR:PEAK-? {channel}')
-        else:
-            raise ValueError("invalid option for polarity"
-                             + "(should be 'positive' or 'negative')")
+    def get_voltage_dc(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_voltage_dc(phase=0)
 
-        return self.format_data(i_pk)
+        Queries the measured value of the DC voltage for the specified
+        phase(s).
 
-    def get_current_dc(self, channel=0):
-        i_dc = self._resource.query(f'FETC:CURR:DC? {channel}')
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
 
-        return self.format_data(i_dc)
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the DC voltage for the
+                given phase(s) in Volts
+        """
 
-    def get_current_inrush(self, channel=0):
-        i_inrush = self._resource.query(f'FETC:CURR:INR? {channel}')
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
 
-        return self.format_data(i_inrush)
+        response = self.query_resource(f'FETC:VOLT:DC? {phase}')
+        return self.format_data(response)
 
-    def get_current_crestfactor(self, channel=0):
-        i_crestfactor = self._resource.query(f'FETC:CURR:CRES? {channel}')
+    def get_voltage_thd(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_voltage_thd(phase=0)
 
-        return self.format_data(i_crestfactor)
+        Queries the measured value of the voltage THD for the specified
+        phase(s).
 
-    def get_current_thd(self, channel=0):
-        i_thd = self._resource.query(f'FETC:CURR:THD? {channel}')
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
 
-        return self.format_data(i_thd)
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the voltage THD for the
+                given phase(s)
+        """
 
-    def get_power_real(self, channel=0):
-        p_real = self._resource.query(f'FETC:POW:REAL? {channel}')
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
 
-        return self.format_data(p_real)
+        response = self.query_resource(f'FETC:VOLT:THD? {phase}')
+        return self.format_data(response)
 
-    def get_power_reactive(self, channel=0):
-        p_reactive = self._resource.query(f'FETC:POW:REAC? {channel}')
+    def get_current_rms(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_current_rms(phase=0)
 
-        return self.format_data(p_reactive)
+        Queries the measured value of the RMS current for the specified
+        phase(s).
 
-    def get_power_apparent(self, channel=0):
-        p_apparent = self._resource.query(f'FETC:POW:APP? {channel}')
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
 
-        return self.format_data(p_apparent)
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the RMS current for the
+                given phase(s) in Arms
+        """
 
-    def get_power_factor(self, channel=0):
-        pf = self._resource.query(f'FETC:POW:PFAC? {channel}')
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
 
-        return self.format_data(pf)
+        response = self.query_resource(f'FETC:CURR:RMS? {phase}')
+        return self.format_data(response)
 
-    def get_power_dc(self, channel=0):
-        p_dc = self._resource.query(f'FETC:POW:DC? {channel}')
+    def get_current_peak(self, phase: int = 0,
+                         use_positive: bool = True
+                         ) -> Union[float, Tuple[float]]:
 
-        return self.format_data(p_dc)
+        """
+        get_current_peak(phase=0, use_positive=True)
 
-    def get_power_energy(self, channel=0):
-        p_energy = self._resource.query(f'FETC:POW:ENER? {channel}')
+        Queries the measured value of the peak current for the specified
+        phase(s).
 
-        return self.format_data(p_energy)
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+            use_positive (bool, optional): If true this will return the
+                positive peak current otherwise the peak negative voltage will
+                be returned. Defaults to True.
 
-    def get_frequency(self, channel=0):
-        frequency = self._resource.query(f'FETC:FREQ? {channel}')
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the Peak current for the
+                given phase(s) in Amps
+        """
 
-        return self.format_data(frequency)
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(
+            f'FETC:CURR:PEAK{"+" if use_positive else "-"}? {phase}'
+            )
+
+        return self.format_data(response)
+
+    def get_current_dc(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_current_dc(phase=0)
+
+        Queries the measured value of the DC current for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the DC current for the
+                given phase(s) in Amps
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:CURR:DC? {phase}')
+        return self.format_data(response)
+
+    def get_current_inrush(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_current_inrush(phase=0)
+
+        Queries the measured value of the inrush current for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the inrush current for
+                the given phase(s) in Amps
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:CURR:INR? {phase}')
+
+        return self.format_data(response)
+
+    def get_current_crestfactor(self,
+                                phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_current_crestfactor(phase=0)
+
+        Queries the measured value of the current crest factor for the
+        specified phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the current crest factor
+                for the given phase(s)
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:CURR:CRES? {phase}')
+        return self.format_data(response)
+
+    def get_current_thd(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_current_thd(phase=0)
+
+        Queries the measured value of the current THD for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the current THD for the
+                given phase(s)
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:CURR:THD? {phase}')
+        return self.format_data(response)
+
+    def get_power_real(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_power_real(phase=0)
+
+        Queries the measured value of the real power for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the real power for the
+                given phase(s) in Watts
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:REAL? {phase}')
+        return self.format_data(response)
+
+    def get_power_reactive(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_power_reactive(phase=0)
+
+        Queries the measured value of the reactive power for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the reactive power for
+                the given phase(s) in VARs
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:REAC? {phase}')
+        return self.format_data(response)
+
+    def get_power_apparent(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_power_apparent(phase=0)
+
+        Queries the measured value of the apparent power for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the apparent power for
+                the given phase(s) in VAs
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:APP? {phase}')
+        return self.format_data(response)
+
+    def get_power_factor(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_power_factor(phase=0)
+
+        Queries the measured value of the power factor for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the power factor for the
+                given phase(s)
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:PFAC? {phase}')
+        return self.format_data(response)
+
+    def get_power_dc(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_power_dc(phase=0)
+
+        Queries the measured value of the DC power for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the DC power for the
+                given phase(s) in Watts
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:DC? {phase}')
+        return self.format_data(response)
+
+    def get_energy(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_energy(phase=0)
+
+        Queries the measured value of the Energy for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the Energy for the
+                given phase(s) in Joules
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:POW:ENER? {phase}')
+        return self.format_data(response)
+
+    def get_frequency(self, phase: int = 0) -> Union[float, Tuple[float]]:
+        """
+        get_frequency(phase=0)
+
+        Queries the measured value of the frequency for the specified
+        phase(s).
+
+        Args:
+            phase (int, optional): AC phase to to retrive measurement info from
+                (1,2,3) or 0 to return the measured value for all phases.
+                Defaults to 0.
+
+        Returns:
+            Union[float, Tuple[float]]: Measurement of the frequency for the
+                given phase(s) in Hz
+        """
+
+        if not (0 <= phase <= 3):
+            raise ValueError('Invalid value of "phase", must be within [0,3]')
+
+        response = self.query_resource(f'FETC:FREQ? {phase}')
+        return self.format_data(response)
 
     def get_efficiency(self):
         eff = self._resource.query('FETC:EFF?')
@@ -180,7 +503,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
 
         return self.format_data(pf)
 
-    def set_input_shunt_configuration(self, configuration):
+    def set_input_shunt_configuration(self, configuration) -> None:
 
         for idx, chan in enumerate(configuration):
             if type(chan) in [bool, int]:
@@ -191,22 +514,19 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
 
         command_str = 'CONF:INP:SHUN {},{},{},{}'.format(*configuration)
         self._resource.write(command_str)
-        return None
 
-    def get_input_shunt_configuration(self):
+    def get_input_shunt_configuration(self) -> Tuple[Union[bool, None]]:
         resp = self._resource.query('CONF:INP:SHUN?')
         resp = resp.rstrip('\n')
         resp = resp.split(',')
 
-        config = ['']*4
+        config: Tuple[Union[bool, None]] = [None, None, None, None]
 
         for idx, chan in enumerate(resp):
             if chan == "ON":
                 config[idx] = True
             elif chan == "OFF":
                 config[idx] = False
-            else:
-                config[idx] = None
 
         return config
 
@@ -215,8 +535,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
 
         return self.format_data(resistance)
 
-    def set_external_input_shunt_res(self, resistance):
+    def set_external_input_shunt_res(self, resistance) -> None:
 
         command_str = 'CONF:INP:SHUN:RESIS {},{},{},{}'.format(*resistance)
         self._resource.write(command_str)
-        return None
