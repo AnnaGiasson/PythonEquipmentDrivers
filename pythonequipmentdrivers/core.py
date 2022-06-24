@@ -43,11 +43,11 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
             error message is printed for resources which could not be reached
             or didn't return a response. Defaults to False.
     Kwargs:
-        open_timeout (int, optional): The time to wait (in milliseconds) when
+        open_timeout (float, optional): The time to wait (in milliseconds) when
             trying to connect to a resource before this operation returns an
-            error. Defaults to 1000.
-        timeout (int, optional): Timeout (in milliseconds) for I/O operations
-            with the connected resource. Defaults to 1000.
+            error. Defaults to 1.
+        timeout (float, optional): Timeout (in seconds) for I/O operations
+            with the connected resource. Defaults to 1.
 
     Returns:
         List[Tuple[str, str]]: list of resource (address, response) tuples is
@@ -58,7 +58,7 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
     resource_addrs = find_visa_resources() if resources is None else resources
 
     # timeout config
-    resource_config = {'open_timeout': 1000, 'timeout': 1000}  # defaults
+    resource_config = {'open_timeout': 1, 'timeout': 1}  # defaults
     resource_config.update(kwargs)  # update based on any user input
 
     if verbose and (len(resource_addrs) > 0):
@@ -107,8 +107,6 @@ class VisaResource:
         timeout (float, optional): Timeout (in seconds) for I/O operations
             with the connected resource; resolves to the nearest millisecond.
             Defaults to 1.0.
-        query_delay (float, optional): the time to wait after each write
-            operation when performing a query in seconds. Defaults to 0.1
     """
 
     idn: str  # str: Description which uniquely identifies the instrument
