@@ -1,7 +1,6 @@
+from typing import Any, Dict, List, Tuple
+
 from pythonequipmentdrivers import VisaResource
-from time import sleep
-import numpy as np
-from typing import Tuple, Dict, List, Union
 
 
 class Chroma_62012P(VisaResource):
@@ -23,7 +22,7 @@ class Chroma_62012P(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self._resource.write(f"CONF:OUTP {1 if state else 0}")
+        self.write_resource(f"CONF:OUTP {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -35,7 +34,7 @@ class Chroma_62012P(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self._resource.query("CONF:OUTP?").rstrip('\n')
+        response = self.query_resource("CONF:OUTP?").rstrip('\n')
         return ("ON" in response)
 
     def on(self) -> None:
@@ -58,27 +57,14 @@ class Chroma_62012P(VisaResource):
 
         self.set_state(False)
 
-    def toggle(self, return_state: bool = False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
+        toggle()
 
         Reverses the current state of the Supply's output
-        If return_state = True the boolean state of the supply after toggle()
-        is executed will be returned.
-
-        Args:
-            return_state (bool, optional): Whether or not to return the state
-                of the supply after changing its state. Defaults to False.
-
-        Returns:
-            Union[None, bool]: If return_state == True returns the Supply state
-                (True == enabled, False == disabled), else returns None
         """
 
         self.set_state(self.get_state() ^ True)
-
-        if return_state:
-            return self.get_state()
 
     def set_voltage(self, voltage: float) -> None:
         """
@@ -90,7 +76,7 @@ class Chroma_62012P(VisaResource):
             voltage (float): output voltage setpoint in Volts DC.
         """
 
-        self._resource.write(f"SOUR:VOLT {float(voltage)}")
+        self.write_resource(f"SOUR:VOLT {voltage}")
 
     def get_voltage(self) -> float:
         """
@@ -102,7 +88,7 @@ class Chroma_62012P(VisaResource):
             float: Output voltage setpoint in Volts DC.
         """
 
-        response = self._resource.query("SOUR:VOLT?")
+        response = self.query_resource("SOUR:VOLT?")
         return float(response)
 
     def set_current(self, current: float) -> None:
@@ -115,7 +101,7 @@ class Chroma_62012P(VisaResource):
             current (float): Current Limit setpoint in Amps DC.
         """
 
-        self._resource.write(f"SOUR:CURR {float(current)}")
+        self.write_resource(f"SOUR:CURR {current}")
 
     def get_current(self) -> float:
         """
@@ -127,87 +113,87 @@ class Chroma_62012P(VisaResource):
             float: Current Limit setpoint in Amps DC.
         """
 
-        response = self._resource.query("SOUR:CURR?")
+        response = self.query_resource("SOUR:CURR?")
         return float(response)
 
-    def set_current_slew_rate(self, slew_rate):
+    def set_current_slew_rate(self, slew_rate: float) -> None:
         """
         set_current_slew_rate(slew_rate)
 
-        slew_rate: float, current slew rate in A/ms
-
-        sets the current slew rate for the power supply's output current in
+        Sets the current slew rate for the power supply's output current in
         A/ms
+
+        Args:
+            slew_rate (float): current slew rate in A/ms
         """
 
-        self._resource.write(f"SOUR:CURR:SLEW {slew_rate}")
-        return None
+        self.write_resource(f"SOUR:CURR:SLEW {slew_rate}")
 
-    def get_current_slew_rate(self):
+    def get_current_slew_rate(self) -> float:
         """
         get_current_slew_rate()
 
-        gets the current slew rate for the power supply's output current in
-        A/ms
+        gets the current slew rate for the power supply's output current
 
-        returns: float
+        Returns:
+            float: current slew rate in A/ms
         """
 
-        response = self._resource.query("SOUR:CURR:SLEW?")
+        response = self.query_resource("SOUR:CURR:SLEW?")
         return float(response)
 
-    def set_voltage_slew_rate(self, slew_rate):
+    def set_voltage_slew_rate(self, slew_rate: float) -> None:
         """
         set_voltage_slew_rate(slew_rate)
 
-        slew_rate: float, voltage slew rate in V/ms
+        Sets the voltage slew rate for the power supply's output voltage
 
-        sets the voltage slew rate for the power supply's output voltage in
-        V/ms
+        Args:
+            slew_rate (float): voltage slew rate in V/ms
         """
 
-        self._resource.write(f"SOUR:VOLT:SLEW {slew_rate}")
-        return None
+        self.write_resource(f"SOUR:VOLT:SLEW {slew_rate}")
 
     def get_voltage_slew_rate(self):
         """
         get_voltage_slew_rate()
 
-        gets the voltage slew rate for the power supply's output voltage in
-        V/ms
+        Gets the voltage slew rate for the power supply's output voltage
 
-        returns: float
+        Returns:
+            float: voltage slew rate in V/ms
         """
 
-        response = self._resource.query("SOUR:VOLT:SLEW?")
+        response = self.query_resource("SOUR:VOLT:SLEW?")
         return float(response)
 
-    def set_voltage_limit(self, v_limit):
+    def set_voltage_limit(self, v_limit: float) -> None:
         """
         set_voltage_limit(v_limit)
 
-        v_limit: float, voltage limit in Vdc
-
-        sets the voltage setpoint limit for the power supply's output voltage
+        Sets the voltage setpoint limit for the power supply's output voltage
         in Vdc
+
+        Args:
+            v_limit (float): voltage limit in Vdc
+
         """
 
-        self._resource.write(f'SOUR:VOLT:LIM:HIGH {v_limit}')
-        return None
+        self.write_resource(f'SOUR:VOLT:LIM:HIGH {v_limit}')
 
-    def get_voltage_limit(self):
+    def get_voltage_limit(self) -> float:
         """
         get_voltage_limit()
 
-        returns:
-        v_limit: float, voltage limit in Vdc
-
         Returns the voltage setpoint limit for the power supply's output
         voltage in Vdc
+
+        Returns:
+            v_limit (float): voltage limit in Vdc
         """
 
-        resp = self._resource.query('SOUR:VOLT:LIM:HIGH?')
-        return float(resp)
+        response = self.query_resource('SOUR:VOLT:LIM:HIGH?')
+        return float(response)
 
     def measure_voltage(self) -> float:
         """
@@ -219,7 +205,7 @@ class Chroma_62012P(VisaResource):
             float: Measured Voltage in Volts DC
         """
 
-        response = self._resource.query("FETC:VOLT?")
+        response = self.query_resource("FETC:VOLT?")
         return float(response)
 
     def measure_current(self) -> float:
@@ -232,7 +218,7 @@ class Chroma_62012P(VisaResource):
             float: Measured Current in Amps DC.
         """
 
-        response = self._resource.query("FETC:CURR?")
+        response = self.query_resource("FETC:CURR?")
         return float(response)
 
     def measure_power(self) -> float:
@@ -245,7 +231,7 @@ class Chroma_62012P(VisaResource):
             float: Measured power in Watts.
         """
 
-        response = self._resource.query("FETC:POW?")
+        response = self.query_resource("FETC:POW?")
         return float(response)
 
     def get_status(self) -> Tuple[str, bool, str]:
@@ -290,8 +276,7 @@ class Chroma_62012P(VisaResource):
                              'Fold_Back_CC_to_CV', 'Reserved', 'Reserved',
                              'Reserved', 'Reserved')
 
-        response = self._resource.query("FETC:STAT?")
-        response = response.strip('\n')
+        response = self.query_resource("FETC:STAT?")
 
         message_code, state, mode = response.split(',')
 
@@ -309,24 +294,23 @@ class Chroma_62012P(VisaResource):
 
     def set_program_type(self, program_type: str) -> None:
 
-        valid_program_types = ('STEP', 'LIST', 'CP')
+        valid_program_types = {'STEP', 'LIST', 'CP'}
 
-        program_type = str(program_type).upper()
-        if program_type not in valid_program_types:
+        if program_type.upper() not in valid_program_types:
             raise ValueError('Invalid program type'
                              f', use: {valid_program_types}')
 
-        self._resource.write(f'PROG:MODE {program_type}')
+        self.write_resource(f'PROG:MODE {program_type}')
 
     def set_program(self, n: int) -> None:
-        self._resource.write(f'PROG:SEL {int(n)}')
+        self.write_resource(f'PROG:SEL {int(n)}')
 
     def get_program_type(self) -> str:
 
-        response = self._resource.query('PROG:MODE?')
+        response = self.query_resource('PROG:MODE?')
         return response.lower()
 
-    def build_program(self, *sequence: dict, **kwargs) -> None:
+    def build_program(self, *sequence: Dict[str, Any], **kwargs) -> None:
         """
         build_program(*sequence, **kwargs)
 
@@ -385,7 +369,6 @@ class Chroma_62012P(VisaResource):
             save (bool, optional): Whether or not to save the program to
                 non-volitile memory. Will only be saved if no errors occur when
                 building the program. Defaults to False.
-
         """
 
         if not (1 <= len(sequence) <= 100):
@@ -404,7 +387,7 @@ class Chroma_62012P(VisaResource):
         cmds.append(f'PROG:COUNT {int(kwargs.get("count", 1))}')
 
         for cmd in cmds:
-            self._resource.write(cmd)
+            self.write_resource(cmd)
 
         # build program
         valid_sequence_types = ('AUTO',  # move to next sequence after "time"
@@ -461,24 +444,25 @@ class Chroma_62012P(VisaResource):
             cmds.append(f'PROG:SEQ:TTL {ttl}')
 
             for cmd in cmds:  # send commands in queue
-                self._resource.write(cmd)
+                self.write_resource(cmd)
         else:
             if kwargs.get('save', False):
-                self._resource.write('PROG:SAVE')
+                self.write_resource('PROG:SAVE')
 
     def get_program(self, program_type: str,
-                    program_number: int) -> Tuple[Dict, List]:
+                    program_number: int
+                    ) -> Tuple[Dict[str, int], List[Dict[str, Any]]]:
 
         # select specified program
         self.set_program_type(program_type)
         self.set_program(program_number)
 
         # get program metadata
-        N = int(self._resource.query('PROG:MAX?'))  # number of sequences
+        N = int(self.query_resource('PROG:MAX?'))  # number of sequences
 
         options = {'program_number': program_number,
-                   'count': int(self._resource.query('PROG:COUNT?')),
-                   'link': int(self._resource.query('PROG:LINK?'))}
+                   'count': int(self.query_resource('PROG:COUNT?')),
+                   'link': int(self.query_resource('PROG:LINK?'))}
 
         valid_sequence_types = ('AUTO',  # move to next sequence after "time"
                                 'MANUAL',  # wait until front panel pressed
@@ -491,10 +475,9 @@ class Chroma_62012P(VisaResource):
         seq = {}
         for n in range(1, N+1, 1):
             seq.clear()
-            self._resource.write(f'PROG:SEQ:SEL {n}')  # select sequence
+            self.write_resource(f'PROG:SEQ:SEL {n}')  # select sequence
 
-            response = self._resource.query('PROG:SEQ?')
-            response = response.strip()
+            response = self.query_resource('PROG:SEQ?')
             type_, volt, volt_sr, curr, curr_sr, ttl, t = response.split(',')
 
             # decode into same format used in self.build_program
@@ -507,7 +490,7 @@ class Chroma_62012P(VisaResource):
             if ('INF' in curr_sr):
                 seq['current_slew'] = 'INF'
             else:
-                float(curr_sr)
+                seq['current_slew'] = float(curr_sr)
 
             # convert to A/s for user output
             if isinstance(seq['current_slew'], float):
@@ -528,7 +511,7 @@ class Chroma_62012P(VisaResource):
         if n != 0:
             self.set_program(n)
 
-        self._resource.write('PROG:RUN ON')
+        self.write_resource('PROG:RUN ON')
 
     def halt_program(self) -> None:
         """
@@ -536,12 +519,11 @@ class Chroma_62012P(VisaResource):
 
         Ends execution of the current program if one is running.
         """
-        self._resource.write('PROG:RUN OFF')
+        self.write_resource('PROG:RUN OFF')
 
     def get_program_state(self) -> bool:
 
-        response = self._resource.query('PROG:RUN?')
-        response = response.strip()
+        response = self.query_resource('PROG:RUN?')
 
         return (response == 'ON')
 
@@ -560,7 +542,7 @@ class Chroma_62012P(VisaResource):
                 f'PROG:STEP:TIME {int(h)},{int(m)},{float(s)}')
 
         for cmd in cmds:
-            self._resource.write(cmd)
+            self.write_resource(cmd)
 
     def cp_program(self, voltage: float = 0, current: float = 0,
                    power: float = 0, tracking_speed: int = 50) -> None:
@@ -576,12 +558,11 @@ class Chroma_62012P(VisaResource):
                 f'PROG:CP:POW {float(power)}')
 
         for cmd in cmds:
-            self._resource.write(cmd)
+            self.write_resource(cmd)
 
     def get_system_errors(self):
 
-        response = self._resource.query('SYST:ERR?')
-        response = response.strip()
+        response = self.query_resource('SYST:ERR?')
 
         error_status = response.split(',')
 
@@ -589,80 +570,3 @@ class Chroma_62012P(VisaResource):
         error_message = error_status[1].replace('"', '')
 
         return (error_code, error_message)
-
-    def pulse(self, level: float, duration: float) -> None:
-        """
-        pulse(level, duration)
-
-        Generates a square pulse with height and duration specified by level
-        and duration. The supply will start and return to the previous voltage
-        level set on the supply before the execution of pulse(). "level" can be
-        less than or greater than the previous voltage setpoint.
-
-        Args:
-            level (float): Voltage level of pulse in Volts DC
-            duration (float): Duration of the pulse in seconds
-        """
-
-        start_level = self.get_voltage()
-        self.set_voltage(level)
-        sleep(duration)
-        self.set_voltage(start_level)
-
-    def ramp(self, start: float, stop: float,
-             n: int = 100, dt: float = 0.01) -> None:
-        """
-        ramp(start, stop, n=100, dt=0.01)
-
-        Generates a linear ramp on the supply's voltage specified by the
-        parameters start, stop, n, and dt.
-        The input of the supply should be enabled before executing this
-        command. "start" can be higher than "stop" or vise-versa. The minimum
-        dt is limited by the communication speed of the interface used to
-        communicate with this device.
-
-        Args:
-            start (float): Initial voltage setpoint of the ramp in Volts DC.
-            stop (float): Final voltage setpoint of the ramp in Volts DC.
-            n (int, optional): Number of points in the ramp between "start" and
-                "stop". Defaults to 100.
-            dt (float, optional): Time between changes in the value of the
-                setpoint in seconds. Defaults to 0.01.
-        """
-
-        for v in np.linspace(float(start), float(stop), int(n)):
-            self.set_voltage(v)
-            sleep(dt)
-
-    def slew(self, start: float, stop: float, n: int = 100,
-             dt: float = 0.01, dwell: float = 0) -> None:
-        """
-        slew(start, stop, n=100, dt=0.01, dwell=0, channel=0)
-
-        Generates a triangular waveform on the supply's voltage specified by
-        the parameters start, stop, n, and dt.
-        Optionally, a dwell acan be added at the top of the waveform to create
-        a trapezoidal voltage shape.
-        The input of the supply should be enabled before executing this
-        command. "start" can be higher than "stop" or vise-versa. The minimum
-        dt is limited by the communication speed of the interface used to
-        communicate with this device.
-
-        Args:
-            start (float): Initial voltage setpoint of the ramp in Volts DC.
-            stop (float): Midpoint voltage setpoint of the ramp in Volts DC.
-            n (int, optional): Number of points in the ramp between "start" and
-                "stop". Defaults to 100.
-            dt (float, optional): Time between changes in the value of the
-                setpoint in seconds. Defaults to 0.01.
-            dwell (float, optional): Time to dwell at the "stop" value before
-                ramping back to "start". Defaults to 0.
-        """
-
-        self.ramp(start, stop, n=n, dt=dt)
-        sleep(dwell)
-        self.ramp(stop, start, n=n, dt=dt)
-
-
-if __name__ == '__main__':
-    pass
