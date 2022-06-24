@@ -80,10 +80,10 @@ class Elgar_1750A(VisaResource):
         self.write_resource("SOUR:FREQ {}".format(frequency))
 
     def get_frequency(self) -> float:
-        return float(self._resource.query("SOUR:FREQ?"))
+        return float(self.query_resource("SOUR:FREQ?"))
 
     def get_phase(self) -> float:
-        return float(self._resource.query("SOUR:PHAS?"))
+        return float(self.query_resource("SOUR:PHAS?"))
 
     def set_phase(self, phase: float) -> None:
         # phase in deg
@@ -110,7 +110,7 @@ class Elgar_1750A(VisaResource):
         self.write_resource(f"SOUR:VOLT:RANG {voltage_range}")
 
     def get_voltage_range(self) -> None:
-        return float(self._resource.query("SOUR:VOLT:RANG?"))
+        return float(self.query_resource("SOUR:VOLT:RANG?"))
 
     def generate_sequence(self, *conditions: Dict[str, Any],
                           run: bool = False) -> None:

@@ -1,4 +1,3 @@
-from typing import Union
 from pythonequipmentdrivers import VisaResource
 
 
@@ -19,7 +18,7 @@ class Elgar_5250A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self._resource.write(f"OUTP:STAT {1 if state else 0}")
+        self.write_resource(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -31,7 +30,7 @@ class Elgar_5250A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self._resource.query('OUTP:STAT?')
+        response = self.query_resource('OUTP:STAT?')
         return ('1' in response)
 
     def on(self) -> None:
@@ -54,60 +53,46 @@ class Elgar_5250A(VisaResource):
 
         self.set_state(False)
 
-    def toggle(self, return_state: bool = False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
-
-        return_state: boolean, whether or not to return the state of the output
-                      relay
+        toggle()
 
         reverses the current state of the power supply's output relay
-
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
         """
 
         self.set_state(self.get_state() ^ True)
 
-        if return_state:
-            return self.get_state()
+    def set_voltage(self, voltage: float, phase: int = 0) -> None:
+        self.write_resource(f"SOUR{phase}:VOLT {voltage}")
 
-    def set_voltage(self, voltage, phase=0):
-        self._resource.write(f"SOUR{phase}:VOLT {voltage}")
-        return None
-
-    def get_voltage(self, phase=1):
-        response = self._resource.query(f"SOUR{phase}:VOLT?")
+    def get_voltage(self, phase: int = 1) -> float:
+        response = self.query_resource(f"SOUR{phase}:VOLT?")
         return float(response)
 
-    def set_current(self, current, phase=0):
-        self._resource.write(f"SOUR{phase}:CURR {current}")
-        return None
+    def set_current(self, current: float, phase: int = 0) -> None:
+        self.write_resource(f"SOUR{phase}:CURR {current}")
 
-    def get_current(self, phase=1):
-        response = self._resource.query(f"SOUR{phase}:CURR?")
+    def get_current(self, phase: int = 1) -> float:
+        response = self.query_resource(f"SOUR{phase}:CURR?")
         return float(response)
 
-    def set_frequency(self, frequency):
-        self._resource.write(f"SOUR:FREQ {frequency}")
-        return None
+    def set_frequency(self, frequency: float) -> None:
+        self.write_resource(f"SOUR:FREQ {frequency}")
 
-    def get_frequency(self):
-        response = self._resource.query("SOUR:FREQ?")
+    def get_frequency(self) -> float:
+        response = self.query_resource("SOUR:FREQ?")
         return float(response)
 
-    def set_voltage_limit(self, voltage_limit):
-        self._resource.write(f"SOUR:VOLT:PROT {voltage_limit}")
-        return None
+    def set_voltage_limit(self, voltage_limit: float) -> None:
+        self.write_resource(f"SOUR:VOLT:PROT {voltage_limit}")
 
-    def get_voltage_limit(self):
-        response = self._resource.query("SOUR:VOLT:PROT?")
+    def get_voltage_limit(self) -> float:
+        response = self.query_resource("SOUR:VOLT:PROT?")
         return float(response)
 
-    def set_voltage_range(self, voltage_range):
-        self._resource.write(f"SOUR:VOLT:RANG {voltage_range}")
-        return None
+    def set_voltage_range(self, voltage_range: float) -> None:
+        self.write_resource(f"SOUR:VOLT:RANG {voltage_range}")
 
-    def get_voltage_range(self):
-        response = self._resource.query("SOUR:VOLT:RANG?")
+    def get_voltage_range(self) -> float:
+        response = self.query_resource("SOUR:VOLT:RANG?")
         return float(response)
