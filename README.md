@@ -22,7 +22,7 @@ To create a connection to an instrument supported by this library it's respectiv
 For example, to control a Chroma 62012P voltage source on a GPIB interface at address 14:
 ```python
 import pythonequipmentdrivers as ped
-source = ped.source.Chroma_62012P('GPIB0::14::INSTR')
+source = ped.source.Chroma_62000P('GPIB0::14::INSTR')
 ```
 With this instance, various features of the instrument can be access through its methods.
 ```python
@@ -42,7 +42,7 @@ import pythonequipmentdrivers as ped
 from time import sleep
 
 # connect to equipment
-source = ped.source.Chroma_62012P('GPIB0::14::INSTR')
+source = ped.source.Chroma_62000P('GPIB0::14::INSTR')
 v_in_meter = ped.multimeter.Keysight_34461A('USB0::0x2A8D::0x1301::MY59026778::INSTR')
 v_out_meter = ped.multimeter.Keysight_34461A('USB0::0x2A8D::0x1301::MY59026586::INSTR')
 sink = ped.sink.Chroma_63206A('GPIB0::3::INSTR')

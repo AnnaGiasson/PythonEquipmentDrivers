@@ -3,13 +3,13 @@ from typing import Any, Dict, List, Tuple
 from pythonequipmentdrivers import VisaResource
 
 
-class Chroma_62012P(VisaResource):
+class Chroma_62000P(VisaResource):
     """
-    Chroma_62012P(address)
+    Chroma_62000P(address)
 
     address : str, address of the connected power supply
 
-    object for accessing basic functionallity of the Chroma_62012P DC supply
+    object for accessing basic functionallity of the Chroma_62000P DC supply
     """
 
     def set_state(self, state: bool) -> None:

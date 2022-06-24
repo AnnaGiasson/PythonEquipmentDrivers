@@ -117,14 +117,14 @@ def connect_resources(config: Union[str, Path, dict],
     "definition". An example of this is shown below:
 
     "source_v_in": {
-                    "object": "Chroma_62012P",
+                    "object": "Chroma_62000P",
                     "definition": "pythonequipmentdrivers.source",
                     "address": "USB0::0x1698::0x0837::002000000655::INSTR",
                     "kwargs": {}
                     },
 
     If this device is connected and availible this will create an instance of
-    the Chroma_62012P at the provided address. The source is defined in the
+    the Chroma_62000P at the provided address. The source is defined in the
     pythonequipmentdrivers.source sub-module. This instance can be accessed
     using EnvironmentSetup('path_to_json file'). i.e. self.source_v_in
     There is an optional argument for each device "kwargs", if present the
@@ -143,7 +143,7 @@ def connect_resources(config: Union[str, Path, dict],
     device. For example:
 
     "source_v_in": {
-                    "object": "Chroma_62012P",
+                    "object": "Chroma_62000P",
                     "definition": "pythonequipmentdrivers.source",
                     "address": "USB0::0x1698::0x0837::002000000655::INSTR"
                     "init": [

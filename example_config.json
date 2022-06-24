@@ -1,6 +1,6 @@
 {
     "source_v_in": {
-                    "object": "Chroma_62012P",
+                    "object": "Chroma_62000P",
                     "definition": "pythonequipmentdrivers.source",
                     "address": "USB0::0x1698::0x0837::002000000655::INSTR",
                     "init": [

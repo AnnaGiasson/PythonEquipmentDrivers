@@ -11,7 +11,7 @@ address = {'v_in_meter': 'USB0::0x2A8D::0x1301::MY59026778::INSTR',
 
 
 # connect to equipment
-source = ped.source.Chroma_62012P(address['source'])
+source = ped.source.Chroma_62000P(address['source'])
 v_in_meter = ped.multimeter.Keysight_34461A(address['v_in_meter'])
 v_out_meter = ped.multimeter.Keysight_34461A(address['v_out_meter'])
 sink = ped.sink.Chroma_63206A(address['sink'])
