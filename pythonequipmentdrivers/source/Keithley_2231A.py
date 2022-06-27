@@ -1,7 +1,4 @@
-from typing import Union
 from pythonequipmentdrivers import VisaResource
-from time import sleep
-import numpy as np
 
 
 class Keithley_2231A(VisaResource):
@@ -13,16 +10,15 @@ class Keithley_2231A(VisaResource):
     object for accessing basic functionallity of the Keithley DC supply
     """
 
-    def __init__(self, address, **kwargs) -> None:
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.set_access_remote('remote')
 
     def __del__(self) -> None:
-        if hasattr(self, 'instrument'):
-            self.set_access_remote('local')
+        self.set_access_remote('local')
         super().__del__()
 
-    def set_access_remote(self, mode) -> None:
+    def set_access_remote(self, mode: str) -> None:
         """
         set_access_remote(mode)
 
@@ -32,11 +28,15 @@ class Keithley_2231A(VisaResource):
         """
 
         if mode.lower() == 'remote':
-            self._resource.write('SYSTem:RWLock')
+            self.write_resource('SYSTem:RWLock')
         elif mode.lower() == 'local':
-            self._resource.write('SYSTem:LOCal')
+            self.write_resource('SYSTem:LOCal')
+        else:
+            raise ValueError(
+                'Unknown option for arg "mode", should be "remote" or "local"'
+                    )
 
-    def set_channel(self, channel):  # check
+    def set_channel(self, channel: int) -> None:
         """
         set_channel(channel)
 
@@ -44,13 +44,11 @@ class Keithley_2231A(VisaResource):
                  valid options are 1-3
 
         Selects the specified Channel to use for software control
-
         """
 
-        self._resource.write(f'INST:NSEL {channel}')
-        return None
+        self.write_resource(f'INST:NSEL {channel}')
 
-    def get_channel(self):  # check
+    def get_channel(self) -> int:
         """
         get_channel()
 
@@ -59,9 +57,8 @@ class Keithley_2231A(VisaResource):
         returns: int
         """
 
-        resp = self._resource.query('INST:NSEL?')
-        channel = int(resp)
-        return channel
+        response = self.query_resource('INST:NSEL?')
+        return int(response)
 
     def set_state(self, state: bool, channel: int) -> None:
         """
@@ -76,7 +73,7 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self._resource.write(f"CHAN:OUTP {1 if state else 0}")
+        self.write_resource(f"CHAN:OUTP {1 if state else 0}")
 
     def get_state(self, channel: int) -> bool:
         """
@@ -93,8 +90,8 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        response = self._resource.query("CHAN:OUTP?")
-        if response.rstrip('\n') not in ("ON", '1'):
+        response = self.query_resource("CHAN:OUTP?")
+        if response not in ("ON", '1'):
             return False
         return True
 
@@ -126,32 +123,20 @@ class Keithley_2231A(VisaResource):
 
         self.set_state(False, channel)
 
-    def toggle(self, channel: int,
-               return_state: bool = False) -> Union[None, bool]:
+    def toggle(self, channel: int) -> None:
         """
-        toggle(channel, return_state=False)
+        toggle(channel)
 
         Reverses the current state of the Supply's output
-        If return_state = True the boolean state of the supply after toggle()
-        is executed will be returned.
 
         Args:
             channel (int): Index of the channel to control. Valid options
                 are 1-3
-            return_state (bool, optional): Whether or not to return the state
-                of the supply after changing its state. Defaults to False.
-
-        Returns:
-            Union[None, bool]: If return_state == True returns the Supply state
-                (True == enabled, False == disabled), else returns None
         """
 
         self.set_state(self.get_state() ^ True, channel)
 
-        if return_state:
-            return self.get_state(channel)
-
-    def set_voltage(self, voltage, channel):
+    def set_voltage(self, voltage: float, channel: int) -> None:
         """
         set_voltage(voltage)
 
@@ -164,10 +149,9 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self._resource.write(f"SOUR:VOLT {voltage}")
-        return None
+        self.write_resource(f"SOUR:VOLT {voltage}")
 
-    def get_voltage(self, channel):  # check
+    def get_voltage(self, channel: int) -> float:
         """
         get_voltage()
 
@@ -179,10 +163,10 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self._resource.query("SOUR:VOLT?")
-        return float(resp)
+        response = self.query_resource("SOUR:VOLT?")
+        return float(response)
 
-    def set_current(self, current, channel):  # check
+    def set_current(self, current: float, channel: int) -> None:
         """
         set_current(current)
 
@@ -194,10 +178,9 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        self._resource.write(f"SOUR:CURR {current}")
-        return None
+        self.write_resource(f"SOUR:CURR {current}")
 
-    def get_current(self, channel):  # check
+    def get_current(self, channel: int) -> float:
         """
         get_current()
 
@@ -209,10 +192,10 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self._resource.query("SOUR:CURR?")
-        return float(resp)
+        response = self.query_resource("SOUR:CURR?")
+        return float(response)
 
-    def measure_voltage(self, channel):
+    def measure_voltage(self, channel: int) -> float:
         """
         measure_voltage()
 
@@ -223,10 +206,10 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self._resource.query('MEAS:VOLT?')
-        return float(resp)
+        response = self.query_resource('MEAS:VOLT?')
+        return float(response)
 
-    def measure_current(self, channel):
+    def measure_current(self, channel: int) -> float:
         """
         measure_current()
 
@@ -237,83 +220,5 @@ class Keithley_2231A(VisaResource):
         """
 
         self.set_channel(channel)
-        resp = self._resource.query('MEAS:CURR?')
-        return float(resp)
-
-    def pulse(self, level, duration, channel):
-        """
-        pulse(level, duration)
-
-        level: float/int, voltage level of "high" state of the pulse in Volts
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
-
-        generates a square pulse with height and duration specified by level
-        and duration. will start and return to the previous voltage level set
-        on the source before the execution of pulse(). level can be less than
-        or greater than the previous voltage setpoint
-        """
-
-        start_level = self.get_voltage(channel)
-        self.set_voltage(level, channel)
-        sleep(duration)
-        self.set_voltage(start_level, channel)
-        return None
-
-    def ramp(self, start, stop, channel, n=100, dt=0.01):
-        """
-        ramp(start, stop, n=100, dt=0.01)
-
-        start: float/int, starting voltage setpoint of the ramp in Vdc
-        stop: float/int, ending voltage setpoint of the ramp in Vdc
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-
-        generates a linear ramp on the sources voltage specified by the
-        parameters start, stop, n, and dt. output of the source should be
-        enabled before executing this command. contrary to what this
-        documentation may imply, start can be higher than stop or vise-versa.
-        minimum dt is limited by the communication speed of the interface used
-        to communicate with this device and the connected electrical network.
-        """
-
-        for v in np.linspace(start, stop, int(n)):
-            self.set_voltage(v, channel)
-            sleep(dt)
-        return None
-
-    def slew(self, start, stop, channel, n=100, dt=0.01, dwell=0):
-        """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
-
-        start: float/int, "low" voltage setpoint of the ramp in Vdc
-        stop: float/int, "high" voltage setpoint of the ramp in Vdc
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
-
-        generates a triangular waveform on the sources voltage specified by the
-        parameters start, stop, n, and dt. optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal voltage shape. The
-        output of the load should be enabled before executing this command.
-        contrary to what this documentation may imply, start can be higher than
-        stop or vise-versa. minimum dt is limited by the communication speed of
-        the interface used to communicate with this device and the connected
-        electrical network.
-        """
-
-        self.ramp(start, stop, channel, n=int(n/2), dt=dt)
-        sleep(dwell)
-        self.ramp(stop, start, channel, n=int(n/2), dt=dt)
-        return None
-
-
-if __name__ == '__main__':
-    pass
+        response = self.query_resource('MEAS:CURR?')
+        return float(response)
