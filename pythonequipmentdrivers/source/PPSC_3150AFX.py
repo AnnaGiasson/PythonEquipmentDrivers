@@ -1,4 +1,5 @@
-from typing import Union
+from typing import Iterable, List, Optional, Tuple, Union
+
 from pythonequipmentdrivers import VisaResource
 
 
@@ -14,10 +15,6 @@ class PPSC_3150AFX(VisaResource):
     https://www.caltest.de/produkte/assets/afx_series_power_source_operation_manual-pn150185-10_x11_caltest.pdf
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-        return None
-
     def set_state(self, state: bool) -> None:
         """
         set_state(state)
@@ -28,7 +25,7 @@ class PPSC_3150AFX(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self._resource.write(f"OUTP:STAT {1 if state else 0}")
+        self.write_resource(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -40,7 +37,7 @@ class PPSC_3150AFX(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        state = self._resource.query("OUTP:STAT?")
+        state = self.query_resource("OUTP:STAT?")
         return (int(state) == 1)
 
     def on(self) -> None:
@@ -63,23 +60,14 @@ class PPSC_3150AFX(VisaResource):
 
         self.set_state(False)
 
-    def toggle(self, return_state=False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
-
-        return_state: boolean, whether or not to return the state of the output
-                      relay
+        toggle()
 
         reverses the current state of the power supply's output relay
-
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
         """
 
         self.set_state(self.get_state() ^ True)
-
-        if return_state:
-            return self.get_state()
 
     def sleep(self) -> None:
         """
@@ -96,9 +84,9 @@ class PPSC_3150AFX(VisaResource):
         if self.get_state():
             self.off()
 
-        self._resource.write("OUTPUT:ALL OFF")
+        self.write_resource("OUTPUT:ALL OFF")
 
-    def set_range(self, voltage_range):
+    def set_range(self, voltage_range: int) -> None:
         """
         set_range(voltage_range)
 
@@ -109,10 +97,9 @@ class PPSC_3150AFX(VisaResource):
         by "voltage_range"
         """
 
-        self._resource.write(f"RANG {voltage_range}")
-        return None
+        self.write_resource(f"RANG {voltage_range}")
 
-    def get_range(self):
+    def get_range(self) -> int:
         """
         get_range()
 
@@ -121,43 +108,48 @@ class PPSC_3150AFX(VisaResource):
         returns: int, 0 for low range and 1 for high range
         """
 
-        response = self._resource.query("RANG?")
+        response = self.query_resource("RANG?")
         return int(response)
 
-    def set_voltage(self, voltage, phase=''):
+    def set_voltage(self, voltage: float,
+                    phase: Optional[int] = None) -> None:
         """
-        set_voltage(voltage, phase='')
+        set_voltage(voltage, phase=None)
 
-        voltage: float or int, amplitude to set output to in Vrms
-        phase (optional) : int or "", phase to set amplitude of
-            valid values are 1,2,3, or "".
-            "" is default and will set all three phases to the same value
+        voltage: float, amplitude to set output to in Vrms
+        phase (optional) : int or None, phase to set amplitude of
+            valid values are 1,2,3, or None.
+            None is default and will set all three phases to the same value
 
         set the voltage of one or all phases to specifed value
         """
 
-        self._resource.write(f"SOUR:VOLT{phase} {voltage}")
-        return None
+        self.write_resource(
+            f"SOUR:VOLT{'' if phase is None else phase} {voltage}"
+            )
 
-    def get_voltage(self, phase=''):
+    def get_voltage(self, phase: Optional[int] = None
+                    ) -> Union[float, List[float]]:
         """
-        get_voltage(phase='')
+        get_voltage(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         gets the voltage setpoint of one or all phases (Vrms)
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'SOUR:VOLT{phase}?')
+        response = self.query_resource(
+            f'SOUR:VOLT{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def set_frequency(self, frequency):
+    def set_frequency(self, frequency: float) -> None:
         """
         set_frequency(frequency)
 
@@ -166,10 +158,9 @@ class PPSC_3150AFX(VisaResource):
         sets the frequency of the output voltage
         """
 
-        self._resource.write(f"SOUR:FREQ {frequency}")
-        return None
+        self.write_resource(f"SOUR:FREQ {frequency}")
 
-    def get_frequency(self):
+    def get_frequency(self) -> float:
         """
         get_frequency()
 
@@ -178,67 +169,76 @@ class PPSC_3150AFX(VisaResource):
         returns : float
         """
 
-        data = self._resource.query("SOUR:FREQ?")
+        data = self.query_resource("SOUR:FREQ?")
         return float(data)
 
-    def measure_voltage_rms(self, phase=''):
+    def measure_voltage_rms(self, phase: Optional[int] = None
+                            ) -> Union[float, List[float]]:
         """
-        measure_voltage_rms(phase='')
+        measure_voltage_rms(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the output voltage of the power supply for the
         specified phase(s) in Vrms
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:VOLT:AC{phase}?')
+        response = self.query_resource(
+            f'MEAS:VOLT:AC{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_voltage_line_to_line(self, phase=''):
+    def measure_voltage_line_to_line(self, phase: Optional[int] = None
+                                     ) -> Union[float, List[float]]:
         """
-        measure_voltage_line_to_line(phase='')
+        measure_voltage_line_to_line(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the output voltage between phases of the power
         supply for the specified phase(s) in Vrms
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:VLL{phase}?')
+        response = self.query_resource(
+            f'MEAS:VLL{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_voltage_dc(self, phase=''):
+    def measure_voltage_dc(self, phase: Optional[int] = None
+                           ) -> Union[float, List[float]]:
         """
-        measure_voltage_dc(phase='')
+        measure_voltage_dc(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the dc voltage of the power supply for the
         specified phase(s) in Vdc
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:VOLT:DC{phase}?')
+        response = self.query_resource(
+            f'MEAS:VOLT:DC{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_frequency(self):
+    def measure_frequency(self) -> float:
         """
         measure_frequency()
 
@@ -246,145 +246,166 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self._resource.query('MEAS:FREQ?')
+        response = self.query_resource('MEAS:FREQ?')
         return float(response)
 
-    def measure_current_rms(self, phase=''):
+    def measure_current_rms(self, phase: Optional[int] = None
+                            ) -> Union[float, List[float]]:
         """
-        measure_current_rms(phase='')
+        measure_current_rms(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the current of the power supply for the
         specified phase(s) in Arms
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:CURR{phase}?')
+        response = self.query_resource(
+            f'MEAS:CURR{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_current_dc(self, phase=''):
+    def measure_current_dc(self, phase: Optional[int] = None
+                           ) -> Union[float, List[float]]:
         """
-        measure_current_dc(phase='')
+        measure_current_dc(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the dc current of the power supply for the
         specified phase(s) in Adc
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:CURR:DC{phase}?')
+        response = self.query_resource(
+            f'MEAS:CURR:DC{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_current_peak(self, phase=''):
+    def measure_current_peak(self, phase: Optional[int] = None
+                             ) -> Union[float, List[float]]:
         """
-        measure_current_peak(phase='')
+        measure_current_peak(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the peak current of the power supply for the
         specified phase(s) in Adc
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:CURR:PEAK{phase}?')
+        response = self.query_resource(
+            f'MEAS:CURR:PEAK{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_current_crest(self, phase=''):
+    def measure_current_crest(self, phase: Optional[int] = None
+                              ) -> Union[float, List[float]]:
         """
-        measure_current_crest(phase='')
+        measure_current_crest(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the crest factor of the power supply's output
         current for the specified phase(s)
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:CURR:CREST{phase}?')
+        response = self.query_resource(
+            f'MEAS:CURR:CREST{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_power_real(self, phase=''):
+    def measure_power_real(self, phase: Optional[int] = None
+                           ) -> Union[float, List[float]]:
         """
-        measure_power_real(phase='')
+        measure_power_real(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the real power drawn from the power supply for
         the specified phase(s) in W
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:POW{phase}?')
+        response = self.query_resource(
+            f'MEAS:POW{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             # convert from kW to W
             return [1000*float(x) for x in response.split(',')]
         else:
             return 1000*float(response)
 
-    def measure_power_apparent(self, phase=''):
+    def measure_power_apparent(self, phase: Optional[int] = None
+                               ) -> Union[float, List[float]]:
         """
-        measure_power_apparent(phase='')
+        measure_power_apparent(phase=None)
 
-        phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+        phase (optional) : int or None, phase to get amplitude of
+            valid values are 1,2,3, or None
 
         returns measurement of the complex power drawn from the power supply
         for the specified phase(s) in VA
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:KVA{phase}?')
+        response = self.query_resource(
+            f'MEAS:KVA{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             # convert from kVA to VA
             return [1000*float(x) for x in response.split(',')]
         else:
             return 1000*float(response)
 
-    def measure_power_factor(self, phase=''):
+    def measure_power_factor(self, phase: Optional[int] = None
+                             ) -> Union[float, List[float]]:
         """
-        measure_power_factor(phase='')
+        measure_power_factor(phase=None)
 
         phase (optional) : int or "", phase to get amplitude of
-            valid values are 1,2,3, or ""
+            valid values are 1,2,3, or None
 
         returns measurement of the power factor of the power supply for the
         specified phase(s)
         returns: float / list of floats
         """
 
-        response = self._resource.query(f'MEAS:PF{phase}?')
+        response = self.query_resource(
+            f'MEAS:PF{"" if phase is None else phase}?'
+            )
 
-        if phase == '':
+        if phase is None:
             return [float(x) for x in response.split(',')]
         else:
             return float(response)
 
-    def measure_temperature_ambient(self):
+    def measure_temperature_ambient(self) -> float:
         """
         measure_temperature_ambient()
 
@@ -393,10 +414,11 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self._resource.query('MEAS:TEMP:AMB?')
+        response = self.query_resource('MEAS:TEMP:AMB?')
         return float(response)
 
-    def store_waveform(self, waveform_number, data):
+    def store_waveform(self, waveform_number: int, data: Iterable[float]
+                       ) -> None:
         """
         store_waveform(waveform_number, data)
 
@@ -409,21 +431,21 @@ class PPSC_3150AFX(VisaResource):
 
         wvfm_str = ','.join([str(x) for x in data])
         command_str = f"WAVEFORM:DEF {waveform_number},{wvfm_str}"
-        self._resource.write(command_str)
-        return None
+        self.write_resource(command_str)
 
-    def run_sequence(self):
+    def run_sequence(self) -> None:
         """
         run_sequence()
 
         executes the currently loaded transient sequence
         """
 
-        self._resource.write('PROG:TRAN RUN')
-        return None
+        self.write_resource('PROG:TRAN RUN')
 
-    def build_sequence(self, sequence_list, sequence_num=1,
-                       v_steady_state=None, f=50, voltage_range=1):
+    def build_sequence(self, sequence_list: List[Tuple[float, float]],
+                       sequence_num: int = 1,
+                       v_steady_state: Optional[float] = None,
+                       f: float = 50, voltage_range: int = 1) -> None:
 
         """
         build_sequence(sequence_list,
@@ -433,15 +455,15 @@ class PPSC_3150AFX(VisaResource):
                        in the sequence.
         sequence_num (optional): int, index of the stored sequence in the
                                  supplies memory (default=1).
-        v_steady_state (optional): float/None, steady-state value of RMS
+        v_steady_state (optional): float, steady-state value of RMS
                                    voltage the supply with default to once the
                                    sequence is completed. Default is None which
                                    will use the value currently set on the
                                    supply.
-        f (optional): float/int frequency of the supply's output voltage
+        f (optional): float frequency of the supply's output voltage
                       (in Hz) to be used throughout the sequence, default is 50
                       Hz
-        voltage_range (optional): int, output voltage range to use through the
+        voltage_range (int): output voltage range to use through the
                                   test. Default is 1. valid options are 0
                                   (low range) and 1 (high range)
 
@@ -449,13 +471,12 @@ class PPSC_3150AFX(VisaResource):
         sequence_list. sequence_list should be a list containing either tuples
         or lists of length 2 which provide the supply voltage and duration of
         each step (in that order).
-
         """
 
         if v_steady_state is None:
             v_steady_state = self.get_voltage(1)
 
-        self._resource.write(f'PROG:NAME {sequence_num}')
+        self.write_resource(f'PROG:NAME {sequence_num}')
 
         sequence_str = f"""
                         FORM,3,COUPL,DIRECT,VOLT:MODE,0,
@@ -497,10 +518,5 @@ class PPSC_3150AFX(VisaResource):
         sequence_str = sequence_str.replace('    ', '')
 
         command_str = f"PROG:DEF {int(sequence_num)},INTERNAL,{sequence_str}"
-        self._resource.write(command_str)
-        self._resource.write(f'PROG:EXEC {int(sequence_num)}')
-        return None
-
-
-if __name__ == '__main__':
-    pass
+        self.write_resource(command_str)
+        self.write_resource(f'PROG:EXEC {int(sequence_num)}')
