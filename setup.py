@@ -1,8 +1,7 @@
-from setuptools import setup, find_packages
-
+from setuptools import find_packages, setup
 
 setup(name='pythonequipmentdrivers',
-      version='1.11.0',
+      version='2.0.0',
       description="""
                   A library of software drivers to interface with various
                   pieces of test instrumentation

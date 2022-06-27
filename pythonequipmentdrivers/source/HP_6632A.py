@@ -1,7 +1,4 @@
-from typing import Union
 from pythonequipmentdrivers import VisaResource
-from time import sleep
-import numpy as np
 
 
 class HP_6632A(VisaResource):
@@ -24,7 +21,7 @@ class HP_6632A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self._resource.write(f'OUTP:STAT {1 if state else 0}')
+        self.write_resource(f'OUTP:STAT {1 if state else 0}')
 
     def get_state(self) -> bool:
         """
@@ -36,7 +33,7 @@ class HP_6632A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self._resource.query("OUTP:STAT?").rstrip('\n')
+        response = self.query_resource("OUTP:STAT?").rstrip('\n')
         return (int(response) == 1)
 
     def on(self) -> None:
@@ -59,25 +56,16 @@ class HP_6632A(VisaResource):
 
         self.set_state(False)
 
-    def toggle(self, return_state=False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
-
-        return_state (optional): boolean, whether or not to return the state
-        of the output relay.
+        toggle()
 
         reverses the current state of the power supply's output relay
-
-        if return_state = True the boolean state of the relay after toggle() is
-        executed will be returned
         """
 
         self.set_state(self.get_state() ^ True)
 
-        if return_state:
-            return self.get_state()
-
-    def set_voltage(self, voltage):
+    def set_voltage(self, voltage: float) -> None:
         """
         set_voltage(voltage)
 
@@ -86,10 +74,9 @@ class HP_6632A(VisaResource):
         set the output voltage setpoint specified by "voltage"
         """
 
-        self._resource.write(f"SOUR:VOLT:LEV {voltage}")
-        return None
+        self.write_resource(f"SOUR:VOLT:LEV {voltage}")
 
-    def get_voltage(self):
+    def get_voltage(self) -> float:
         """
         get_voltage()
 
@@ -98,10 +85,10 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("SOUR:VOLT:LEV?")
+        response = self.query_resource("SOUR:VOLT:LEV?")
         return float(response)
 
-    def set_current(self, current):
+    def set_current(self, current: float) -> None:
         """
         set_current(current)
 
@@ -109,10 +96,10 @@ class HP_6632A(VisaResource):
 
         sets the current limit setting for the power supply in Adc
         """
-        self._resource.write(f"SOUR:CURR:LEV {current}")
-        return None
 
-    def get_current(self):
+        self.write_resource(f"SOUR:CURR:LEV {current}")
+
+    def get_current(self) -> float:
         """
         get_current()
 
@@ -121,10 +108,10 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("SOUR:CURR:LEV?")
+        response = self.query_resource("SOUR:CURR:LEV?")
         return float(response)
 
-    def get_voltage_limit(self):
+    def get_voltage_limit(self) -> float:
         """
         get_voltage_limit()
 
@@ -135,10 +122,10 @@ class HP_6632A(VisaResource):
         potentiometer on the front panel
         """
 
-        resp = self._resource.query('SOUR:VOLT:PROT?')
+        resp = self.query_resource('SOUR:VOLT:PROT?')
         return float(resp)
 
-    def set_ocp_state(self, state):
+    def set_ocp_state(self, state: bool) -> None:
         """
         set_ocp_state(state)
 
@@ -150,11 +137,9 @@ class HP_6632A(VisaResource):
             state (bool): Whether or not Over-Current Protection is active
         """
 
-        state = 1 if bool(state) else 0
-        self._resource.write(f'SOUR:CURR:PROT:STATE {state}')
-        return None
+        self.write_resource(f'SOUR:CURR:PROT:STATE {1 if state else 0}')
 
-    def get_ocp_state(self):
+    def get_ocp_state(self) -> bool:
         """
         get_ocp_state()
 
@@ -165,10 +150,10 @@ class HP_6632A(VisaResource):
         Args:
             state (bool): Whether or not Over-Current Protection is active
         """
-        response = self._resource.query('SOUR:CURR:PROT:STATE?')
-        return int(response)
+        response = self.query_resource('SOUR:CURR:PROT:STATE?')
+        return int(response) == 1
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -177,10 +162,10 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("MEAS:VOLT?")
+        response = self.query_resource("MEAS:VOLT?")
         return float(response)
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -188,81 +173,5 @@ class HP_6632A(VisaResource):
         returns: float
         """
 
-        response = self._resource.query("MEAS:CURR?")
+        response = self.query_resource("MEAS:CURR?")
         return float(response)
-
-    def pulse(self, level, duration):
-        """
-        pulse(level, duration)
-
-        level: float/int, voltage level of "high" state of the pulse in Volts
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
-
-        generates a square pulse with height and duration specified by level
-        and duration. will start and return to the previous voltage level set
-        on the source before the execution of pulse(). level can be less than
-        or greater than the previous voltage setpoint
-        """
-
-        start_level = self.get_voltage()
-        self.set_voltage(level)
-        sleep(duration)
-        self.set_voltage(start_level)
-        return None
-
-    def ramp(self, start, stop, n=100, dt=0.01):
-        """
-        ramp(start, stop, n=100, dt=0.01)
-
-        start: float/int, starting voltage setpoint of the ramp in Vdc
-        stop: float/int, ending voltage setpoint of the ramp in Vdc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-
-        generates a linear ramp on the sources voltage specified by the
-        parameters start, stop, n, and dt. output of the source should be
-        enabled before executing this command. contrary to what this
-        documentation may imply, start can be higher than stop or vise-versa.
-        minimum dt is limited by the communication speed of the interface used
-        to communicate with this device and the connected electrical network.
-        """
-
-        for i in np.linspace(start, stop, int(n)):
-            self.set_voltage(i)
-            sleep(dt)
-        return None
-
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0):
-        """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
-
-        start: float/int, "low" voltage setpoint of the ramp in Vdc
-        stop: float/int, "high" voltage setpoint of the ramp in Vdc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
-
-        generates a triangular waveform on the sources voltage specified by the
-        parameters start, stop, n, and dt. optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal voltage shape. The
-        output of the load should be enabled before executing this command.
-        contrary to what this documentation may imply, start can be higher than
-        stop or vise-versa. minimum dt is limited by the communication speed of
-        the interface used to communicate with this device and the connected
-        electrical network.
-        """
-
-        self.ramp(start, stop, n=int(n/2), dt=dt)
-        sleep(dwell)
-        self.ramp(stop, start, n=int(n/2), dt=dt)
-        return None
-
-
-if __name__ == '__main__':
-    pass
