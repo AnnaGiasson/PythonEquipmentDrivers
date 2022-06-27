@@ -19,7 +19,7 @@ class Fluke_45(VisaResource):
     http://www.ece.ubc.ca/~eng-services/files/manuals/Man_DMM_fluke45.pdf
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.factor = kwargs.get('factor', 1.0)
         self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC'
@@ -39,9 +39,7 @@ class Fluke_45(VisaResource):
         except IOError:
             pass  # emptied
 
-        return None
-
-    def _measure_signal(self):
+    def _measure_signal(self) -> float:
         """
         _measure_signal()
 
@@ -56,7 +54,7 @@ class Fluke_45(VisaResource):
 
         return self.factor*float(response)
 
-    def set_range(self, n, auto_range=False):
+    def set_range(self, n: int, auto_range: bool = False) -> None:
         """
         set_range(n, auto_range=False)
 
@@ -69,8 +67,6 @@ class Fluke_45(VisaResource):
         if the auto_range flag is set to True the device will automaticly
         determine which range to be in base on the signal level default is
         False.
-
-        returns: int
         """
 
         if auto_range:
@@ -83,9 +79,7 @@ class Fluke_45(VisaResource):
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-        return None
-
-    def get_range(self):
+    def get_range(self) -> int:
         """
         get_range()
 
@@ -100,7 +94,7 @@ class Fluke_45(VisaResource):
         _ = self.read_resource()  # to empty the buffer
         return int(response)
 
-    def set_rate(self, rate):
+    def set_rate(self, rate: str) -> None:
         """
         set_rate(rate)
 
@@ -112,14 +106,13 @@ class Fluke_45(VisaResource):
         """
 
         rate = rate.upper()
-        if rate in ['S', 'M', 'F']:
+        if rate in {'S', 'M', 'F'}:
             self.write_resource(f"RATE {rate}")
             _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid rate option, should be 'S','M', or 'F'")
-        return None
 
-    def get_rate(self):
+    def get_rate(self) -> str:
         """
         get_rate()
 
@@ -131,7 +124,7 @@ class Fluke_45(VisaResource):
         _ = self.read_resource()  # to empty the buffer
         return response
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: str) -> None:
         """
         set_mode(mode)
 
@@ -151,9 +144,8 @@ class Fluke_45(VisaResource):
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
-        return None
 
-    def get_mode(self):
+    def get_mode(self) -> str:
         """
         get_mode()
 
@@ -167,7 +159,7 @@ class Fluke_45(VisaResource):
         _ = self.read_resource()  # to empty the buffer
         return response
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -177,14 +169,13 @@ class Fluke_45(VisaResource):
         If the meter is not configured to measure DC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VDC':
             raise IOError("Multimeter is not configured to measure voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_voltage_rms(self):
+    def measure_voltage_rms(self) -> float:
         """
         measure_voltage_rms()
 
@@ -194,14 +185,13 @@ class Fluke_45(VisaResource):
         If the meter is not configured to measure AC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VAC':
             raise IOError("Multimeter is not configured to measure AC voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -211,14 +201,13 @@ class Fluke_45(VisaResource):
         terminals. If the meter is not configured to measure DC current this
         will raise an exception. This can be remedied by setting the meaurement
         mode with the set_mode method.
-
         """
+
         if self.get_mode() != 'ADC':
             raise IOError("Multimeter is not configured to measure current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current_rms(self):
+    def measure_current_rms(self) -> float:
         """
         measure_current_rms()
 
@@ -228,14 +217,13 @@ class Fluke_45(VisaResource):
         terminals. If the meter is not configured to measure AC current this
         will raise an exception. This can be remedied by setting the meaurement
         mode with the set_mode method.
-
         """
+
         if self.get_mode() != 'AAC':
             raise IOError("Multimeter is not configured to measure AC current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_resistance(self):
+    def measure_resistance(self) -> float:
         """
         measure_resistance()
 
@@ -245,14 +233,13 @@ class Fluke_45(VisaResource):
         If the meter is not configured to measure resistance this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'OHMS':
             raise IOError("Multimeter is not configured to measure resistance")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_frequency(self):
+    def measure_frequency(self) -> float:
         """
         measure_frequency()
 
@@ -262,9 +249,8 @@ class Fluke_45(VisaResource):
         If the meter is not configured to measure frequency this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'FREQ':
             raise IOError("Multimeter is not configured to measure frequency")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()

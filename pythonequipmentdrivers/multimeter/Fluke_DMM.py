@@ -1,4 +1,5 @@
 from typing import Set
+
 from pythonequipmentdrivers import VisaResource
 
 
@@ -24,7 +25,7 @@ class Fluke_DMM(VisaResource):
             'AAC', 'ADC', 'VAC', 'VDC', 'OHMS', 'FREQ', 'CONT'
             }
 
-    def _measure_signal(self):
+    def _measure_signal(self) -> float:
         """
         _measure_signal(self)
 
@@ -62,7 +63,7 @@ class Fluke_DMM(VisaResource):
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-    def get_range(self):
+    def get_range(self) -> int:
         """
         get_range()
 
@@ -137,7 +138,7 @@ class Fluke_DMM(VisaResource):
         response = self.query_resource("FUNC1?")
         return response
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -147,14 +148,13 @@ class Fluke_DMM(VisaResource):
         If the meter is not configured to measure DC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VDC':
             raise IOError("Multimeter is not configured to measure voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_voltage_rms(self):
+    def measure_voltage_rms(self) -> float:
         """
         measure_voltage_rms()
 
@@ -164,14 +164,13 @@ class Fluke_DMM(VisaResource):
         If the meter is not configured to measure AC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VAC':
             raise IOError("Multimeter is not configured to measure AC voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -185,10 +184,9 @@ class Fluke_DMM(VisaResource):
         """
         if self.get_mode() != 'ADC':
             raise IOError("Multimeter is not configured to measure current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current_rms(self):
+    def measure_current_rms(self) -> float:
         """
         measure_current_rms()
 
@@ -202,10 +200,9 @@ class Fluke_DMM(VisaResource):
         """
         if self.get_mode() != 'AAC':
             raise IOError("Multimeter is not configured to measure AC current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_resistance(self):
+    def measure_resistance(self) -> float:
         """
         measure_resistance()
 
@@ -215,14 +212,13 @@ class Fluke_DMM(VisaResource):
         If the meter is not configured to measure resistance this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'OHMS':
             raise IOError("Multimeter is not configured to measure resistance")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_frequency(self):
+    def measure_frequency(self) -> float:
         """
         measure_frequency()
 
@@ -232,9 +228,8 @@ class Fluke_DMM(VisaResource):
         If the meter is not configured to measure frequency this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'FREQ':
             raise IOError("Multimeter is not configured to measure frequency")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
