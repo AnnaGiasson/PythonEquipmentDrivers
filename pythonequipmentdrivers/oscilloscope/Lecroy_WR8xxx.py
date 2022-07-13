@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -21,6 +22,8 @@ class Lecroy_WR8xxx(VisaResource):
 
     valid_trigger_states = ['AUTO', 'NORM', 'SINGLE', 'STOP']
 
+    bandwidth_settings = {'20MHZ', '200MHZ', '350MHZ', "FULL"}
+
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, clear=True, **kwargs)
         self.set_comm_header('short')
@@ -37,8 +40,7 @@ class Lecroy_WR8xxx(VisaResource):
                 selected/visable on the screen.
         """
 
-        cmd_str = f"C{channel}:TRACE {'ON' if state else 'OFF'}"
-        self.write_resource(cmd_str)
+        self.write_resource(f"C{channel}:TRACE {'ON' if state else 'OFF'}")
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
         """
@@ -88,6 +90,7 @@ class Lecroy_WR8xxx(VisaResource):
 
         if kwargs.get('use_divisions', False):
             off = off*self.get_channel_scale(channel)
+
         self.write_resource(f"C{channel}:OFFSET {off}")
 
     def get_channel_offset(self, channel: int) -> float:
@@ -154,6 +157,54 @@ class Lecroy_WR8xxx(VisaResource):
         response = self.query_resource(f"C{int(channel)}:COUPLING?")
         return coupling_map[response.split()[-1]]
 
+    def clear_bandwidth_limits(self) -> None:
+        """
+        clear_bandwidth_limits()
+
+        Removes any bandwidth limiting on all channels
+        """
+
+        self.write_resource('BWL OFF')
+
+    def set_channel_bandwidth_limit(self, channel: int, bandwidth: str
+                                    ) -> None:
+
+        if bandwidth.upper() not in self.bandwidth_settings:
+            raise ValueError('Invalid setting for bandwidth,'
+                             'see self.bandwidth_settings for allowed options')
+
+        vb_cmd = f'app.Acquisition.C{channel}.BandwidthLimit = "{bandwidth}"'
+        self.write_resource(f"""VBS {vb_cmd}""")
+
+    def get_channel_bandwidth_limit(self, channel: int) -> Union[float, None]:
+        """
+        get_channel_bandwidth_limit(channel)
+
+        Returns the bandwidth limit for the specified channel. If no limit is
+        used the method will return None.
+
+        Args:
+            channel (int): Channel number to query
+
+        Returns:
+            Union[float, None]: Bandwidth limit in Hz, or None if no limiting
+                is used.
+        """
+
+        response = self.query_resource(
+            f"VBS? 'return=app.Acquisition.C{channel}.BandwidthLimit' "
+            )
+
+        match = re.findall(r'VBS (Full|\d*[Mk]?Hz)', response)
+        if not match:
+            raise ValueError(f'Error reading BW limit for channel {channel}')
+
+        if match[0] == 'Full':
+            return None
+
+        value = match[0].rstrip('Hz')
+        return float(value.replace('M', 'E+3'))
+
     def set_horizontal_scale(self, scale: float) -> None:
         """
         set_horizontal_scale(scale)
@@ -181,6 +232,41 @@ class Lecroy_WR8xxx(VisaResource):
         response = self.query_resource('TIME_DIV?')
         val = response.split()[1]
         return float(val)
+
+    def set_memory_size(self, size: int) -> None:
+        """
+        set_memory_size()
+
+        Sets the number of points used to store each waveform in memory.
+        Built-in settings in this scope allow for the following sizes: 500,
+        1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000,
+        2500000, 5000000, 10000000, 25000000. Any size not specifed here will
+        round to the nearest value in the list.
+
+        Args:
+            size (int): number of waveform points to use in memory
+        """
+
+        self.write_resource(f'MEMORY_SIZE {size}')
+
+    def get_memory_size(self) -> int:
+        """
+        get_memory_size()
+
+        Retrives the number of points used to store each waveform in memory.
+
+        Returns:
+            int: number of points
+        """
+
+        response = self.query_resource('MEMORY_SIZE?')
+
+        match = re.findall(r'M\w* (\d*E?[+-]?\d*) SAMPLE', response)
+
+        if not match:
+            raise ValueError('Error retriveing value from oscilloscope')
+
+        return int(float(match[0]))
 
     def set_measure_config(self, channel: int, meas_type: int, meas_idx: int,
                            source_type: str = 'channel') -> None:
