@@ -1,7 +1,5 @@
 from typing import Tuple, Union
 from pythonequipmentdrivers import VisaResource
-import numpy as np
-from time import sleep
 
 
 # Look into programming "sequences" and "programs" to the device. See basic
@@ -426,110 +424,113 @@ class Chroma_63600(VisaResource):
         channel = self._channel_index(int(response), reverse=True)
         return channel
 
-    def set_mode(self, channel, mode, range_setting=1):
+    def set_mode(self, channel: int, mode: str,
+                 range_setting: str = "M") -> None:
         """
-        set_mode(channel, mode, range_setting=1)
-
-        channel: int, valid options are 1-5
-
-        mode: str, mode / load type to set the desired channel to
-              valid options can be accessed via the self.valid_modes attribute.
-
-        range_setting: int, range of the given mode.
-                       Valid options are:
-                           0: Low range
-                           1: Medium range
-                           2: High range
+        set_mode(channel, mode, range_setting="M")
 
         Sets the mode of the specified load card
+
+        Args:
+            channel: int, valid options are 1-5
+
+            mode: str, mode / load type to set the desired channel to
+                valid options can be accessed via the self.valid_modes
+                attribute.
+
+            range_setting: str, range of the given mode. Valid options are:
+                "L", "M", and "H" for Low, Medium, and High range respectively
         """
 
-        if (mode in self.valid_modes) and (range_setting in [0, 1, 2]):
-            ranges = ["L", "M", "H"]
-            self.set_channel(channel)
-            self._resource.write(f'MODE {mode}{ranges[range_setting]}')
-        else:
-            err_str = f"Invalid mode/range combo: ({mode}, {range_setting})"
-            raise ValueError(err_str)
-        return None
+        ranges = {"L", "M", "H"}
 
-    def get_mode(self, channel):
+        if (mode in self.valid_modes) and (range_setting in ranges):
+
+            self.set_channel(channel)
+            self.write_resource(f'MODE {mode}{range_setting}')
+        else:
+            raise ValueError(
+                f"Invalid mode/range combo: ({mode}, {range_setting})"
+                )
+
+    def get_mode(self, channel: int) -> Tuple[str, str]:
         """
         get_mode(channel)
 
-        channel: int, valid options are 1-5
-
-        returns a tuple (mode, range_setting)
-
-        mode: str, mode / load type to set the desired channel to
-              valid options can be accessed via the self.valid_modes attribute.
-
-        range_setting: int, range of the given mode.
-                       Valid options are:
-                           0: Low range
-                           1: Medium range
-                           2: High range
-
         Gets the load mode from specified load channel
+
+        Args:
+            channel: int, valid options are 1-5
+
+        Returns:
+        Tuple[str, str]:  load mode (mode, range_setting). Mode (str),
+            mode/load type to set the desired channel to valid options can be
+            accessed via the self.valid_modes attribute.
+            range_setting (str), range of the given mode. Valid options are:
+            "L", "M", and "H" for Low, Medium, and High range respectiv
         """
 
-        ranges = {"L": 0, "M": 1, "H": 2}
-
         self.set_channel(channel)
-        resp = self._resource.query('MODE?')
-        resp = resp.strip()
+        response = self.query_resource('MODE?')
 
-        mode, range_setting = resp[0:-1], resp[-1]
+        mode, range_setting = response[0:-1], response[-1]
 
-        return (mode, ranges[range_setting])
+        return (mode, range_setting)
 
-    def set_parallel_state(self, state):
+    def set_parallel_state(self, state: bool) -> None:
         """
         set_parallel_state(state)
 
-        state: int, valid options are 0 and 1.
-
-        Enables/Disables parallel mode operation of individual channels wihin
+        Enables/Disables parallel mode operation of individual channels within
         the load.
+
+        Args:
+            state: bool, parallel state.
         """
 
-        self._resource.write(f'CONF:PARA:INIT {state}')
-        return None
+        self.write_resource(f'CONF:PARA:INIT {1 if state else 0}')
 
-    def get_parallel_state(self):
+    def get_parallel_state(self) -> bool:
         """
         get_parallel_state()
 
-        Returns the state of the loads parallel operation.
-        """
-        resp = self._resource.query('CONF:PARA:INIT?')
-        resp = resp.strip()
-        if resp == "ON":
-            return True
-        elif resp == "OFF":
-            return False
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        Returns the loads parallel operation state.
 
-    def set_parallel_mode(self, channel, mode):
+        Returns:
+            bool: parallel operation state
+        """
+
+        response = self.query_resource('CONF:PARA:INIT?')
+
+        if response not in {"ON", "OFF"}:
+            raise IOError(f"Unknown response: {response}")
+
+        return response == "ON"
+
+    def set_parallel_mode(self, channel: int, mode: str) -> None:
         """
         set_parallel_mode(channel, mode)
 
-        channel: int, valid options are 1-5
-
-        mode: int, a code corresponding to the parallel mode of the respective
-               channel. Valid options are:
-                    0: None
-                    1: Master
-                    2: Slave
-
         Sets parallel mode for each channel
-        """
-        self.set_channel(channel)
-        self._resource.write(f'CONF:PARA:MODE {mode}')
-        return None
 
-    def get_parallel_mode(self, channel):
+        Args:
+            channel: int, valid options are 1-5
+
+            mode: str,  the parallel mode of the respective channel. Valid
+                options are: "None", "Master", and "Slave" (case-insensitive)
+        """
+
+        modes = {"none": 0, 'master': 1, 'slave': 2}
+
+        if mode.lower() not in modes.keys():
+            raise ValueError(
+                f'Invalid mode, valid options are {modes.keys()}'
+                )
+
+        self.set_channel(channel)
+        self.write_resource(f'CONF:PARA:MODE {modes[mode.lower()]}')
+
+    def get_parallel_mode(self, channel: int) -> str:
         """
         get_parallel_mode(channel)
 
@@ -543,53 +544,50 @@ class Chroma_63600(VisaResource):
                     1: Master
                     2: Slave
         """
+
+        modes = {"none", 'master', 'slave'}
+
         self.set_channel(channel)
-        resp = self._resource.query('CONF:PARA:MODE?')
-        resp = resp.strip()
+        response = self.query_resource('CONF:PARA:MODE?')
 
-        if resp == "NONE":
-            return 0
-        if resp == "MASTER":
-            return 1
-        elif resp == "SLAVE":
-            return 2
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        if response not in modes:
+            raise IOError(f"Unknown response: {response}")
+        return response.lower()
 
-    def set_channel_state(self, channel, state):
+    def set_channel_state(self, channel: int, state: bool) -> None:
         """
         set_channel_state(channel, state)
 
-        channel: int, valid options are 1-5
-        state = 0, 1
-
         Enables/disables the respective load channel
 
+        Args:
+            channel (int): valid options are 1-5
+            state (bool): channel state
         """
 
         self.set_channel(channel)
-        self._resource.write(f'CHAN:ACT {state}')
-        return None
+        self.write_resource(f'CHAN:ACT {1 if state else 0}')
 
-    def get_channel_state(self, channel):
+    def get_channel_state(self, channel: int) -> bool:
         """
         get_channel_state(channel)
 
-        channel: int, valid options are 1-5
+        returns the state of the output of the specified channel
 
-        Returns whether or not the respective load channel is Enabled/disabled
-        (bool)
+        Args:
+            channel (int): valid options are 1-5
+
+        Returns:
+            bool: whether or not the respective load channel is Enabled
         """
 
         self.set_channel(channel)
-        resp = self._resource.query('CHAN:ACT?')
-        resp = resp.strip()
-        if resp == "ON":
-            return True
-        elif resp == "OFF":
-            return False
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        response = self.query_resource('CHAN:ACT?')
+
+        if response not in {"ON", "OFF"}:
+            raise IOError(f"Unknown response: {response}")
+
+        return (response == "ON")
 
     # # need to investigate what this function actually does
     # def set_sync_mode(self, channel: int, state) -> None:
@@ -599,94 +597,89 @@ class Chroma_63600(VisaResource):
     #     self.set_channel(channel)
     #     self.write_resource(f'CONF:SYNC:MODE {state}')
 
-    def set_voltage(self, voltage, level=0):
+    def set_voltage(self, voltage: float, level: int = 0) -> None:
         """
         set_voltage(voltage, level=0)
-
-        voltage: float, desired voltage setpoint in Vdc
-        level (optional): int, level to change setpoint of.
-                          valid options are 0,1,2 (default is 0)
 
         changes the voltage setpoint of the load for the specified level in
         constant voltage mode. if level = 0 both levels will be set to the
         value specified
+
+        Args:
+            voltage (float): desired voltage setpoint in Vdc
+            level (int): level to change setpoint of. valid options
+                are 0,1,2 (default is 0).
         """
 
         if level == 0:
-            self._resource.write(f'VOLT:STAT:L1 {float(voltage)}')
-            self._resource.write(f'VOLT:STAT:L2 {float(voltage)}')
+            self.write_resource(f'VOLT:STAT:L1 {voltage}')
+            self.write_resource(f'VOLT:STAT:L2 {voltage}')
         else:
-            command_str = f'VOLT:STAT:L{int(level)} {float(voltage)}'
-            self._resource.write(command_str)
-        return None
+            self.write_resource(f'VOLT:STAT:L{level} {voltage}')
 
-    def get_voltage(self, level):
+    def get_voltage(self, level: int) -> float:
         """
         get_voltage(level)
 
-        level: int, level to get setpoint of.
-               valid options are 1,2, and 0
-
-        reads the voltage setpoint of the load for the specified level in
+        Reads the voltage setpoint of the load for the specified level in
         constant voltage mode. if level == 0 then it will return a list
         containing both load levels.
+
+        Args:
+            level (int): level to get setpoint of. valid options are 1,2, and 0
         """
 
         if level == 0:
-            voltages = (float(self._resource.query('VOLT:STAT:L1?')),
-                        float(self._resource.query('VOLT:STAT:L2?')))
-            return voltages
+            return (float(self.query_resource('VOLT:STAT:L1?')),
+                    float(self.query_resource('VOLT:STAT:L2?')))
         else:
-            response = self._resource.query(f'VOLT:STAT:L{int(level)}?')
+            response = self.query_resource(f'VOLT:STAT:L{level}?')
             return float(response)
 
-    def set_cv_current_limit(self, current):
+    def set_cv_current_limit(self, current: float) -> None:
         """
         set_cv_current_limit(current)
 
-        current: float, desired current setpoint
-
-        changes the current setpoint of the load for the specified level in
+        Changes the current setpoint of the load for the specified level in
         constant voltage mode.
+
+        Returns:
+            float: setpoint current in Amps
         """
 
-        self._resource.write(f'VOLT:STAT:ILIM {current}')
-        return None
+        self.write_resource(f'VOLT:STAT:ILIM {current}')
 
-    def get_cv_current_limit(self):
+    def get_cv_current_limit(self) -> float:
         """
         get_cv_current_limit()
 
-        returns:
-        current: float, current setpoint in Adc
-
-        returns the current setpoint of the load for the in constant voltage
+        Retries the current setpoint of the load for the in constant voltage
         mode.
+
+        Returns:
+            float:  setpoint current in Adc
         """
 
-        resp = self._resource.query('VOLT:STAT:ILIM?')
+        response = self._resource.query('VOLT:STAT:ILIM?')
+        return float(response)
 
-        return float(resp)
-
-    def set_dynamic_sine_frequency(self, freq):
+    def set_dynamic_sine_frequency(self, frequency: float) -> None:
 
         """
-        set_dynamic_sine_frequency(freq)
+        set_dynamic_sine_frequency(frequency)
 
         Sets the frequency of the sine wave current used in the
         'advanced sine-wave' mode of operation in Hz. Min/Max setting can be
         determined using the get_dynamic_sine_frequency method with the min/max
         flag.
 
-        Arguments:
-            freq {float} -- desired frequency in Hz
+        Args:
+            frequency (float): desired frequency in Hz
         """
 
-        self._resource.write(f'ADV:SINE:FREQ {freq}')
-        return None
+        self.write_resource(f'ADV:SINE:FREQ {frequency}')
 
-    def get_dynamic_sine_frequency(self, flag=''):
-
+    def get_dynamic_sine_frequency(self, flag='') -> float:
         """
         get_dynamic_sine_frequency(flag='')
 
@@ -694,46 +687,40 @@ class Chroma_63600(VisaResource):
         'advanced sine-wave' mode of operation in Hz. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the frequency limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the frequency limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively (Not case-sensitive, default: {''}).
 
         Returns:
-            freq {float} -- current frequency setpoint (or limit) in Hz.
+            float: current frequency setpoint (or limit) in Hz.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
-            raise ValueError(f'Invalid value {flag} for arg "value"')
+        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+            raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        resp = self._resource.query(f'ADV:SINE:FREQ? {flag}')
-        freq = float(resp)
-        return freq
+        response = self.query_resource(f'ADV:SINE:FREQ? {flag.upper()}')
+        return float(response)
 
-    def set_dynamic_sine_amplitude_ac(self, amp):
+    def set_dynamic_sine_amplitude_ac(self, amplitude: float) -> None:
 
         """
-        set_dynamic_sine_amplitude_ac(amp)
+        set_dynamic_sine_amplitude_ac(amplitude)
 
         Sets the amplitude of the sine wave current used in the
         'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
         determined using the get_dynamic_sine_amplitude_ac method with the
         min/max flag.
 
-        Arguments:
-            freq {float} -- desired amplitude in A_DC
+        Args:
+            amplitude (float): desired amplitude in A_DC
         """
 
-        amp_peak2peak = amp*2  # convert Amplitude to peak-to-peak
-        self._resource.write(f'ADV:SINE:IAC {amp_peak2peak}')
-        return None
+        amp_peak2peak = amplitude*2  # convert Amplitude to peak-to-peak
+        self.write_resource(f'ADV:SINE:IAC {amp_peak2peak}')
 
-    def get_dynamic_sine_amplitude_ac(self, flag=''):
+    def get_dynamic_sine_amplitude_ac(self, flag: str = '') -> float:
 
         """
         get_dynamic_sine_amplitude_ac(flag='')
@@ -742,32 +729,26 @@ class Chroma_63600(VisaResource):
         'advanced sine-wave' mode of operation in A_DC. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the amplitude limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the amplitude limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively; Not case-insensitive. Defaults to ''.
 
         Returns:
-            freq {float} -- current amplitude setpoint (or limit) in A_DC.
+            float: current amplitude setpoint (or limit) in A_DC.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
+        if flag.upper() not in {'MIN', 'MAX', ''}:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        resp = self._resource.query(f'ADV:SINE:IAC? {flag}')
-        amp_peak2peak = float(resp)
-        amp = amp_peak2peak/2  # convert peak-to-peak to Amplitude
-        return amp
+        response = self.query_resource(f'ADV:SINE:IAC? {flag.upper()}')
+        amp_peak2peak = float(response)
+        return amp_peak2peak/2  # convert peak-to-peak to Amplitude
 
-    def set_dynamic_sine_dc_level(self, amp):
-
+    def set_dynamic_sine_dc_offset(self, offset: float) -> None:
         """
-        set_dynamic_sine_dc_level(amp)
+        set_dynamic_sine_dc_offset(offset)
 
         Sets the DC level of the sine wave current used in the
         'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
@@ -775,14 +756,12 @@ class Chroma_63600(VisaResource):
         min/max flag.
 
         Arguments:
-            freq {float} -- desired DC level in A_DC
+            freq (float): desired DC offset in A_DC
         """
 
-        self._resource.write(f'ADV:SINE:IDC {amp}')
-        return None
+        self.write_resource(f'ADV:SINE:IDC {offset}')
 
-    def get_dynamic_sine_dc_level(self, flag=''):
-
+    def get_dynamic_sine_dc_level(self, flag: str = '') -> float:
         """
         get_dynamic_sine_dc_level(flag='')
 
@@ -790,36 +769,21 @@ class Chroma_63600(VisaResource):
         'advanced sine-wave' mode of operation in A_DC. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the DC level limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the DC level limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively; case-insensitive. Defaults to ''.
 
         Returns:
-            freq {float} -- current DC level setpoint (or limit) in A_DC.
+            float: current DC level setpoint (or limit) in A_DC.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
-            raise ValueError(f'Invalid value {flag} for arg "value"')
+        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+            raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        resp = self._resource.query(f'ADV:SINE:IDC? {flag}')
-        amp = float(resp)
-        return amp
-
-    def reset(self):
-        """
-        reset()
-
-        Resets all registers to default settings
-        """
-
-        self._resource.write('*RST')
-        return None
+        response = self._resource.query(f'ADV:SINE:IDC? {flag.upper()}')
+        return float(response)
 
     def clear_errors(self):
         """
@@ -911,7 +875,7 @@ class Chroma_63600(VisaResource):
         voltages = list(map(float, response.split(',')))
 
         if return_average:
-            return np.mean(voltages)
+            return sum(voltages)/len(voltages)
         else:
             return voltages
 
@@ -954,96 +918,3 @@ class Chroma_63600(VisaResource):
             return sum(powers)
         else:
             return powers
-
-    def pulse(self, level, duration):
-        """
-        pulse(level, duration)
-
-        level: float/int, current level of "high" state of the pulse in Amps
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
-
-        generates a square pulse with height and duration specified by level
-        and duration. will start and return to the previous current level set
-        on the load before the execution of pulse(). level can be less than or
-        greater than the previous current setpoint
-        """
-
-        start_level = self.get_current(1)
-        self.set_current(level)
-        sleep(duration)
-        self.set_current(start_level)
-        return None
-
-    def ramp(self, start, stop, n=100, dt=0.01):
-        """
-        ramp(start, stop, n=100, dt=0.01)
-
-        start: float/int, starting current setpoint of the ramp in Adc
-        stop: float/int, ending current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-
-        generates a linear ramp on the loads current specified by the
-        parameters start, stop, n, and dt. input of the load should be enabled
-        before executing this command. contrary to what this documentation may
-        imply, start can be higher than stop or vise-versa. minimum dt is
-        limited by the communication speed of the interface used to communicate
-        with this device
-        """
-
-        for i in np.linspace(start, stop, int(n)):
-            self.set_current(i)
-            sleep(dt)
-        return None
-
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0):
-        """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
-
-        start: float/int, "low" current setpoint of the ramp in Adc
-        stop: float/int, "high" current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
-
-        generates a triangular waveform on the loads current specified by the
-        parameters start, stop, n, and dt. optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal load shape. input of
-        the load should be enabled before executing this command. contrary to
-        what this documentation may imply, start can be higher than stop or
-        vise-versa. minimum dt is limited by the communication speed of the
-        interface used to communicate with this device
-        """
-
-        self.ramp(start, stop, n=int(n), dt=dt)
-        sleep(dwell)
-        self.ramp(stop, start, n=int(n), dt=dt)
-        return None
-
-    # def config_1Master_xSlave (self, CHROMALOAD_NUMCHUSED, CHROMALOAD_MODE):
-    #     """
-    #     Reset array, Set Ch1 as master remainder as slave \n
-    #     set all channels to one mode as selected \n
-    #     Trun ON parallel mode
-    #     """
-    #     self.reset_all()
-    #     for Slave_Ch in range( 3 , CHROMALOAD_NUMCHUSED + 1, 2):
-    #         self.set_mode(Slave_Ch, '%s' %CHROMALOAD_MODE)
-    #         self.set_parallel_mode(Slave_Ch, 'SLAVE')
-    #         self.set_sync_mode(Slave_Ch, 'SLAVE')
-    #     self.set_mode(1, '%s' %CHROMALOAD_MODE)
-    #     self.set_parallel_mode( 1 , 'MASTER')
-    #     self.set_sync_mode( 1 , 'MASTER')
-    #     self.set_channel(1)
-    #     self.set_parallel_state('ON')
-    #     return None
-
-
-if __name__ == '__main__':
-    pass
