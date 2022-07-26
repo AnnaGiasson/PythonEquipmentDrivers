@@ -96,11 +96,11 @@ class VisaResource:
 
     Arg:
         address (str): Visa resource address to connect to
-
-    Kwargs:
         clear (bool): whether or not to clear the VISA resource's input/output
             buffers after instantiating the connection at class creation (see
             self.clear() for more details). Defaults to False.
+
+    Kwargs:
         open_timeout (float, optional): The time to wait (in seconds) when
             trying to connect to a resource before this operation returns an
             error; resolves to the nearest millisecond. Defaults to 1.0.
@@ -126,7 +126,7 @@ class VisaResource:
         except (pyvisa.Error) as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
-                )
+            )
 
         if clear:
             self.clear()
@@ -226,7 +226,7 @@ class VisaResource:
         return def_str
 
     def __str__(self) -> str:
-        return f"Rource ID: {self.idn}\nAddress: {self.address}"
+        return f"Resource ID: {self.idn}\nAddress: {self.address}"
 
     def write_resource(self, message: str, **kwargs) -> None:
         """
