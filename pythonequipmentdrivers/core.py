@@ -146,7 +146,7 @@ class VisaResource:
         compatible instruments.
         """
 
-        self._resource.write("*CLS", **kwargs)
+        self.write_resource("*CLS", **kwargs)
 
     def clear(self) -> None:
         """
@@ -189,7 +189,7 @@ class VisaResource:
         Commands and should be supported by all SCPI compatible instruments.
         """
 
-        self._resource.write("*RST", **kwargs)
+        self.write_resource("*RST", **kwargs)
 
     @property
     def timeout(self) -> int:
