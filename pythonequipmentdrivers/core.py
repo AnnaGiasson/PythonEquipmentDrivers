@@ -304,3 +304,21 @@ class VisaResource:
 
         except pyvisa.VisaIOError as error:
             raise IOError("Error communicating with the resource\n", error)
+
+
+class GpibInterface(VisaResource):
+    """
+    Class for instantiation of the GPIB interface device (typically plugs into
+    the computer's USB port). Since GPIB is a bus based interface layer,
+    all instruments that utilize the bus can be accessed with group commands,
+    if supported, to perform syncronized tasks.
+    """
+
+    def group_execute_trigger(self, *trigger_devices):
+        """
+        Sends the group execture trigger (GET) command to the devices specified
+
+        *trigger_devices: Device instances to trigger
+        """
+        visa_resources = [n._resource for n in trigger_devices]
+        self.instrument.group_execute_trigger(*visa_resources)
