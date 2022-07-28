@@ -49,6 +49,8 @@ class ResourceCollection(SimpleNamespace):
     passed into the connect_resources function.
     """
 
+    dmms: "DmmCollection"
+
     def __repr__(self) -> str:
         return (
             super().__repr__().replace("namespace", self.__class__.__name__)
@@ -83,7 +85,7 @@ class ResourceCollection(SimpleNamespace):
                 pass
 
 
-class Dmms(ResourceCollection):
+class DmmCollection(ResourceCollection):
     """
     A slightly modified subclass of ResourceCollection to act as a container
     for multimeters and support some common methods.
@@ -273,6 +275,7 @@ def connect_resources(config: Union[str, Path, dict],
 
     # build ResourceCollection instance
     resources = ResourceCollection()
+    dmms = {}
     for name, meta_info in collection_config.items():
 
         try:
@@ -285,7 +288,11 @@ def connect_resources(config: Union[str, Path, dict],
 
             # create instance of Resource called 'name', any remaining items in
             # meta_info will be passed as kwargs
-            setattr(resources, name, Resource(**meta_info))
+            resource = Resource(**meta_info)
+            setattr(resources, name, resource)
+
+            if 'multimeter' in Module:
+                dmms[name.replace('DMM', '')] = resource
 
             if kwargs.get('verbose', True):
                 print(f'[CONNECTED] {name}')
@@ -313,6 +320,9 @@ def connect_resources(config: Union[str, Path, dict],
 
             if object_mask:  # unknown resource is required equipment
                 raise UnsupportedResourceError(error)
+
+    if dmms:
+        resources.dmms = DmmCollection(**dmms)
 
     return resources
 
