@@ -1,7 +1,9 @@
 import json
 from importlib import import_module
 from pathlib import Path
-from typing import Tuple, Union
+from types import SimpleNamespace
+from typing import Tuple, Union, Iterator
+
 
 from pyvisa import VisaIOError
 
@@ -37,7 +39,7 @@ def read_configuration(config_info: Union[str, Path, dict]) -> dict:
     return configuration
 
 
-class ResourceCollection:
+class ResourceCollection(SimpleNamespace):
     """
     ResourceCollection
 
@@ -47,10 +49,106 @@ class ResourceCollection:
     passed into the connect_resources function.
     """
 
-    pass
+    dmms: "DmmCollection"
 
+    def __repr__(self) -> str:
+        return (
+            super().__repr__().replace("namespace", self.__class__.__name__)
+        )
+
+    def __iter__(self) -> Iterator:
+        # allows intuitive iteration over the collection objects
+        return iter(self.__dict__.values())
+
+    def reset(self) -> None:
+        """
+        reset()
+
+        Attempt to reset each resource in the collection.
+        """
+        for resource in self:
+            try:
+                resource.reset()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def set_local(self) -> None:
+        """
+        set_local()
+
+        Attempt to reset each resource in the collection.
+        """
+        for resource in self:
+            try:
+                resource.set_local()
+            except (VisaIOError, AttributeError):
+                pass
+
+
+class DmmCollection(ResourceCollection):
+    """
+    A slightly modified subclass of ResourceCollection to act as a container
+    for multimeters and support some common methods.
+    """
+
+    def fetch_data(self, mapper: dict = None, only_mapped: bool = False) -> dict[str, float]:
+        """
+        fetch_data([mapper])
+
+        Fetch measurements from all DMMs and pack them into a dict. The keys
+        will be the DMM name by default. Optionally, a mapper can be specified
+        to rename the dictonary keys.
+        Args:
+            mapper (dict, optional): rename keys of the collected data. Key
+            should be the DMM name and the value should be the desired new name.
+            only_mapped (bool, optional): If true only measurments of DMMs found
+            in mapper will be returned.
+
+        Returns:
+            dict: dict of the fetched measurements
+        """
+        mapper = {} if mapper is None else mapper
+        measurements = {}
+        for name, resource in self.__dict__.items():
+            new_name = mapper.get(name)
+            if new_name is None and only_mapped:
+                continue
+            if new_name is None:
+                new_name = name
+            try:
+                measurements[new_name] = resource.fetch_data()
+            except AttributeError as exc:
+                raise AttributeError(
+                    "All multimeter instances must have a fetch_data method") from exc
+        return measurements
+
+    def init(self) -> None:
+        """
+        init()
+
+        Initialize (arm) the trigger of dmms where applicable.
+        """
+        for resource in self:
+            try:
+                resource.init()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def trigger(self) -> None:
+        """
+        trigger()
+
+        Perform a basic sequential triggering of all devices.
+        """
+        for resource in self:
+            try:
+                resource.trigger()
+            except (VisaIOError, AttributeError):
+                pass
 
 # Update expected/assumed format of json file
+
+
 def connect_resources(config: Union[str, Path, dict],
                       **kwargs) -> ResourceCollection:
     """
@@ -177,6 +275,7 @@ def connect_resources(config: Union[str, Path, dict],
 
     # build ResourceCollection instance
     resources = ResourceCollection()
+    dmms = {}
     for name, meta_info in collection_config.items():
 
         try:
@@ -189,7 +288,11 @@ def connect_resources(config: Union[str, Path, dict],
 
             # create instance of Resource called 'name', any remaining items in
             # meta_info will be passed as kwargs
-            setattr(resources, name, Resource(**meta_info))
+            resource = Resource(**meta_info)
+            setattr(resources, name, resource)
+
+            if 'multimeter' in Module:
+                dmms[name.replace('DMM', '')] = resource
 
             if kwargs.get('verbose', True):
                 print(f'[CONNECTED] {name}')
@@ -217,6 +320,9 @@ def connect_resources(config: Union[str, Path, dict],
 
             if object_mask:  # unknown resource is required equipment
                 raise UnsupportedResourceError(error)
+
+    if dmms:
+        resources.dmms = DmmCollection(**dmms)
 
     return resources
 
