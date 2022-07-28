@@ -191,6 +191,24 @@ class VisaResource:
 
         self.write_resource("*RST", **kwargs)
 
+    def set_local(self) -> None:
+        """
+        set_local()
+
+        Set the instument to local mode
+
+        Attempts to send the go to local command if the device has a ren function.
+        Resource subclasses can customize this to handle specific cases i.e.
+        serial resources
+        """
+        try:
+            # generic set local method for most GPIB, USB, TCIP
+            self.instrument.control_ren(
+                pyvisa.constants.RENLineOperation.address_gtl)
+        except (AttributeError, pyvisa.Error):
+            # not a device that has control_ren method
+            pass
+
     @property
     def timeout(self) -> int:
         """
