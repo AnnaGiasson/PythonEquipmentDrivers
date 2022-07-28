@@ -203,7 +203,7 @@ class VisaResource:
         """
         try:
             # generic set local method for most GPIB, USB, TCIP
-            self.instrument.control_ren(
+            self._resource.control_ren(
                 pyvisa.constants.RENLineOperation.address_gtl)
         except (AttributeError, pyvisa.Error):
             # not a device that has control_ren method
@@ -338,5 +338,7 @@ class GpibInterface(VisaResource):
 
         *trigger_devices: Device instances to trigger
         """
+
+        # TODO: consider adding getter to access private _resource
         visa_resources = [n._resource for n in trigger_devices]
-        self.instrument.group_execute_trigger(*visa_resources)
+        self._resource.group_execute_trigger(*visa_resources)
