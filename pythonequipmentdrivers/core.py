@@ -21,9 +21,9 @@ def find_visa_resources(query: str = "?*::INSTR") -> Tuple[str]:
     return rm.list_resources(query=query)
 
 
-def identify_visa_resources(resources: Optional[Iterable[str]] = None,
-                            verbose: bool = False,
-                            **kwargs) -> List[Tuple[str, str]]:
+def identify_visa_resources(
+    resources: Optional[Iterable[str]] = None, verbose: bool = False, **kwargs
+) -> List[Tuple[str, str]]:
     """
     identify_connections(resources=None, verbose=False)
 
@@ -58,7 +58,7 @@ def identify_visa_resources(resources: Optional[Iterable[str]] = None,
     resource_addrs = find_visa_resources() if resources is None else resources
 
     # timeout config
-    resource_config = {'open_timeout': 1, 'timeout': 1}  # defaults
+    resource_config = {"open_timeout": 1, "timeout": 1}  # defaults
     resource_config.update(kwargs)  # update based on any user input
 
     if verbose and (len(resource_addrs) > 0):
@@ -96,11 +96,11 @@ class VisaResource:
 
     Arg:
         address (str): Visa resource address to connect to
-
-    Kwargs:
         clear (bool): whether or not to clear the VISA resource's input/output
             buffers after instantiating the connection at class creation (see
             self.clear() for more details). Defaults to False.
+
+    Kwargs:
         open_timeout (float, optional): The time to wait (in seconds) when
             trying to connect to a resource before this operation returns an
             error; resolves to the nearest millisecond. Defaults to 1.0.
@@ -115,8 +115,8 @@ class VisaResource:
         self.address = address
 
         default_settings = {
-            'open_timeout': int(1000*kwargs.get("open_timeout", 1.0)),  # ms
-            'timeout': int(1000*kwargs.get("timeout", 1.0)),  # ms
+            "open_timeout": int(1000 * kwargs.get("open_timeout", 1.0)),  # ms
+            "timeout": int(1000 * kwargs.get("timeout", 1.0)),  # ms
         }
 
         try:
@@ -126,7 +126,7 @@ class VisaResource:
         except (pyvisa.Error) as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
-                )
+            )
 
         if clear:
             self.clear()
@@ -146,7 +146,7 @@ class VisaResource:
         compatible instruments.
         """
 
-        self._resource.write("*CLS", **kwargs)
+        self.write_resource("*CLS", **kwargs)
 
     def clear(self) -> None:
         """
@@ -189,7 +189,24 @@ class VisaResource:
         Commands and should be supported by all SCPI compatible instruments.
         """
 
-        self._resource.write("*RST", **kwargs)
+        self.write_resource("*RST", **kwargs)
+
+    def set_local(self) -> None:
+        """
+        set_local()
+
+        Set the instument to local mode
+
+        Attempts to send the go to local command if the device has a ren function.
+        Resource subclasses can customize this to handle specific cases i.e.
+        serial resources
+        """
+        try:
+            # generic set local method for most GPIB, USB, TCIP
+            self._resource.control_ren(pyvisa.constants.RENLineOperation.address_gtl)
+        except (AttributeError, pyvisa.Error):
+            # not a device that has control_ren method
+            pass
 
     @property
     def timeout(self) -> int:
@@ -215,7 +232,7 @@ class VisaResource:
         self._resource.timeout = int(timeout)  # ms
 
     def __del__(self) -> None:
-        if hasattr(self, '_resource'):
+        if hasattr(self, "_resource"):
             self._resource.close()
 
     def __repr__(self) -> str:
@@ -226,7 +243,7 @@ class VisaResource:
         return def_str
 
     def __str__(self) -> str:
-        return f"Rource ID: {self.idn}\nAddress: {self.address}"
+        return f"Resource ID: {self.idn}\nAddress: {self.address}"
 
     def write_resource(self, message: str, **kwargs) -> None:
         """
@@ -304,3 +321,41 @@ class VisaResource:
 
         except pyvisa.VisaIOError as error:
             raise IOError("Error communicating with the resource\n", error)
+
+
+class GpibInterface:
+    """
+    GpibInterface
+
+    Class for instantiation of the GPIB interface device (typically plugs into
+    the computer's USB port). Since GPIB is a bus based interface layer,
+    all instruments that utilize the bus can be accessed with group commands,
+    if supported, to perform syncronized tasks.
+    """
+
+    def __init__(self, address: str, **kwargs) -> None:
+        self.address = address
+
+        default_settings = {
+            "open_timeout": int(1000 * kwargs.get("open_timeout", 1.0)),  # ms
+            "timeout": int(1000 * kwargs.get("timeout", 1.0)),  # ms
+        }
+
+        try:
+            self._resource = rm.open_resource(self.address, **default_settings)
+
+        except (pyvisa.Error) as error:
+            raise ResourceConnectionError(
+                f"Could not connect to resource at: {address}", error
+            )
+
+    def group_execute_trigger(self, *trigger_devices):
+        """
+        Sends the group execture trigger (GET) command to the devices specified
+
+        *trigger_devices: Device instances to trigger
+        """
+
+        # TODO: consider adding getter to access private _resource
+        visa_resources = [n._resource for n in trigger_devices]
+        self._resource.group_execute_trigger(*visa_resources)
