@@ -197,13 +197,15 @@ class VisaResource:
 
         Set the instument to local mode
 
-        Attempts to send the go to local command if the device has a ren function.
-        Resource subclasses can customize this to handle specific cases i.e.
-        serial resources
+        Attempts to send the go to local command if the device has a ren
+        function. Resource subclasses can customize this to handle specific
+        cases i.e. serial resources
         """
         try:
             # generic set local method for most GPIB, USB, TCIP
-            self._resource.control_ren(pyvisa.constants.RENLineOperation.address_gtl)
+            self._resource.control_ren(
+                pyvisa.constants.RENLineOperation.address_gtl
+                )
         except (AttributeError, pyvisa.Error):
             # not a device that has control_ren method
             pass
