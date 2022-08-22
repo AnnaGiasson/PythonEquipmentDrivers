@@ -1,4 +1,5 @@
-from .core import VisaResource, GpibInterface, find_visa_resources, identify_visa_resources
+from .core import (VisaResource, GpibInterface,
+                   find_visa_resources, identify_visa_resources)
 
 from .resource_collections import connect_resources, ResourceCollection
 

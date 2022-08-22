@@ -2,7 +2,7 @@ import json
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Tuple, Union, Iterator
+from typing import Dict, Tuple, Union, Iterator
 
 
 from pyvisa import VisaIOError
@@ -91,7 +91,8 @@ class DmmCollection(ResourceCollection):
     for multimeters and support some common methods.
     """
 
-    def fetch_data(self, mapper: dict = None, only_mapped: bool = False) -> dict[str, float]:
+    def fetch_data(self, mapper: Dict[str, str] = None,
+                   only_mapped: bool = False) -> Dict[str, float]:
         """
         fetch_data([mapper])
 
@@ -100,26 +101,30 @@ class DmmCollection(ResourceCollection):
         to rename the dictonary keys.
         Args:
             mapper (dict, optional): rename keys of the collected data. Key
-            should be the DMM name and the value should be the desired new name.
-            only_mapped (bool, optional): If true only measurments of DMMs found
-            in mapper will be returned.
+                should be the DMM name and the value should be the desired new
+                name.
+            only_mapped (bool, optional): If true only measurments of DMMs
+                found in mapper will be returned.
 
         Returns:
             dict: dict of the fetched measurements
         """
+
         mapper = {} if mapper is None else mapper
         measurements = {}
         for name, resource in self.__dict__.items():
-            new_name = mapper.get(name)
-            if new_name is None and only_mapped:
+
+            if (name not in mapper) and only_mapped:
                 continue
-            if new_name is None:
-                new_name = name
+
+            new_name = mapper.get(name, name)
+
             try:
                 measurements[new_name] = resource.fetch_data()
             except AttributeError as exc:
-                raise AttributeError(
-                    "All multimeter instances must have a fetch_data method") from exc
+                raise AttributeError('All multimeter instances must have a '
+                                     '"fetch_data" method') from exc
+
         return measurements
 
     def init(self) -> None:
