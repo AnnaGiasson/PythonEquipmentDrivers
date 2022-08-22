@@ -1,4 +1,4 @@
-from .core import VisaResource, find_visa_resources, identify_visa_resources
+from .core import VisaResource, GpibInterface, find_visa_resources, identify_visa_resources
 
 from .resource_collections import connect_resources, ResourceCollection
 
@@ -18,7 +18,8 @@ from . import functiongenerator
 from . import temperaturecontroller
 
 
-__all__ = ['VisaResource', 'find_visa_resources', 'identify_visa_resources',
+__all__ = ['VisaResource', 'GpibInterface', 'find_visa_resources',
+           'identify_visa_resources',
 
            'connect_resources', 'ResourceCollection',
 
