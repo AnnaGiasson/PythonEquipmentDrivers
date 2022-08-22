@@ -285,7 +285,8 @@ def connect_resources(config: Union[str, Path, dict],
 
         try:
             # get object to instantate from it's source module
-            Module = import_module(meta_info.pop('definition'))
+            module_name = meta_info.pop('definition')
+            Module = import_module(module_name)
             Resource = getattr(Module, meta_info.pop('object'))
 
             # special keyword for resource initialization, not passed as kwarg
@@ -296,7 +297,7 @@ def connect_resources(config: Union[str, Path, dict],
             resource = Resource(**meta_info)
             setattr(resources, name, resource)
 
-            if 'multimeter' in Module:
+            if 'multimeter' in module_name:
                 dmms[name.replace('DMM', '')] = resource
 
             if kwargs.get('verbose', True):
