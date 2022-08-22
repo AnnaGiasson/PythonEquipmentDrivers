@@ -401,6 +401,9 @@ class Logger:
 
         self.log_message(*messages)
 
+    def __del__(self) -> None:
+        self.log_message(f'({asctime()}) Message Log Closed')
+
     def _can_resume_log(self) -> bool:
         """
         Checks to see if an logging session can be resumed, for this to be
