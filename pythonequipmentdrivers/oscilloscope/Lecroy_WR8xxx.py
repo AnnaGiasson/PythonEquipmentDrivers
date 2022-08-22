@@ -512,14 +512,11 @@ class Lecroy_WR8xxx(VisaResource):
         write_cmd = f'{response[:i_start]}C{channel}{response[i_end:]}'
         self.write_resource(write_cmd)
 
-    def get_trigger_source(self) -> int:
+    def set_trigger_external(self) -> None:
         """
-        get_trigger_source()
+        set_trigger_external()
 
-        Gets the channel number for the trigger source
-
-        Returns:
-            int: channel number used for the trigger source
+        Sets the trigger source to the external trigger input
         """
 
         response = self.query_resource('TRSE?')  # get current trigger config
@@ -528,8 +525,33 @@ class Lecroy_WR8xxx(VisaResource):
         i_start = response.index('SR,') + 3
         i_end = response.index(',', i_start)
 
-        channel = response[i_start:i_end].lstrip('C')
-        return int(channel)
+        # replace source with new source, send to device
+        write_cmd = f'{response[:i_start]}EXT{response[i_end:]}'
+        self.write_resource(write_cmd)
+
+    def get_trigger_source(self) -> Union[int, str]:
+        """
+        get_trigger_source()
+
+        Gets the channel number for the trigger source
+
+        Returns:
+            Union[int, str]: channel number used for the trigger source or
+                string description of trigger source if something other then
+                one of the source inputs is used as the trigger.
+        """
+
+        response = self.query_resource('TRSE?')  # get current trigger config
+
+        # extract indecies that bound the current trigger source
+        i_start = response.index('SR,') + 3
+        i_end = response.index(',', i_start)
+
+        if "C" in response[i_start:i_end]:
+            channel = response[i_start:i_end].lstrip('C')
+            return int(channel)
+        else:
+            return response[i_start:i_end]
 
     def set_trigger_acquire_state(self, state: str) -> None:
         """
@@ -583,7 +605,9 @@ class Lecroy_WR8xxx(VisaResource):
         """
 
         source = kwargs.get('source', self.get_trigger_source())
-        self.write_resource(f'C{int(source)}:TRLV {float(level)}\n')
+        if isinstance(source, int):
+            source = f'C{source}'
+        self.write_resource(f'{source}:TRLV {float(level)}\n')
 
     def get_trigger_level(self, **kwargs) -> float:
         """
@@ -603,8 +627,10 @@ class Lecroy_WR8xxx(VisaResource):
         """
 
         source = kwargs.get('source', self.get_trigger_source())
+        if isinstance(source, int):
+            source = f'C{source}'
 
-        read_cmd = f'C{source}:TRLV'
+        read_cmd = f'{source}:TRLV'
         response = self.query_resource(f'{read_cmd}?')
 
         return float(response.lstrip(read_cmd).split()[0])
@@ -638,13 +664,15 @@ class Lecroy_WR8xxx(VisaResource):
                          'NEG': 'NEG', 'FALL': 'NEG'}
 
         source = kwargs.get('source', self.get_trigger_source())
+        if isinstance(source, int):
+            source = f'C{source}'
 
         slope = str(slope).upper()
         if slope not in valid_options.keys():
             raise ValueError('Invalid option for Arg "slope".'
                              f' Valid option are {valid_options.keys()}')
 
-        self.write_resource(f'C{int(source)}:TRSL {valid_options[slope]}')
+        self.write_resource(f'{source}:TRSL {valid_options[slope]}')
 
     def get_trigger_slope(self, **kwargs) -> str:
         """
@@ -663,8 +691,10 @@ class Lecroy_WR8xxx(VisaResource):
         """
 
         source = kwargs.get('source', self.get_trigger_source())
+        if isinstance(source, int):
+            source = f'C{source}'
 
-        response = self.query_resource(f'C{source}:TRSL?')
+        response = self.query_resource(f'{source}:TRSL?')
         return response.split()[-1].lower()
 
     def set_trigger_position(self, offset: float, **kwargs) -> None:

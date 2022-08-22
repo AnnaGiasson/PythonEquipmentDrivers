@@ -131,7 +131,7 @@ class VisaResource:
         if clear:
             self.clear()
 
-        self.timeout = int(kwargs.get("timeout", 1000))  # ms
+        self.timeout = int(1000*kwargs.get("timeout", 1.0))  # ms
 
     def clear_status(self, **kwargs) -> None:
         """
