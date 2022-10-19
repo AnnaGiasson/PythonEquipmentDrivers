@@ -61,11 +61,11 @@ class Keysight_33500B(VisaResource):
         freq, amp, off = map(float, wave_info.split(','))
         return (wave_type, freq, amp, off)
 
-    def set_voltage(self, voltage: float, source: int = 1) -> None:
-        self.write_resource(f'SOUR{source}:VOLT {voltage}')
+    def set_voltage_amplitude(self, amplitude: float, source: int = 1) -> None:
+        self.write_resource(f'SOUR{source}:VOLT:AMPL {amplitude}')
 
-    def get_voltage(self, source: int = 1) -> float:
-        response = self.query_resource(f'SOUR{source}:VOLT?')
+    def get_voltage_amplitude(self, source: int = 1) -> float:
+        response = self.query_resource(f'SOUR{source}:VOLT:AMPL?')
         return float(response)
 
     def set_voltage_offset(self, voltage: float, source: int = 1) -> None:
@@ -454,7 +454,7 @@ class Keysight_33500B(VisaResource):
                 generator
             source (int, optional): Channel to configure (1,2). Defaults to 1.
         """
-        self.write_resource(f'SOUR{source}:FUNC {arb_name}')
+        self.write_resource(f'SOUR{source}:FUNC:ARB {arb_name}')
 
     def get_arbitrary_waveform(self, source: int = 1) -> str:
         """
