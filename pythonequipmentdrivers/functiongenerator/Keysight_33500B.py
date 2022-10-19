@@ -1,6 +1,5 @@
-from typing import Sequence, Union
+from typing import Generator, Iterable, List, Tuple, Union
 from pythonequipmentdrivers import VisaResource
-import numpy as np
 
 
 class Keysight_33500B(VisaResource):
@@ -321,7 +320,7 @@ class Keysight_33500B(VisaResource):
         """Valid options are 1-10k, min, max, and inf"""
         self.write_resource(f'OUTP{source}:LOAD {impedance}')
 
-    def get_output_impedance(self, source=1) -> float:
+    def get_output_impedance(self, source: int = 1) -> float:
         response = self.query_resource(f'OUTP{source}:LOAD?')
         return float(response)
 
@@ -335,18 +334,200 @@ class Keysight_33500B(VisaResource):
     def clear_display_text(self):
         return self.set_display_text("")
 
-    def store_arbitrary_waveform(self, data: Sequence, arb_name: str) -> None:
+    @staticmethod
+    def _clip_signal(data: Iterable[float],
+                     val_min: float,
+                     val_max: float) -> Generator[float, None, None]:
+        """
+        _clip_signal(data, val_min, val_max)
+
+        Clips the values of the iterable data to the range [val_min, val_max].
+        values within this range are passed unmodifed.
+
+        Args:
+            data (Iterable[float]): A series of values to clip
+            val_min (float): minimum value of output
+            val_max (float): maximum value of output
+
+        Yields:
+            Generator[float, None, None]: input sequence clipped to the
+                specified range.
+        """
+
+        for x in data:
+            yield min(max(x, val_min), val_max)
+
+    @staticmethod
+    def _normalize(data: Iterable[float]) -> Generator[float, None, None]:
+        """
+        _normalize(data)
+
+        Normalized the input sequence to the range +/- 1.
+
+        Args:
+            data (Iterable[float]): series of values to normalize
+
+        Yields:
+            Generator[float, None, None]: normalized sequence
+        """
+
+        val_min = min(data)
+        val_max = max(data)
+
+        norm_val = max(
+            abs(val_min),
+            abs(val_min)
+        )
+        mid_val = (val_max + val_min)/2
+
+        for x in data:
+            yield (x - mid_val)/(norm_val + mid_val)
+
+    def store_arbitrary_waveform(self,
+                                 data: Iterable[float],
+                                 arb_name: str) -> None:
+        """
+
+        Stores an arbitrary waveform to the volatile memory of the function
+        generator. The waveform will be stored as a normalized sequence (-1,
+        1), its amplitude can be adjusted using the amplitude/offset or
+        high/low settings of the waveform. Sequence should be between 8 and
+        65535 samples.
+
+        Args:
+            data (Iterable[float]): arbitrary waveform sequence
+            arb_name (str): alias used to access the saved waveform
+        """
 
         if not (8 < len(data) < 65536):
             raise ValueError('data must be between 8 and 65536 samples')
 
-        data = np.array(data)
-
-        data -= data.mean()  # symmetric
-        data /= data.max()  # spans +/- 1
-        data *= 32767  # spans +/- 32767
-        data = data.astype(int)
-
         # send data
-        cmd_str = "SOUR:DATA:ARB1:DAC"
-        self.write_resource(f'{cmd_str} {arb_name},{",".join(map(str, data))}')
+        self.write_resource(
+            'SOUR:DATA:ARB1 {},{}'.format(
+                arb_name,
+                ",".join(
+                    map(
+                        str,
+                        self._clip_signal(self._normalize(data), -1, 1)
+                    )
+                )
+            )
+        )
+
+    def get_stored_waveform_names(self, source: int = 1) -> List[str]:
+        """
+        get_stored_waveform_names(source=1)
+
+        Returns a list of aliases for arbitrary waveforms stored in the
+        function generators volatile memory for the given channel.
+
+        Args:
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
+
+        Returns:
+            List[str]: list of aliases
+        """
+
+        response = self.query_resource(f'SOUR{source}:DATA:VOL:CAT?')
+        return response.replace('"', '').split(',')
+
+    def clear_stored_waveforms(self) -> None:
+        """
+        clear_stored_waveforms()
+
+        Clears the volatile memory of the function generator of all arbitrary
+        waveforms and sequences.
+        """
+
+        self.write_resource('DATA:VOL:CLE')
+
+    def set_arbitrary_waveform(self, arb_name: str, source: int = 1) -> None:
+        """
+        set_arbitrary_waveform(arb_name, source)
+
+        Sets the arbitrary waveform file used by the function generator when
+        the given channel is configured to use the ARB wave type.
+
+        Args:
+            arb_name (str): Alias of arbitrary waveform stored in the function
+                generator
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
+        """
+        self.write_resource(f'SOUR{source}:FUNC {arb_name}')
+
+    def get_arbitrary_waveform(self, source: int = 1) -> str:
+        """
+        get_arbitrary_waveform(source)
+
+        Returns the arbitrary waveform file used by the function generator when
+        the given channel is configured to use the ARB wave type.
+
+        Args:
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
+
+        Returns:
+            str: Alias of arbitrary waveform stored in the function generator
+        """
+
+        return self.query_resource(f'SOUR{source}:FUNC:ARB?').replace('"', '')
+
+    def set_arbitrary_waveform_sample_rate(self, sample_rate: float,
+                                           source: int = 1) -> None:
+        """
+        set_arbitrary_waveform_sample_rate(sample_rate, source=1)
+
+        Sets the sample rate used for arbitrary waveforms on the given channel.
+
+        Args:
+            sample_rate (float): Sample rate in samples/sec
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
+        """
+
+        self.write_resource(f'SOUR{source}:FUNC:ARB:SRATE {sample_rate}')
+
+    def get_arbitrary_waveform_sample_rate(self, source: int = 1) -> float:
+        """
+        get_arbitrary_waveform_sample_rate(source=1)
+
+        Retrives the sample rate used for arbitrary waveforms on the specifed
+        channel.
+
+        Args:
+            source (int, optional): Channel to configure (1,2). Defaults to 1.
+        Returns:
+            float: Sample rate in samples/sec
+        """
+
+        response = self.query_resource(f'SOUR{source}:FUNC:ARB:SRATE?')
+        return float(response)
+
+    def read_error_queue(self) -> List[Tuple[int, str]]:
+        """
+        read_error_queue()
+
+        Reads the error queue of the function generator, return the queue as
+        list. Errors are returned in the same order as the were logged within
+        the function generator. Note: using this method to read the error queue
+        will clear the error queue in the function generator.
+
+        Returns:
+            List[Tuple[int, str]]: error_code, error_message tuples for each
+                error logged. If no errors have occured this list will be
+                empty.
+        """
+
+        error_queue: List[Tuple[int, str]] = []
+
+        while True:
+            response = self.query_resource('SYST:ERR?')
+
+            error_code, error_string = response.split(',')
+            error_code = int(error_code)
+
+            if error_code == 0:  # no error
+                break
+
+            error_queue.append((error_code, error_string))
+
+        return error_queue
