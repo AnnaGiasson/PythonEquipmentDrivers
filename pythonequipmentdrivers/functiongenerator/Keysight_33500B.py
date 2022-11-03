@@ -376,7 +376,7 @@ class Keysight_33500B(VisaResource):
 
         norm_val = max(
             abs(val_min),
-            abs(val_min)
+            abs(val_max)
         )
         mid_val = (val_max + val_min)/2
 
