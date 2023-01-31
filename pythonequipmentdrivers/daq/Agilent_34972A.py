@@ -1,6 +1,53 @@
+from collections import deque
+from enum import Enum
 from typing import Iterable, List, Tuple, Union
 from pythonequipmentdrivers import VisaResource
 from time import sleep
+
+
+class ChannelModes(Enum):
+    """
+    Valid measurement modes for a DAQ channel
+    """
+
+    VOLT = 'VOLT'
+    CURR = 'CURR'
+    FREQ = 'FREQ'
+    OHMS = 'RES'
+    RES = 'RES'
+    DIODE = 'DIOD'
+    CONT = 'CONT'
+    PERIOD = 'PER'
+
+
+class NPLC_Options(Enum):
+    """
+    Number of Power Line Cycle to use per measurement
+    """
+
+    N0p02 = '0.02'
+    N0p2 = '0.2'
+    N1 = '1'
+    N2 = '2'
+    N10 = '10'
+    N20 = '20'
+    N100 = '100'
+    N200 = '200'
+    MIN = 'MIN'
+    MAX = 'MAX'
+
+
+class TriggerOptions(Enum):
+    BUS = 'BUS'
+    IMMEDIATE = 'IMMediate'
+    IMM = 'IMMediate'
+    EXTERNAL = 'EXTernal'
+    EXT = 'EXT'
+    ALARM1 = 'ALARm1'
+    ALARM2 = 'ALARm2'
+    ALARM3 = 'ALARm3'
+    ALARM4 = 'ALARm4'
+    TIMER = 'TIMer'
 
 
 class Agilent_34972A(VisaResource):
@@ -20,34 +67,18 @@ class Agilent_34972A(VisaResource):
     recommend channels be passed in a list
     """
 
-    valid_modes = {'VOLT': 'VOLT',
-                   'CURR': 'CURR',
-                   'V': 'VOLT',
-                   'A': 'CURR',
-                   'FREQ': 'FREQ',
-                   'F': 'FREQ',
-                   'OHMS': 'RES',
-                   'O': 'RES',
-                   'RES': 'RES',
-                   'DIOD': 'DIOD',
-                   'D': 'DIOD',
-                   'DIODE': 'DIOD',
-                   'CONT': 'CONT',
-                   'C': 'CONT',
-                   'PER': 'PER',
-                   'P': 'PER'
-                   }
+    channel_modes = ChannelModes
+    nplc_options = NPLC_Options
+    trigger_options = TriggerOptions
 
-    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                    '0.1', '1', '10', '100', '300'}
+    valid_volt_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                         '0.1', '1', '10', '100', '300'}
 
-    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '0.01', '0.1', '1'}
+    valid_curr_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                         '0.01', '0.1', '1'}
 
-    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
-
-    nplc = {'0.02', '0.2', '1', '2', '10', '20', '100', '200', 'MIN', 'MAX'}
+    valid_res_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
+                        '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
 
     valid_resolutions = {'MIN': 0.0001,  # lookup based on nplc
                          'MAX': 0.00000022,  # this * range = resolution
@@ -60,24 +91,11 @@ class Agilent_34972A(VisaResource):
                          '100': 0.0000003,
                          '200': 0.00000022}
 
-    valid_trigger = {'BUS': 'BUS',
-                     'IMMEDIATE': 'IMMediate',
-                     'IMM': 'IMMediate',
-                     'EXTERNAL': 'EXTernal',
-                     'EXT': 'EXTernal',
-                     'ALARM1': 'ALARm1',
-                     'ALARM2': 'ALARm2',
-                     'ALARM3': 'ALARm3',
-                     'ALARM4': 'ALARm4',
-                     'TIMER': 'TIMer',
-                     'TIME': 'TIMer',
-                     'TIM': 'TIMer'}
-
     def __init__(self, address: str, ch_change_time: float = 0.05,
-                 line_frequency: float = 60.0, **kwargs) -> None:
+                 line_frequency: float = 60.0, reset: bool = False) -> None:
 
-        super().__init__(address, **kwargs)
-        if kwargs.get('reset', False):
+        super().__init__(address)
+        if reset:
             self.clear_status()
 
         self.ch_change_time = ch_change_time
@@ -87,7 +105,7 @@ class Agilent_34972A(VisaResource):
         self.line_frequency = line_frequency  # Hz
 
         self.scan_list = self.get_scan_list()
-        self.measure_time = self.set_measure_time()
+        self.set_measure_time()
         self.trigger_mode = self.get_trigger_source()
 
     def _split_response(self, response: str) -> List[str]:
@@ -113,44 +131,36 @@ class Agilent_34972A(VisaResource):
 
         return response[(start + 1): stop].split(',')
 
-    def set_mode(self, mode, chan, **kwargs):
+    def set_mode(self, chan: int, mode: ChannelModes) -> None:
         """
         set_mode(mode)
 
-        mode (str): type of measurement to be done
-            valid modes are: 'VDC', 'VAC', 'ADC', 'AAC', 'FREQ', 'OHMS',
-                             'DIOD', 'CONT', 'PER'
-            which correspond to DC voltage, AC voltage, DC current, AC current,
-            frequency, resistence, diode voltage, continuity, and period
-            respectively (not case sensitive)
-        chan (list, int, str): channels to apply to
-        Configures the dac to perform the specified measurement
-        RANGe will be AUTO
-        NPLC/RESOLUTION will be DEFAULT (usually 5.5d)
+        Configures the dac to perform the specified measurement. RANGe will be
+        AUTO, NPLC/RESOLUTION will be DEFAULT (usually 5.5d)
+
+        chan (int): channels to apply to
+        mode (ChannelModes): type of measurement to be done (Enum)
+            see self.valid_modes for options
         """
 
-        if mode.upper() not in self.valid_modes:
-            raise ValueError("Invalid mode option")
-
         chan_str = self._format_channel_str(chan)
-        self.write_resource(f"CONF:{self.valid_modes[mode]} (@{chan_str})",
-                            **kwargs)
+        self.write_resource(f"CONF:{mode.value} (@{chan_str})")
 
-    def get_mode(self, chan: Union[int, Iterable[int]]) -> str:
+    def get_mode(self, chan: Union[int, Iterable[int]]) -> ChannelModes:
         """
         get_mode(chan)
 
         retrives type of measurement the dac is current configured to
         perform.
 
-        returns: str
+        returns: ChannelModes Enum for the current channel config
         """
 
         response = self.query_resource(
             f"FUNC? (@{self._format_channel_str(chan)})"
         )
 
-        return response.replace('"', '')
+        return self.channel_modes[response.replace('"', '')]
 
     def get_error_queue(self, **kwargs) -> List[Tuple[int, str]]:
         """
@@ -181,27 +191,26 @@ class Agilent_34972A(VisaResource):
 
         return error_queue
 
-    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs) -> None:
+    def set_trigger_source(self,
+                           trigger: TriggerOptions = TriggerOptions.IMMEDIATE
+                           ) -> None:
         """
         set_trigger(trigger)
 
-        trigger: str, type of trigger to be done
+        trigger: TriggerOptions Enum, type of trigger to be done
             valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'
             which correspond to 'BUS', 'IMMEDIATE', 'EXTERNAL'
-            respectively (not case sensitive)
+            respectively (not case sensitive). See self.trigger_options.
 
         Configures the multimeter to trigger as specified
         """
-        trigger = trigger.upper()
-        if trigger in self.valid_trigger:
-            self.trigger_mode = self.valid_trigger[trigger]
-            self.write_resource(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
-        else:
-            raise ValueError("Invalid trigger option")
 
-    def get_trigger_source(self) -> str:
+        self.write_resource(f"TRIG:SOUR {trigger.value}")
+        self.trigger_mode = trigger
+
+    def get_trigger_source(self) -> TriggerOptions:
         response = self.query_resource("TRIG:SOUR?")
-        self.trigger_mode = self.valid_trigger[response]
+        self.trigger_mode = self.trigger_options[response]
         return self.trigger_mode
 
     def set_trigger_count(self, count: int, **kwargs) -> None:
@@ -234,29 +243,30 @@ class Agilent_34972A(VisaResource):
         return float(response)
 
     def trigger(self, wait: bool = True, **kwargs) -> None:
-        """trigger(wait)
-        If the unit is setup to BUS trigger, sends trigger, otherwise pass
-        If the unit is not setup to BUS trigger, it will log an error
+        """
+        trigger(wait=True)
+
+        If the unit is setup to BUS trigger, sends trigger
 
         Args:
             wait (bool, optional): Does not return to caller until scantime
                                    is complete.  Prevents Trigger Ignored
                                    errors (-211). Defaults to True.
-        Returns:
-            None
         """
-        if self.trigger_mode == self.valid_trigger['BUS']:
+        if self.trigger_mode == TriggerOptions.BUS:
             self.write_resource('*TRG', **kwargs)
         else:
-            print(f"Trigger not configured, set as: {self.trigger_mode}"
-                  f" should be {self.valid_trigger['BUS']}")
+            raise ValueError(
+                f"Trigger not configured, set as: {self.trigger_mode}"
+                " should be BUS"
+            )
 
         if wait:
-            sleep(self.measure_time)  # should work most of the time.
             # it should also wait nplc time per channel
             # need to make a function to track nplc time
             # if nplc is longer than 1, then this will fail, if shorter
             # then this will take way too long
+            sleep(self.measure_time)  # should work most of the time.
 
     def get_scan_list(self, **kwargs):
         """
@@ -274,7 +284,7 @@ class Agilent_34972A(VisaResource):
 
         return self.scan_list
 
-    def _format_channel_str(self, chan: Iterable[int]) -> str:
+    def _format_channel_str(self, chan: Union[int, Iterable[int]]) -> str:
 
         if isinstance(chan, int):
             return str(chan)
@@ -282,7 +292,7 @@ class Agilent_34972A(VisaResource):
         return ",".join(map(str, chan))
 
     def set_scan_list(self, chan: Iterable[int],
-                      relaytime: bool = False) -> None:
+                      relay_time: bool = False) -> None:
         """
         set_scan_list(chan)
 
@@ -292,14 +302,15 @@ class Agilent_34972A(VisaResource):
         Aguments:
             chan (Iterable[int]): list of channels to include in new
                 scan list.  Note that scan list is overwritten every time
-            relaytime (bool): ch_change_time delay before return.
+            relay_time (bool): ch_change_time delay before return.
         """
 
         chan_str = self._format_channel_str(chan)
         self.scan_list = list(chan)
 
         self.write_resource(f'ROUT:SCAN (@{chan_str})')
-        if relaytime:
+
+        if relay_time:
             self.relay_delay(n=len(self.scan_list))
 
     def measure(self, chan: Iterable[int], **kwargs) -> List[float]:
@@ -381,23 +392,21 @@ class Agilent_34972A(VisaResource):
 
         return list(map(float, data))
 
-    def config_chan(self, chan, mode='volt', is_dc: bool = True,
-                    signal_range='auto', resolution=None,
-                    nplc=0.02, **kwargs):
+    def config_channel(self,
+                       chan: int, mode=ChannelModes.VOLT, is_dc: bool = True,
+                       signal_range: str = 'auto', resolution=None,
+                       nplc: NPLC_Options = NPLC_Options.N1) -> None:
         """
-        config_chan(#)
+        config_channel(chan, mode=ChannelModes.VOLT, is_dc=True,
+                       signal_range='auto', resolution=None,
+                       nplc=NPLC_Options.N1)
+
+        Configures the measurement settings for the specified channel.
 
         Args:
-            chan (int or str or list): channel number or list to apply
-                common settings to example:
-                    chan=101, applies to channel 101 only.
-
-                    chan='202:207,209,302:308' --> channels 02 through 07 and
-                    09 on the module in slot 200 and channels 02 through 08 on
-                    the module in slot 300.
-
-                    chan=[102,104,205,301]...
-            mode (str, optional): meter mode. Defaults to 'volt'.
+            chan (int): channel number to apply configuration to
+            mode (ChannelModes, optional): channel measurement mode.
+                Defaults to ChannelModes.VOLT.
             is_dc (bool, optional): Whether the measurement is to be configured
                 as a DC measurement (True) or an AC measurement (False).
                 Defaults to True.
@@ -405,74 +414,100 @@ class Agilent_34972A(VisaResource):
             resolution (str, optional): 4.5, 5.5 or 6.5, if None uses nplc
                 nplc is recommended because script timing is more
                 deterministic. Defaults to None.
-            nplc (float, optional): power line cycles to average.
-                                    Defaults to 0.02.
-        Kwargs:
-            verbose (bool, optional): Whether or not the command message sent
-                to the device is also printed to stdio.out, for debugging
-                purposes. Defaults to False.
+            nplc (NPLC_Options, optional): power line cycles to average.
+                Defaults to NPLC_Options.N1 (1 cycle).
         """
 
-        mode = str(mode).upper()
-        if mode not in self.valid_modes:
-            raise ValueError("Invalid mode option")
-        mode = self.valid_modes[mode]
+        # Set channel measurement range. if range is not provided, cannot use
+        # nplc in CONF command
+        signal_range = signal_range.upper()
+        auto_range = (signal_range == 'AUTO')
 
-        use_freq = (mode == self.valid_modes['FREQ'])
-        use_current = (mode == self.valid_modes['CURR'])
-        use_res = (mode == self.valid_modes['RES'])
+        if (mode == self.channel_modes.CURR) and (signal_range not in self.valid_curr_ranges):
+            raise ValueError('Invalid Range option')
+        elif (mode == self.channel_modes.RES) and (signal_range not in self.valid_res_ranges):
+            raise ValueError('Invalid Range option')
+        elif signal_range not in self.valid_volt_ranges:
+            raise ValueError('Invalid Range option')
+
+        # set up number of power line cycles per measurement
+
+        use_freq = (mode == self.channel_modes.FREQ)
+        nplc_str = nplc.value if not use_freq else ''
 
         if not use_freq:
             acdc = ':DC' if is_dc else ':AC'
         else:
             acdc = ''
 
-        # if range is not provided, cannot use nplc in CONF command
-        signal_range = str(signal_range).upper()
-        if signal_range == 'AUTO':
-            signal_range = False
-
-        try:
-            if use_current and signal_range not in self.valid_cranges:
-                raise ValueError('Invalid Current Range option')
-            elif use_res and signal_range not in self.valid_Rranges:
-                raise ValueError('Invalid Resistance Range option')
-            elif signal_range not in self.valid_ranges:
-                raise ValueError('Invalid Range option')
-
-        except ValueError:
-            if kwargs.get('verbose', False):
-                print("signal_range not in list, using max")
-            signal_range = 'MAX'  # same as MAX for current
-
-        nplc = str(nplc).upper()
-        if not (nplc in self.nplc):
-            raise ValueError("Invalid nplc option")
-        nplc = nplc if not use_freq else ''
-
-        chan_str, chanlist = self._format_channel_str(chan)
-
-        cmds = []
-        if resolution and signal_range:
-            cmds.append(f"CONF:{mode}{acdc} {signal_range},{resolution}"
-                        f"(@{chan_str})")
+        # build command strings
+        cmd_queue = deque([])  # command queue
+        if resolution and not auto_range:
+            cmd_queue.append(
+                f"CONF:{mode.value}{acdc} {signal_range},{resolution}(@{chan})"
+            )
         else:
-            if signal_range:
-                cmds.append(f"CONF:{mode}{acdc} {signal_range}(@{chan_str})")
-            else:
-                cmds.append(f"CONF:{mode}{acdc} (@{chan_str})")
+            cmd_queue.append(
+                "CONF:{}{} {}(@{})".format(
+                    mode.value,
+                    acdc,
+                    f'{signal_range},' if not auto_range else '',
+                    chan
+                )
+            )
 
-            if (resolution or nplc) and (not use_freq):
-                for i in range(len(chanlist)):
-                    cmds.append(f"SENS:{mode}{acdc}"
-                                f"{':RES ' if resolution else ':NPLC '}"
-                                f"{resolution if resolution else nplc}"
-                                f"(@{chanlist[i]})")
+            if nplc_str:
+                cmd_queue.append(
+                    "SENS:{}{}:{} {},(@{})".format(
+                        mode.value,
+                        acdc,
+                        'RES' if resolution else 'NPLC',
+                        resolution if resolution else nplc_str,
+                        chan
+                    )
+                )
 
-        for cmd_str in cmds:
-            if kwargs.get('verbose', False):
-                print(cmd_str)
-            self.write_resource(cmd_str, **kwargs)
+        # write data to device
+        while cmd_queue:
+            self.write_resource(cmd_queue.popleft())
+
+    def config_channels(self, channels: Iterable[int],
+                        mode: ChannelModes = ChannelModes.VOLT,
+                        is_dc: bool = True, signal_range='auto',
+                        resolution=None, nplc: NPLC_Options = NPLC_Options.N1
+                        ) -> None:
+        """
+        config_channels(channels: Iterable[int], mode=ChannelModes.VOLT,
+                        is_dc: bool = True, signal_range='auto',
+                        resolution=None, nplc=NPLC_Options.N1)
+
+        Configures multiple channels with the same common settings
+
+        Args:
+            channels (Iterable[int]): list of channel numbers to apply
+                common settings.
+            mode (ChannelModes, optional): channel measurement mode.
+                Defaults to ChannelModes.VOLT.
+            is_dc (bool, optional): Whether the measurement is to be configured
+                as a DC measurement (True) or an AC measurement (False).
+                Defaults to True.
+            signal_range (str, optional): measurement range. Defaults to 'auto'
+            resolution (str, optional): 4.5, 5.5 or 6.5, if None uses nplc
+                nplc is recommended because script timing is more
+                deterministic. Defaults to None.
+            nplc (NPLC_Options, optional): power line cycles to average.
+                Defaults to NPLC_Options.N1 (1 cycle).
+        """
+
+        for chan in channels:
+            self.config_channel(
+                chan=chan,
+                mode=mode,
+                is_dc=is_dc,
+                signal_range=signal_range,
+                resolution=resolution,
+                nplc=nplc
+            )
 
     def close_chan(self, chan: int) -> None:
         """
@@ -486,7 +521,7 @@ class Agilent_34972A(VisaResource):
 
         self.write_resource(f"ROUT:CLOS (@{chan})")
 
-    def open_chan(self, chan, **kwargs) -> None:
+    def open_chan(self, chan: int, **kwargs) -> None:
         """
         Open relay on channel #
 
@@ -599,7 +634,6 @@ class Agilent_34972A(VisaResource):
                                  self.ch_change_time)
         else:
             self.measure_time = measure_time
-        return self.measure_time
 
     def set_local(self, **kwargs) -> None:
         self.write_resource("SYSTem:LOCal", **kwargs)
