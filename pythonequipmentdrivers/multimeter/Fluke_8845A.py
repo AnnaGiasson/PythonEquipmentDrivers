@@ -26,4 +26,4 @@ class Fluke_8845A(HP_34401A):
         Disable the Fluke 45 command set emulation mode i.e. use Fluke8845
         native commands.
         """
-        self.instrument.write("L1")
+        self.write_resource("L1")
