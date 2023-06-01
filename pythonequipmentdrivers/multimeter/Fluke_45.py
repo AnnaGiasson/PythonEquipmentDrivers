@@ -1,4 +1,7 @@
+import pyvisa
+from pyvisa.constants import BufferOperation
 from pythonequipmentdrivers import VisaResource
+from pythonequipmentdrivers.core import rm
 
 
 class Fluke_45(VisaResource):
@@ -25,6 +28,25 @@ class Fluke_45(VisaResource):
         self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC'
                             'OHMS', 'FREQ', 'CONT')
 
+        if "asrl" in address.lower():
+            self._is_serial = True
+            # self._flush_receive_buffer()
+            visa_resource = self._get_visa_resource()
+            visa_resource.flush(BufferOperation.discard_receive_buffer)
+            visa_resource.write_termination = '\r\n'
+            visa_resource.read_termination = '\r\n'
+        else:
+            self._is_serial = False
+
+    def _get_visa_resource(self) -> pyvisa.resources.Resource:
+        """Obtain the device's visa resource without accessing protected members of parent class"""
+        for resource in rm.list_opened_resources():
+            if resource.resource_name == self.address:
+                return resource
+        raise RuntimeError("Unable to find a resource matching the device")
+
+    def _flush_receive_buffer(self):
+        """alternate method for flushing the receive buffer"""
         # ensure RS232 buffer is empty
         try:
             # ensure exit of loop, not sure if the read buffer is even big
@@ -39,6 +61,28 @@ class Fluke_45(VisaResource):
         except IOError:
             pass  # emptied
 
+    def write_resource(self, message: str, **kwargs) -> None:
+        """
+        Fluke45 specific write_resource function
+        takes care of serial response if the device uses serial
+        """
+        response = super().write_resource(message, **kwargs)
+        if self._is_serial:
+            _ = self.read_resource()  # to empty the buffer
+        return response
+
+    def query_resource(self, message: str, **kwargs) -> str:
+        """
+        Fluke45 specific query_resource function
+        takes care of serial response if the device uses serial       
+        """
+        # TODO: an incorrect command will cause the serial response to end up in
+        # response then the read_resource() will time out, need to handle better
+        response = super().query_resource(message, **kwargs)
+        if self._is_serial:
+            _ = self.read_resource()  # to empty the buffer
+        return response
+
     def _measure_signal(self) -> float:
         """
         _measure_signal()
@@ -50,7 +94,6 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("VAL?")
-        _ = self.read_resource()  # to empty the buffer
 
         return self.factor*float(response)
 
@@ -71,11 +114,10 @@ class Fluke_45(VisaResource):
 
         if auto_range:
             self.write_resource("AUTO")
-            _ = self.read_resource()  # to empty the buffer
 
         if n in range(0, 7):
             self.write_resource(f"RANGE {n}")
-            _ = self.read_resource()  # to empty the buffer
+
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
@@ -91,7 +133,7 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("RANGE1?")
-        _ = self.read_resource()  # to empty the buffer
+
         return int(response)
 
     def set_rate(self, rate: str) -> None:
@@ -108,7 +150,7 @@ class Fluke_45(VisaResource):
         rate = rate.upper()
         if rate in {'S', 'M', 'F'}:
             self.write_resource(f"RATE {rate}")
-            _ = self.read_resource()  # to empty the buffer
+
         else:
             raise ValueError("Invalid rate option, should be 'S','M', or 'F'")
 
@@ -121,7 +163,7 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("RATE?")
-        _ = self.read_resource()  # to empty the buffer
+
         return response
 
     def set_mode(self, mode: str) -> None:
@@ -140,7 +182,7 @@ class Fluke_45(VisaResource):
         mode = mode.upper()
         if mode in self.valid_modes:
             self.write_resource(f"FUNC1 {mode}")
-            _ = self.read_resource()  # to empty the buffer
+
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
@@ -156,7 +198,7 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("FUNC1?")
-        _ = self.read_resource()  # to empty the buffer
+
         return response
 
     def measure_voltage(self) -> float:
