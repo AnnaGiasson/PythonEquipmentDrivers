@@ -1,8 +1,19 @@
 import logging
 from time import time
 from pythonequipmentdrivers import VisaResource
+from dataclasses import dataclass
+
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Register:
+    offset: int
+    n_bytes: int
+    m: int
+    r: int
+    b: int
 
 
 class Koolance_EXC900(VisaResource):
@@ -17,21 +28,21 @@ class Koolance_EXC900(VisaResource):
     DATA_REGISTER_MAP = {
         # kwarg name, offset, width, m, r, b
         # monitoring data
-        "mon_liq_temp": (2, 2, 10, 0, 2000),
-        "mon_ext_temp": (4, 2, 10, 0, 2000),
-        "mon_amb_temp": (6, 2, 10, 0, 2000),
-        "mon_fan_rpm": (8, 2, 1, 0, 0),
-        "mon_pump_rpm": (10, 2, 1, 0, 0),
-        "mon_flow_meter": (12, 2, 1, 1, 0),
+        "mon_liq_temp": Register(2, 2, 10, 0, 2000),
+        "mon_ext_temp": Register(4, 2, 10, 0, 2000),
+        "mon_amb_temp": Register(6, 2, 10, 0, 2000),
+        "mon_fan_rpm": Register(8, 2, 1, 0, 0),
+        "mon_pump_rpm": Register(10, 2, 1, 0, 0),
+        "mon_flow_meter": Register(12, 2, 1, 1, 0),
         # user mode settings
-        "usr_temp_sp_liq": (14, 2, 1, 0, 500),
-        "usr_temp_sp_ext": (14, 2, 1, 0, 1000),
-        "usr_temp_sp_liq_amb": (14, 2, 1, 0, 1500),
-        "usr_temp_sp_ext_amb": (14, 2, 1, 0, 2000),
-        "usr_pump_sp": (16, 2, 1, 0, 0),
-        "usr_flow_sp": (18, 2, 1, 0, 0),
+        "usr_temp_sp_liq": Register(14, 2, 1, 0, 500),
+        "usr_temp_sp_ext": Register(14, 2, 1, 0, 1000),
+        "usr_temp_sp_liq_amb": Register(14, 2, 1, 0, 1500),
+        "usr_temp_sp_ext_amb": Register(14, 2, 1, 0, 2000),
+        "usr_pump_sp": Register(16, 2, 1, 0, 0),
+        "usr_flow_sp": Register(18, 2, 1, 0, 0),
         # units
-        "units": (44, 2, 1, 0, 0),
+        "units": Register(44, 2, 1, 0, 0),
     }
 
     def __init__(self, address, **kwargs):
@@ -47,14 +58,14 @@ class Koolance_EXC900(VisaResource):
         refreshed when the age of the buffered data > _read_data_max_age or
         when a write has occured.
         """
-        DATA_REQUEST_COMMAND = [0xCF, 0x01, 0x08]
+        DATA_REQUEST_COMMAND = bytes([0xCF, 0x01, 0x08])
         if (
             self._last_read_data_time is None
             or (time() - self._last_read_data_time) > self._read_data_max_age
         ):
             logger.debug("fetched new data from the device")
             self._last_read_data_time = time()
-            self._resource.write_raw(bytes(DATA_REQUEST_COMMAND))
+            self._resource.write_raw(DATA_REQUEST_COMMAND)
             self._last_read_data = self._resource.read_bytes(51)
         return self._last_read_data
 
@@ -63,7 +74,17 @@ class Koolance_EXC900(VisaResource):
         self._last_read_data_time = None  # trigger a refresh on the next read
         self._resource.write_raw(data)
 
-    def read_settings(self) -> dict:
+    @staticmethod
+    def _mrb_to_float(n: int, reg: Register) -> float:
+        value = (1 / reg.m) * (n*10**(-1*reg.r) - reg.b)
+        return value
+
+    @staticmethod
+    def _float_to_mrb(value: float, reg: Register) -> int:
+        n = round((reg.m * value + reg.b)*10**reg.r)
+        return n
+
+    def read_settings(self) -> dict[str, float]:
         """
         read_settings()
 
@@ -75,11 +96,12 @@ class Koolance_EXC900(VisaResource):
         """
         data = self._read_data()
         out_dict = {}
-        for name, (offs, n_bytes, m, r, b) in self.DATA_REGISTER_MAP.items():
-            selected = data[offs: offs + n_bytes]
-            val = int.from_bytes(selected, "big")
-            val = (1 / m) * (val * 10 ** (-1 * r) - b)
-            out_dict[name] = val
+
+        for name, reg in self.DATA_REGISTER_MAP.items():
+            value = data[reg.offset: reg.offset + reg.n_bytes]
+            n = int.from_bytes(value, "big")
+            out_dict[name] = self._mrb_to_float(n, reg)
+
         return out_dict
 
     def update_settings(self, **kwargs) -> None:
@@ -97,15 +119,18 @@ class Koolance_EXC900(VisaResource):
             update_settings(usr_temp_sp_liq=10) - set the setpoint to 10 deg
             update_settings(units=1) - set the units used to C
         """
+
         data = bytearray(self._read_data())
         for name, value in kwargs.items():
             try:
-                offs, n_bytes, m, r, b = self.DATA_REGISTER_MAP[name.lower()]
+                reg = self.DATA_REGISTER_MAP[name.lower()]
             except KeyError:
                 raise TypeError(f"{name} is not a valid setting name")
-            value = round((m * value + b) * 10 ** r)
-            val_bytes = value.to_bytes(n_bytes, "big")
-            data[offs: offs + n_bytes] = val_bytes
+
+            n = self._float_to_mrb(value, reg)
+
+            val_bytes = n.to_bytes(reg.n_bytes, "big")
+            data[reg.offset: reg.offset + reg.n_bytes] = val_bytes
 
         data[0:2] = [0xCF, 0x04]  # configure the command bytes for a write
         data[2:14] = 12 * [0]  # set read-only locations to 0
@@ -159,6 +184,7 @@ class Koolance_EXC900(VisaResource):
         Returns:
             float: measured temperature
         """
+
         try:
             return self.read_settings()[f"mon_{sensor}_temp"]
         except KeyError:
@@ -187,5 +213,5 @@ class Koolance_EXC900(VisaResource):
         """
         if unit not in {"C", "F"}:
             raise ValueError(f"unit={unit} is not a valid option")
-        units_val = 1 if unit == "C" else 2
-        self.update_settings(units=units_val)
+
+        self.update_settings(units=(1 if unit == "C" else 2))
