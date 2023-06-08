@@ -259,13 +259,28 @@ class VisaResource:
         """
 
         try:
-            self._resource.write(message, **kwargs)
+            self._resource.write(message=message, **kwargs)
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with the resource\n", error)
+
+    def write_resource_raw(self, message: bytes, **kwargs) -> None:
+        """
+        write_resource_raw(message, **kwargs)
+
+        Writes data to the connected resource.
+
+        Args:
+            message (bytes): data to write to the connected resource
+        """
+
+        try:
+            self._resource.write_raw(message=message, **kwargs)
         except pyvisa.VisaIOError as error:
             raise IOError("Error communicating with the resource\n", error)
 
     def query_resource(self, message: str, **kwargs) -> str:
         """
-        query_raw_scpi(query, **kwargs)
+        query_resource(query, **kwargs)
 
         Writes data to the connected resource before reading data back from the
         resource. The duration of the delay between the write and read
@@ -281,7 +296,7 @@ class VisaResource:
         """
 
         try:
-            response: str = self._resource.query(message, **kwargs)
+            response: str = self._resource.query(message=message, **kwargs)
             return response.strip()
 
         except pyvisa.VisaIOError as error:
@@ -309,8 +324,9 @@ class VisaResource:
         """
         read_resource_raw(**kwargs)
 
-        Reads data back from the connected resource and returns it in its
-        recieved raw byte format with no decoding. This can be useful for
+        Reads data back from the connected resource in its unmodified string
+        form (no termination characters skipped) and returns it in its recieved
+        raw byte format with no decoding. This can be useful for
         responses which do not use a simple ASCII or UTF-8 encoding.
 
         Returns:
@@ -319,6 +335,25 @@ class VisaResource:
 
         try:
             response = self._resource.read_raw(**kwargs)
+            return response
+
+        except pyvisa.VisaIOError as error:
+            raise IOError("Error communicating with the resource\n", error)
+
+    def read_resource_bytes(self, n: int, **kwargs) -> bytes:
+        """
+        read_resource_bytes(**kwargs)
+
+        Reads data back the specified number of bytes from the connected
+        resource and returns it. This can be useful for responses which do not
+        use a simple ASCII or UTF-8 encoding.
+
+        Returns:
+            bytes: data recieved from a connected resource
+        """
+
+        try:
+            response = self._resource.read_bytes(count=n, **kwargs)
             return response
 
         except pyvisa.VisaIOError as error:
