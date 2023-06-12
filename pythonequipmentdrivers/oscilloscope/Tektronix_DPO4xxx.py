@@ -16,7 +16,7 @@ class Tektronix_DPO4xxx(VisaResource):
     Family of Oscilloscopes
     """
 
-    # todo:
+    # TODO:
     #   add additional functionality for setting / getting scope measurements
 
     def select_channel(self, channel: int, state: bool) -> None:
@@ -34,8 +34,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 selected/visable on the screen.
         """
 
-        cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
-        self._resource.write(cmd_str)
+        self.write_resource(f"SEL:CH{channel} {'ON' if state else 'OFF'}")
 
     def get_channel_data(self, *channels: int,
                          **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
@@ -137,7 +136,7 @@ class Tektronix_DPO4xxx(VisaResource):
             label (str): text label to assign to the specified
         """
 
-        self._resource.write(f'CH{int(channel)}:LAB "{label}"')
+        self.write_resource(f'CH{channel}:LAB "{label}"')
 
     def get_channel_label(self, channel: int) -> str:
         """
@@ -152,8 +151,8 @@ class Tektronix_DPO4xxx(VisaResource):
             (str): specified channel label
         """
 
-        response = self._resource.query(f'CH{int(channel)}:LAB?')
-        return response.rstrip('\n')
+        response = self.query_resource(f'CH{channel}:LAB?')
+        return response
 
     def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
         """
@@ -170,7 +169,7 @@ class Tektronix_DPO4xxx(VisaResource):
             bandwidth (float): desired bandwidth setting for "channel" in Hz
         """
 
-        self._resource.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
+        self.write_resource(f"CH{channel}:BAN {bandwidth}")
 
     def get_channel_bandwidth(self, channel: int) -> float:
         """
@@ -185,7 +184,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: channel bandwidth setting
         """
 
-        response = self._resource.query(f"CH{int(channel)}:BAN?")
+        response = self.query_resource(f"CH{channel}:BAN?")
         return float(response)
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
@@ -200,7 +199,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        self._resource.write(f'CH{int(channel)}:SCA {float(scale)}')
+        self.write_resource(f'CH{channel}:SCA {scale}')
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -216,7 +215,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        response = self._resource.query(f'CH{int(channel)}:SCA?')
+        response = self.query_resource(f'CH{channel}:SCA?')
         return float(response)
 
     def set_channel_offset(self, channel: int, off: float) -> None:
@@ -230,7 +229,7 @@ class Tektronix_DPO4xxx(VisaResource):
             off (float): vertical/amplitude offset
         """
 
-        self._resource.write(f"CH{int(channel)}:OFFS {float(off)}")
+        self.write_resource(f"CH{channel}:OFFS {off}")
 
     def get_channel_offset(self, channel: int) -> float:
         """
@@ -245,7 +244,7 @@ class Tektronix_DPO4xxx(VisaResource):
             float: vertical/amplitude offset
         """
 
-        response = self._resource.query(f"CH{int(channel)}:OFFS?")
+        response = self.query_resource(f"CH{channel}:OFFS?")
         return float(response)
 
     def set_channel_position(self, channel: int, position: float) -> None:
@@ -263,7 +262,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 the display of the specified channel waveform.
         """
 
-        self._resource.write(f"CH{int(channel)}:POS {float(position)}")
+        self.write_resource(f"CH{channel}:POS {position}")
 
     def get_channel_position(self, channel: int) -> float:
         """
@@ -282,7 +281,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 of the specified channel waveform.
         """
 
-        response = self._resource.query(f"CH{int(channel)}:POS?")
+        response = self.query_resource(f"CH{channel}:POS?")
         return float(response)
 
     def trigger_run_stop(self) -> None:
@@ -293,7 +292,7 @@ class Tektronix_DPO4xxx(VisaResource):
         whether or not it is acquiring new data.
         """
 
-        self._resource.write("FPANEL:PRESS RUnstop")
+        self.write_resource("FPANEL:PRESS RUnstop")
 
     def trigger_force(self) -> None:
         """
@@ -301,7 +300,8 @@ class Tektronix_DPO4xxx(VisaResource):
 
         forces a trigger event to occur
         """
-        self._resource.write("TRIG FORC")
+
+        self.write_resource("TRIG FORC")
 
     def trigger_single(self) -> None:
         """
@@ -309,7 +309,8 @@ class Tektronix_DPO4xxx(VisaResource):
 
         arms the oscilloscope to capture a single trigger event.
         """
-        self._resource.write("FPANEL:PRESS SING")
+
+        self.write_resource("FPANEL:PRESS SING")
 
     def set_trigger_position(self, offset: float) -> None:
         """
@@ -323,10 +324,10 @@ class Tektronix_DPO4xxx(VisaResource):
                 of the horizontal capture window. Should be between 0-100.
         """
 
-        if not (0 <= float(offset) <= 100):
+        if not (0.0 <= offset <= 100.0):
             raise ValueError('offset out of the valid range [0-100]')
 
-        self._resource.write(f"HOR:POS {float(offset)}")
+        self.write_resource(f"HOR:POS {offset}")
 
     def get_trigger_position(self) -> float:
         """
@@ -339,7 +340,9 @@ class Tektronix_DPO4xxx(VisaResource):
             float: Horizontal position of the trigger as a percentage of the
                 horizontal capture window.
         """
-        return float(self._resource.query("HOR:POS?"))
+
+        response = self.query_resource("HOR:POS?")
+        return float(response)
 
     def set_trigger_mode(self, mode: str) -> None:
         """
@@ -387,7 +390,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 the signal being triggered on.
         """
 
-        self._resource.write(f"TRIG:A:LEV {float(level)}")
+        self.write_resource(f"TRIG:A:LEV {level}")
 
     def get_trigger_level(self) -> float:
         """
@@ -401,7 +404,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 being triggered on.
         """
 
-        response = self._resource.query("TRIG:A:LEV?")
+        response = self.query_resource("TRIG:A:LEV?")
         return float(response)
 
     def set_zoom_mode(self, state: bool) -> None:
@@ -416,7 +419,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 is disabled.
         """
 
-        self._resource.write(f"ZOO:MODE {'ON' if state else 'OFF'}")
+        self.write_resource(f"ZOO:MODE {'ON' if state else 'OFF'}")
 
     def get_zoom_mode(self) -> bool:
         """
@@ -428,12 +431,12 @@ class Tektronix_DPO4xxx(VisaResource):
             bool: If True, Zoom mode is activated. Otherwise Zoom mode is
                 disabled.
         """
-        on_keywords = ('on', 'true', '1')
 
-        response = self._resource.query("ZOO:MODE?")
-        response = response.lower()
+        on_keywords = {'on', 'true', '1'}
 
-        return any(key in response for key in on_keywords)
+        response = self.query_resource("ZOO:MODE?")
+
+        return any(key in response.lower() for key in on_keywords)
 
     def set_zoom_position(self, position: float) -> None:
         """
@@ -448,7 +451,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 record length.
         """
 
-        self._resource.write(f"ZOO:ZOOM:POS {float(position)}")
+        self.write_resource(f"ZOO:ZOOM:POS {position}")
 
     def get_zoom_position(self) -> float:
         """
@@ -462,7 +465,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 length.
         """
 
-        response = self._resource.query("ZOO:ZOOM:POS?")
+        response = self.query_resource("ZOO:ZOOM:POS?")
         return float(response)
 
     def set_zoom_scale(self, scale: float) -> None:
@@ -477,7 +480,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 division.
         """
 
-        self._resource.write(f"ZOO:ZOOM:SCA {float(scale)}")
+        self.write_resource(f"ZOO:ZOOM:SCA {scale}")
 
     def get_zoom_scale(self) -> float:
         """
@@ -489,7 +492,8 @@ class Tektronix_DPO4xxx(VisaResource):
         Returns:
             float: horizontal scale for Zoom Mode in seconds per division.
         """
-        response = self._resource.query("ZOO:ZOOM:SCA?")
+
+        response = self.query_resource("ZOO:ZOOM:SCA?")
         return float(response)
 
     def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
@@ -667,7 +671,3 @@ class Tektronix_DPO4xxx(VisaResource):
 
         response = self._resource.query('HOR:SCA?')
         return float(response)
-
-
-if __name__ == "__main__":
-    pass
