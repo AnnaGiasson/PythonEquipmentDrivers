@@ -1,6 +1,6 @@
-import pythonequipmentdrivers as ped
 from time import sleep
 
+import pythonequipmentdrivers as ped
 
 # addresses of the equipment to connect, yours may vary
 address = {'v_in_meter': 'USB0::0x2A8D::0x1301::MY59026778::INSTR',
@@ -11,7 +11,7 @@ address = {'v_in_meter': 'USB0::0x2A8D::0x1301::MY59026778::INSTR',
 
 
 # connect to equipment
-source = ped.source.Chroma_62012P(address['source'])
+source = ped.source.Chroma_62000P(address['source'])
 v_in_meter = ped.multimeter.Keysight_34461A(address['v_in_meter'])
 v_out_meter = ped.multimeter.Keysight_34461A(address['v_out_meter'])
 sink = ped.sink.Chroma_63206A(address['sink'])
@@ -39,10 +39,10 @@ data_path = 'C:\\top_sneaky\\'
 data_file_name = 'test_data.csv'
 
 # create file to store data using the utility function
-ped.utility.log_data(data_path + data_file_name,
-                     'v_in_set', 'i_out_set', 'v_in',         # columns names
-                     'i_in', 'v_out', 'i_out', 'efficiency',  # of the data csv
-                     init=True)
+ped.utility.log_to_csv(data_path + data_file_name,
+                       'v_in_set', 'i_out_set', 'v_in',     # columns names of
+                       'i_in', 'v_out', 'i_out', 'efficiency',  # the data csv
+                       init=True)
 
 # run test
 source.on()
@@ -71,7 +71,7 @@ for v_in_set in v_in_conditions:
         measurement.append(eff)
 
         # log measurements
-        ped.utility.log_data(data_path + data_file_name, *measurement)
+        ped.utility.log_to_csv(data_path + data_file_name, *measurement)
 
         sleep(cooldown_delay)  # cool down unit
 

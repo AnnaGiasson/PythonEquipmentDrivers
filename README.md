@@ -22,7 +22,7 @@ To create a connection to an instrument supported by this library it's respectiv
 For example, to control a Chroma 62012P voltage source on a GPIB interface at address 14:
 ```python
 import pythonequipmentdrivers as ped
-source = ped.source.Chroma_62012P('GPIB0::14::INSTR')
+source = ped.source.Chroma_62000P('GPIB0::14::INSTR')
 ```
 With this instance, various features of the instrument can be access through its methods.
 ```python
@@ -33,7 +33,7 @@ print(source.measure_voltage())
 PythonEquipmentDrivers comes with a built in utility for identifing (most) connected instruments if the addresses are not known.
 ```python
 import pythonequipmentdrivers as ped
-ped.identify_devices()
+ped.identify_visa_resources()
 ```
 By instantiating multiple instruments simple tests can be scripted to automatically log data for a "device under test" (DUT)
 Here is an example test which measures the efficiency of a power converter over multiple operating points and logs the resulting data to file:
@@ -42,7 +42,7 @@ import pythonequipmentdrivers as ped
 from time import sleep
 
 # connect to equipment
-source = ped.source.Chroma_62012P('GPIB0::14::INSTR')
+source = ped.source.Chroma_62000P('GPIB0::14::INSTR')
 v_in_meter = ped.multimeter.Keysight_34461A('USB0::0x2A8D::0x1301::MY59026778::INSTR')
 v_out_meter = ped.multimeter.Keysight_34461A('USB0::0x2A8D::0x1301::MY59026586::INSTR')
 sink = ped.sink.Chroma_63206A('GPIB0::3::INSTR')

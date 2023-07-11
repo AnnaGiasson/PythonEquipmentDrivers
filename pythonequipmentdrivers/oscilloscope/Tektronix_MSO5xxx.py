@@ -1,11 +1,11 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from pythonequipmentdrivers import VisaResource
 import struct
 import numpy as np
 from pathlib import Path
 from typing import Union, Tuple
 
 
-class Tektronix_MSO5xxx(Scpi_Instrument):
+class Tektronix_MSO5xxx(VisaResource):
     """
     Tektronix_MSO5xxx(address)
 
@@ -19,11 +19,11 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         super().__init__(address, **kwargs)
 
         # get image formatting
-        self.instrument.write('EXP:FORM PNG')  # image is a .png file
-        self.instrument.write('HARDC:PORT FILE')  # image is stored as a file
-        self.instrument.write('HARDC:PALE COLOR')  # color image (alt INKS)
-        self.instrument.write('HARDC:LAY LAN')  # landscape image
-        self.instrument.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
+        self._resource.write('EXP:FORM PNG')  # image is a .png file
+        self._resource.write('HARDC:PORT FILE')  # image is stored as a file
+        self._resource.write('HARDC:PALE COLOR')  # color image (alt INKS)
+        self._resource.write('HARDC:LAY LAN')  # landscape image
+        self._resource.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
@@ -42,7 +42,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         """
 
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
-        self.instrument.write(cmd_str)
+        self._resource.write(cmd_str)
 
     def get_channel_data(self, *channels: int,
                          **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
@@ -94,21 +94,21 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         for channel in channels:
 
             # configure data transfer
-            self.instrument.write(f'DATA:START {start_idx}')  # data range
-            self.instrument.write(f'DATA:STOP {stop_idx}')
-            self.instrument.write(f'DATA:SOU CH{channel}')  # data source
-            self.instrument.write('DATA:ENC SRP')  # encoding, int little-end
+            self._resource.write(f'DATA:START {start_idx}')  # data range
+            self._resource.write(f'DATA:STOP {stop_idx}')
+            self._resource.write(f'DATA:SOU CH{channel}')  # data source
+            self._resource.write('DATA:ENC SRP')  # encoding, int little-end
 
             # get waveform metadata
-            dt = float(self.instrument.query('WFMPRE:XINCR?'))  # sampling time
-            y_offset = float(self.instrument.query('WFMPRE:YOFF?'))
-            y_scale = float(self.instrument.query('WFMPRE:YMULT?'))
+            dt = float(self._resource.query('WFMPRE:XINCR?'))  # sampling time
+            y_offset = float(self._resource.query('WFMPRE:YOFF?'))
+            y_scale = float(self._resource.query('WFMPRE:YMULT?'))
 
-            adc_offset = float(self.instrument.query('WFMPRE:YZERO?'))
+            adc_offset = float(self._resource.query('WFMPRE:YZERO?'))
 
             # get raw data, strip header
-            self.instrument.write('CURVE?')
-            raw_data = self.instrument.read_raw()
+            self._resource.write('CURVE?')
+            raw_data = self._resource.read_raw()
 
             header_len = 2 + int(raw_data[1])
             raw_data = raw_data[header_len:-1]
@@ -144,7 +144,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             label (str): text label to assign to the specified
         """
 
-        self.instrument.write(f'CH{int(channel)}:LAB:NAM "{label}"')
+        self._resource.write(f'CH{int(channel)}:LAB:NAM "{label}"')
 
     def get_channel_label(self, channel: int) -> str:
         """
@@ -159,7 +159,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             (str): specified channel label
         """
 
-        response = self.instrument.query(f'CH{channel}:LAB:NAM?')
+        response = self._resource.query(f'CH{channel}:LAB:NAM?')
         return response.strip().replace('"', '')
 
     def set_channel_label_position(self, channel: int, pos: tuple) -> None:
@@ -181,8 +181,8 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         x_coord, y_coord = pos
 
-        self.instrument.write(f'CH{int(channel)}:LAB:XPOS {float(x_coord)}')
-        self.instrument.write(f'CH{int(channel)}:LAB:YPOS {float(y_coord)}')
+        self._resource.write(f'CH{int(channel)}:LAB:XPOS {float(x_coord)}')
+        self._resource.write(f'CH{int(channel)}:LAB:YPOS {float(y_coord)}')
 
     def get_channel_label_position(self, channel: int) -> Tuple[float, float]:
         """
@@ -199,8 +199,8 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 with respect to the waveform as a number of divisions.
         """
 
-        x_coord = float(self.instrument.query(f'CH{int(channel)}:LAB:XPOS?'))
-        y_coord = float(self.instrument.query(f'CH{int(channel)}:LAB:YPOS?'))
+        x_coord = float(self._resource.query(f'CH{int(channel)}:LAB:XPOS?'))
+        y_coord = float(self._resource.query(f'CH{int(channel)}:LAB:YPOS?'))
 
         return (x_coord, y_coord)
 
@@ -220,9 +220,9 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         """
 
         if isinstance(bandwidth, str) and (bandwidth.upper() == 'FULL'):
-            self.instrument.write(f"CH{int(channel)}:BAN FULL")
+            self._resource.write(f"CH{int(channel)}:BAN FULL")
         else:
-            self.instrument.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
+            self._resource.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
 
     def get_channel_bandwidth(self, channel: int) -> float:
         """
@@ -237,7 +237,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             float: channel bandwidth setting
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:BAN?")
+        response = self._resource.query(f"CH{int(channel)}:BAN?")
         return float(response)
 
     def set_channel_scale(self, channel: int, scale: float) -> None:
@@ -252,7 +252,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 vertical division on the display.
         """
 
-        self.instrument.write(f'CH{int(channel)}:SCA {float(scale)}')
+        self._resource.write(f'CH{int(channel)}:SCA {float(scale)}')
 
     def get_channel_scale(self, channel):
         """
@@ -267,7 +267,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             (float): vertical scale
         """
 
-        response = self.instrument.query(f'CH{int(channel)}:SCA?')
+        response = self._resource.query(f'CH{int(channel)}:SCA?')
         return float(response)
 
     def set_channel_offset(self, channel: int, off: float) -> None:
@@ -281,7 +281,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             off (float): vertical/amplitude offset
         """
 
-        self.instrument.write(f"CH{int(channel)}:OFFS {float(off)}")
+        self._resource.write(f"CH{int(channel)}:OFFS {float(off)}")
 
     def get_channel_offset(self, channel: int) -> float:
         """
@@ -296,7 +296,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             float: vertical/amplitude offset
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:OFFS?")
+        response = self._resource.query(f"CH{int(channel)}:OFFS?")
         return float(response)
 
     def set_channel_position(self, channel: int, position: float) -> None:
@@ -314,7 +314,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 the display of the specified channel waveform.
         """
 
-        self.instrument.write(f"CH{int(channel)}:POS {float(position)}")
+        self._resource.write(f"CH{int(channel)}:POS {float(position)}")
 
     def get_channel_position(self, channel: int) -> float:
         """
@@ -333,7 +333,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 of the specified channel waveform.
         """
 
-        response = self.instrument.query(f"CH{int(channel)}:POS?")
+        response = self._resource.query(f"CH{int(channel)}:POS?")
         return float(response)
 
     def set_channel_coupling(self, channel: int, coupling: str) -> None:
@@ -356,7 +356,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             raise ValueError(f"Invalid Coupling option: {coupling}. "
                              f"Suuport options are: {valid_modes}")
 
-        self.instrument.write(f"CH{int(channel)}:COUP {coupling}")
+        self._resource.write(f"CH{int(channel)}:COUP {coupling}")
 
     def get_channel_coupling(self, channel: int) -> str:
         """
@@ -373,7 +373,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             str: coupling mode
         """
 
-        resp = self.instrument.query(f"CH{int(channel)}:COUP?")
+        resp = self._resource.query(f"CH{int(channel)}:COUP?")
         return resp.strip()
 
     def set_trigger_acquire_state(self, state: bool) -> None:
@@ -388,7 +388,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 and True (run/acquire)
         """
 
-        self.instrument.write(f"ACQ:STATE {1 if state else 0}")
+        self._resource.write(f"ACQ:STATE {1 if state else 0}")
 
     def get_trigger_acquire_state(self) -> bool:
         """
@@ -402,7 +402,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 True (run/acquire)
         """
 
-        response = self.instrument.query("ACQ:STATE?")
+        response = self._resource.query("ACQ:STATE?")
         return bool(response)
 
     def trigger_run(self) -> None:
@@ -431,7 +431,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         forces a trigger event to occur
         """
 
-        self.instrument.write("TRIG FORC")
+        self._resource.write("TRIG FORC")
 
     def trigger_single(self) -> None:
         """
@@ -441,7 +441,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         """
 
         self.set_trigger_acquire_state(1)
-        self.instrument.write("ACQ:STOPA SEQ")
+        self._resource.write("ACQ:STOPA SEQ")
 
     def set_trigger_source(self, channel: int) -> None:
         """
@@ -453,7 +453,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             channel (int): channel number to configure
         """
 
-        self.instrument.write(f'TRIGger:A:EDGE:SOUrce CH{int(channel)}')
+        self._resource.write(f'TRIGger:A:EDGE:SOUrce CH{int(channel)}')
 
     def get_trigger_source(self) -> int:
         """
@@ -465,7 +465,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             int: channel number used for the trigger source
         """
 
-        response = self.instrument.query('TRIGger:A:EDGE:SOUrce?')
+        response = self._resource.query('TRIGger:A:EDGE:SOUrce?')
         return int(response.replace('CH', ''))
 
     def set_trigger_position(self, offset: float) -> None:
@@ -483,7 +483,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         if not (0 <= float(offset) <= 100):
             raise ValueError('offset out of the valid range [0-100]')
 
-        self.instrument.write(f"HOR:POS {float(offset)}")
+        self._resource.write(f"HOR:POS {float(offset)}")
 
     def get_trigger_position(self) -> float:
         """
@@ -497,7 +497,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 horizontal capture window.
         """
 
-        return float(self.instrument.query("HOR:POS?"))
+        return float(self._resource.query("HOR:POS?"))
 
     def set_trigger_slope(self, slope: str) -> None:
         """
@@ -517,7 +517,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             raise ValueError('Invalid option for Arg "slope".'
                              f' Valid option are {valid_options}')
 
-        self.instrument.write(f'TRIGger:A:EDGE:SLOpe {slope}')
+        self._resource.write(f'TRIGger:A:EDGE:SLOpe {slope}')
 
     def get_trigger_slope(self) -> str:
         """
@@ -530,7 +530,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             str: trigger edge polarity.
         """
 
-        response = self.instrument.query('TRIGger:A:EDGE:SLOpe?')
+        response = self._resource.query('TRIGger:A:EDGE:SLOpe?')
         return response.rstrip('\n').lower()
 
     def set_trigger_mode(self, mode: str) -> None:
@@ -549,7 +549,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         mode = str(mode).upper()
         if mode not in ["AUTO", "NORM", "NORMAL"]:
             raise ValueError(f"Invalid mode: {mode}")
-        self.instrument.write(f"TRIG:A:MOD {mode}")
+        self._resource.write(f"TRIG:A:MOD {mode}")
 
     def get_trigger_mode(self) -> str:
         """
@@ -564,7 +564,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             str: trigger mode. Valid modes are "AUTO" and "NORM"
         """
 
-        response = self.instrument.query("TRIG:A:MOD?")
+        response = self._resource.query("TRIG:A:MOD?")
         return response.rstrip("\n").lower()
 
     def set_trigger_level(self, level: float) -> None:
@@ -579,7 +579,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 the signal being triggered on.
         """
 
-        self.instrument.write(f"TRIG:A:LEV {float(level)}")
+        self._resource.write(f"TRIG:A:LEV {float(level)}")
 
     def get_trigger_level(self) -> float:
         """
@@ -593,7 +593,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 being triggered on.
         """
 
-        response = self.instrument.query("TRIG:A:LEV?")
+        response = self._resource.query("TRIG:A:LEV?")
         return float(response)
 
     def set_measure_method(self, method):
@@ -608,7 +608,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         method = method.upper()
         if method in ['HISTOGRAM', 'MEAN', 'MINMAX']:
-            self.instrument.write(f'MEASU:METH {method}')
+            self._resource.write(f'MEASU:METH {method}')
         else:
             raise ValueError("Invalid Method")
         return None
@@ -624,7 +624,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         Gets the method used to calculate the 0% and 100% reference levels.
         """
 
-        resp = self.instrument.query('MEASU:METH?')
+        resp = self._resource.query('MEASU:METH?')
         return resp.strip('\n')
 
     def set_measure_reference_method(self, method):
@@ -639,7 +639,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         method = method.upper()
         if method in ['ABSOLUTE', 'PERCENT']:
-            self.instrument.write(f'MEASU:REFL:METH {method}')
+            self._resource.write(f'MEASU:REFL:METH {method}')
         else:
             raise ValueError("Invalid Method")
         return None
@@ -655,7 +655,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         Gets the reference level units used for measurement calculations.
         """
 
-        resp = self.instrument.query('MEASU:REFL:METH?')
+        resp = self._resource.query('MEASU:REFL:METH?')
         return resp.strip('\n')
 
     def set_measure_ref_level(self, method, level, threshold):
@@ -682,7 +682,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         if level not in ['HIGH', 'MID', 'LOW']:
             ValueError("Invalid level")
 
-        self.instrument.write(f'MEASU:REFL:{method}:{level} {threshold}')
+        self._resource.write(f'MEASU:REFL:{method}:{level} {threshold}')
 
         return None
 
@@ -711,7 +711,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         if level not in ['HIGH', 'MID', 'LOW']:
             ValueError("Invalid level")
 
-        resp = self.instrument.query(f'MEASU:REFL:{method}:{level}?')
+        resp = self._resource.query(f'MEASU:REFL:{method}:{level}?')
 
         return float(resp.strip('\n'))
 
@@ -758,9 +758,9 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             raise ValueError("Measurement Type not supported")
 
         self.clear_measure(meas_idx)
-        self.instrument.write(f'MEASU:MEAS{meas_idx}:SOU CH{channel}')
-        self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP {meas_type}')
-        self.instrument.write(f'MEASU:MEAS{meas_idx}:STATE ON')
+        self._resource.write(f'MEASU:MEAS{meas_idx}:SOU CH{channel}')
+        self._resource.write(f'MEASU:MEAS{meas_idx}:TYP {meas_type}')
+        self._resource.write(f'MEASU:MEAS{meas_idx}:STATE ON')
         return None
 
     def get_measure_config(self, meas_idx):
@@ -779,13 +779,13 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             returns the setup information of measurement # meas_idx.
         """
 
-        meas_type = self.instrument.query(f'MEASU:MEAS{meas_idx}:TYP?')
+        meas_type = self._resource.query(f'MEASU:MEAS{meas_idx}:TYP?')
         meas_type = meas_type.strip('\n')
 
         if meas_type == 'UNDEFINED':
             channel = None
         else:
-            channel = self.instrument.query(f'MEASU:MEAS{meas_idx}:SOU?')
+            channel = self._resource.query(f'MEASU:MEAS{meas_idx}:SOU?')
             channel = int(channel.strip('\n').lstrip('CH3'))
 
         return meas_type, channel
@@ -800,8 +800,8 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         Clears measurement settings from the oscilloscopes memory and
         removes the measurement from the screeen
         """
-        self.instrument.write(f'MEASU:MEAS{meas_idx}:STATE OFF')
-        self.instrument.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
+        self._resource.write(f'MEASU:MEAS{meas_idx}:STATE OFF')
+        self._resource.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
         return None
 
     def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
@@ -825,7 +825,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         for idx in meas_idx:
 
             query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
-            response = self.instrument.query(query_cmd)
+            response = self._resource.query(query_cmd)
 
             try:
                 data.append(float(response))
@@ -853,19 +853,19 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         stats = {}
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:MEAN?')
+        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MEAN?')
         stats['mean'] = float(resp)
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:MINI?')
+        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MINI?')
         stats['min'] = float(resp)
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:MAX?')
+        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MAX?')
         stats['max'] = float(resp)
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:COUNT?')
+        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:COUNT?')
         stats['count'] = float(resp)
 
-        resp = self.instrument.query(f'MEASU:MEAS{meas_idx}:STD?')
+        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:STD?')
         stats['std'] = float(resp)
 
         return stats
@@ -876,7 +876,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         resets the accumlated measurements used to calculate statistics
         """
-        self.instrument.write('MEASU:STATI:COUN RESET')
+        self._resource.write('MEASU:STATI:COUN RESET')
         return None
 
     def enable_measure_statistics(self):
@@ -886,7 +886,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         enables the calculation of statistics on a measurement
         """
 
-        self.instrument.write('MEASU:STATI:MODE ALL')
+        self._resource.write('MEASU:STATI:MODE ALL')
         return None
 
     def disable_measure_statistics(self):
@@ -896,7 +896,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         disables the calculation of statistics on a measurement
         """
 
-        self.instrument.write('MEASU:STATI:MODE OFF')
+        self._resource.write('MEASU:STATI:MODE OFF')
         return None
 
     def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
@@ -930,20 +930,20 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         if kwargs.get('save_to_device', False):
             # save to location on scope
-            self.instrument.write(f'HARDCopy:FILEName "{file_path}"')
-            self.instrument.write('HARDCopy STARt')
+            self._resource.write(f'HARDCopy:FILEName "{file_path}"')
+            self._resource.write('HARDCopy STARt')
         else:
 
             # save to temp location on scope
             buffer_path = r'C:\TekScope\Screen Captures\temp.png'
 
-            self.instrument.write(f'HARDCopy:FILEName "{buffer_path}"')
-            self.instrument.write('HARDCopy STARt')
-            self.instrument.write('*OPC?')  # done yet?
+            self._resource.write(f'HARDCopy:FILEName "{buffer_path}"')
+            self._resource.write('HARDCopy STARt')
+            self._resource.write('*OPC?')  # done yet?
 
             # transfer file to computer
-            self.instrument.write(f'FILESystem:READFile "{buffer_path}"')
-            raw_data = self.instrument.read_raw()
+            self._resource.write(f'FILESystem:READFile "{buffer_path}"')
+            raw_data = self._resource.read_raw()
 
             # save image
             with open(file_path, 'wb') as file:
@@ -963,7 +963,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 per scope trigger
         """
 
-        self.instrument.write(f"HOR:RECO {int(length)}")
+        self._resource.write(f"HOR:RECO {int(length)}")
 
     def get_record_length(self) -> int:
         """
@@ -975,7 +975,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             int: len of the waveform buffer
         """
 
-        return int(self.instrument.query("HOR:RECO?"))
+        return int(self._resource.query("HOR:RECO?"))
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -989,7 +989,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                 display in seconds.
         """
 
-        self.instrument.write(f'HOR:SCA {float(scale)}')
+        self._resource.write(f'HOR:SCA {float(scale)}')
 
     def get_horizontal_scale(self) -> float:
         """
@@ -1001,7 +1001,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
             float: horizontal scale in seconds per division.
         """
 
-        response = self.instrument.query('HOR:SCA?')
+        response = self._resource.query('HOR:SCA?')
         return float(response)
 
     def set_horizontal_roll_mode(self, mode):
@@ -1018,11 +1018,11 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         if type(mode) == int:
             if mode in [0, 1]:
                 options = ["OFF", "ON"]
-                self.instrument.write(f'HOR:ROLL {options[mode]}')
+                self._resource.write(f'HOR:ROLL {options[mode]}')
         elif type(mode) == str:
             mode = mode.upper()
             if mode in ["OFF", "ON", "AUTO"]:
-                self.instrument.write(f'HOR:ROLL {mode}')
+                self._resource.write(f'HOR:ROLL {mode}')
         else:
             raise ValueError(f"invalid value {mode} for arg 'mode'")
 
@@ -1039,7 +1039,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         valid return values are 'on', 'off', or 'auto'
         """
 
-        resp = self.instrument.query('HOR:ROLL?')
+        resp = self._resource.query('HOR:ROLL?')
         resp = resp.strip()
 
         return resp
@@ -1054,7 +1054,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         display. Sets cursors on if state = 1 and off if state = 0
         """
 
-        self.instrument.write(f'CURS:STATE {state}')
+        self._resource.write(f'CURS:STATE {state}')
         return None
 
     def get_cursor_state(self):
@@ -1068,7 +1068,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         display. Cursors are on if state = 1 and off if state = 0
         """
 
-        resp = self.instrument.query('CURS:STATE?')
+        resp = self._resource.query('CURS:STATE?')
         state = int(resp)
         return state
 
@@ -1082,7 +1082,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         'channel'
         """
 
-        self.instrument.write(f'CURS:SOU CH{channel}')
+        self._resource.write(f'CURS:SOU CH{channel}')
         return None
 
     def get_cursor_source(self):
@@ -1095,7 +1095,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         returns the source used for the cursors data
         """
 
-        resp = self.instrument.query('CURS:SOU?')
+        resp = self._resource.query('CURS:SOU?')
         source = resp.strip()
         return source
 
@@ -1119,7 +1119,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
 
         function = function.upper()
         if function in ['OFF', 'HBA', 'VBA', 'SCREEN', 'WAVE']:
-            self.instrument.write(f'CURS:FUNC {function}')
+            self._resource.write(f'CURS:FUNC {function}')
         else:
             raise ValueError(f"invalid value {function} for arg 'function'")
 
@@ -1144,7 +1144,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
                   assigned to.
         """
 
-        resp = self.instrument.query('CURS:FUNC?')
+        resp = self._resource.query('CURS:FUNC?')
         function = resp.strip()
         return function
 
@@ -1160,7 +1160,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         trigger.
         """
 
-        self.instrument.write(f'CURS:SCREEN:XPOSITION{cursor_num} {position}')
+        self._resource.write(f'CURS:SCREEN:XPOSITION{cursor_num} {position}')
         return None
 
     def get_cursor_x_position(self, cursor_num):
@@ -1176,7 +1176,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         Position is the capture time relative to the trigger.
         """
 
-        resp = self.instrument.query(f'CURS:SCREEN:XPOSITION{cursor_num}?')
+        resp = self._resource.query(f'CURS:SCREEN:XPOSITION{cursor_num}?')
         position = float(resp)
         return position
 
@@ -1192,7 +1192,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         the observed waveform
         """
 
-        self.instrument.write(f'CURS:SCREEN:YPOSITION{cursor_num} {position}')
+        self._resource.write(f'CURS:SCREEN:YPOSITION{cursor_num} {position}')
         return None
 
     def get_cursor_y_position(self, cursor_num):
@@ -1206,7 +1206,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         The units of position depend on the units of the observed waveform.
         """
 
-        resp = self.instrument.query(f'CURS:SCREEN:YPOSITION{cursor_num}?')
+        resp = self._resource.query(f'CURS:SCREEN:YPOSITION{cursor_num}?')
         position = float(resp)
         return position
 
@@ -1222,7 +1222,7 @@ class Tektronix_MSO5xxx(Scpi_Instrument):
         after being successfully single-triggered.
         """
 
-        resp = self.instrument.query('ACQ:NUMAC?')
+        resp = self._resource.query('ACQ:NUMAC?')
         acq_num = int(resp)
         return acq_num
 

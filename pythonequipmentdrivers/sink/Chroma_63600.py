@@ -1,7 +1,6 @@
-from typing import Tuple, Union
-from pythonequipmentdrivers import Scpi_Instrument
-import numpy as np
-from time import sleep
+from typing import Set, Tuple, Union
+from pythonequipmentdrivers import VisaResource
+from enum import Enum
 
 
 # Look into programming "sequences" and "programs" to the device. See basic
@@ -9,7 +8,7 @@ from time import sleep
 
 # add set/get methods for the current and resistance ranges
 
-class Chroma_63600(Scpi_Instrument):
+class Chroma_63600(VisaResource):
     """
     Chroma_63600(address)
 
@@ -18,9 +17,29 @@ class Chroma_63600(Scpi_Instrument):
     object for accessing basic functionallity of the Chroma_63600 DC load.
     """
 
-    valid_modes = ('CC', 'CR', 'CV', 'CP', 'CZ', 'CCD', 'CCFS', 'TIM', 'SWD')
+    class ValidModes(Enum):
+        CC = 'CC'
+        CR = 'CR'
+        CV = 'CV'
+        CP = 'CP'
+        CZ = 'CZ'
+        CCD = 'CCD'
+        CCFS = 'CCFS'
+        TIM = 'TIM'
+        SWD = 'SWD'
 
-    def _channel_index(self, channel: int, reverse: bool = False) -> int:
+    class Errors(Enum):
+        OTP = 0
+        OVP = 1
+        OCP = 2
+        OPP = 3
+        REV = 4
+        SYNC = 5
+        MAX_LIM = 6
+        REMOTE_INHIBIT = 7
+
+    @staticmethod
+    def _channel_index(channel: int, reverse: bool = False) -> int:
         """
         _channel_index(channel, reverse=False)
 
@@ -58,7 +77,7 @@ class Chroma_63600(Scpi_Instrument):
             state (bool): Load state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"LOAD {1 if state else 0}")
+        self.write_resource(f"LOAD {'1' if state else '0'}")
 
     def get_state(self) -> bool:
         """
@@ -70,9 +89,7 @@ class Chroma_63600(Scpi_Instrument):
             bool: Load state (True == enabled, False == disabled)
         """
 
-        if self.instrument.query("LOAD?").rstrip('\n') == "ON":
-            return True
-        return False
+        return (self.query_resource("LOAD?") == "ON")
 
     def on(self) -> None:
         """
@@ -92,27 +109,14 @@ class Chroma_63600(Scpi_Instrument):
 
         self.set_state(False)
 
-    def toggle(self, return_state: bool = False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
+        toggle()
 
-        Reverses the current state of the Load's input. If return_state = True
-        the boolean state of the load after toggle() is executed will be
-        returned.
-
-        Args:
-            return_state (bool, optional): Whether or not to return the state
-                of the load after changing its state. Defaults to False.
-
-        Returns:
-            Union[None, bool]: If return_state == True returns the Load state
-                (True == enabled, False == disabled), else returns None
+        Reverses the current state of the Load's input.
         """
 
         self.set_state(self.get_state() ^ True)
-
-        if return_state:
-            return self.get_state()
 
     def set_current(self, current: float, level: int = 0) -> None:
         """
@@ -129,11 +133,10 @@ class Chroma_63600(Scpi_Instrument):
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:STAT:L1 {float(current)}')
-            self.instrument.write(f'CURR:STAT:L2 {float(current)}')
+            self.write_resource(f'CURR:STAT:L1 {current}')
+            self.write_resource(f'CURR:STAT:L2 {current}')
         else:
-            command_str = f'CURR:STAT:L{int(level)} {float(current)}'
-            self.instrument.write(command_str)
+            self.write_resource(f'CURR:STAT:L{level} {current}')
 
     def get_current(self, level: int) -> Union[float, Tuple[float]]:
         """
@@ -153,41 +156,34 @@ class Chroma_63600(Scpi_Instrument):
         """
 
         if level == 0:
-            return (float(self.instrument.query('CURR:STAT:L1?')),
-                    float(self.instrument.query('CURR:STAT:L2?'))
-                    )
-        response = self.instrument.query(f'CURR:STAT:L{int(level)}?')
+            return (float(self.query_resource('CURR:STAT:L1?')),
+                    float(self.query_resource('CURR:STAT:L2?')))
+
+        response = self.query_resource(f'CURR:STAT:L{level}?')
         return float(response)
 
     def set_current_slew_rate(self, slew_rate: float,
-                              edge_polarity: str) -> None:
+                              set_rising_edge: bool = True) -> None:
         """
-        set_current_slew(slew_rate, edge_polarity)
+        set_current_slew(slew_rate, set_rising_edge)
 
         Changes the slew-rate setting of the load (for the specified edge
         polarity) in constant current mode.
 
         Args:
             slew_rate (float): desired slew-rate setting in A/s
-            edge_polarity (str): edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'.
+            set_rising_edge (bool): determines which edge to set the slew-rate
+                of. if true, sets the rising edge, otherwise sets the falling
+                edge slew-rate. Defaults to True.
         """
-
-        edge_polarity = str(edge_polarity).upper()
-
-        if edge_polarity not in ('BOTH', 'RISE', 'FALL'):
-            raise ValueError(f'Invalid edge_polarity: "{edge_polarity}"')
 
         slew_rate = float(slew_rate)*(1e-6)  # A/s --> A/us
 
-        if edge_polarity == 'BOTH':
-            self.instrument.write(f'CURR:STAT:RISE {slew_rate}')
-            self.instrument.write(f'CURR:STAT:FALL {slew_rate}')
-            return None
+        self.write_resource(
+            f'CURR:STAT:{"RISE" if set_rising_edge else "FALL"} {slew_rate}'
+        )
 
-        self.instrument.write(f'CURR:STAT:{edge_polarity} {slew_rate}')
-
-    def get_current_slew_rate(self, edge_polarity: str) -> Union[float, Tuple[float]]:
+    def get_current_slew_rate(self, get_rising_edge: bool = True) -> float:
         """
         get_current_slew_rate(edge_polarity)
 
@@ -195,27 +191,20 @@ class Chroma_63600(Scpi_Instrument):
         polarity) in constant current mode.
 
         Args:
-            edge_polarity (str): edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'.
+            get_rising_edge (bool): determines which edge to get the slew-rate
+                of. if true, gets the rising edge, otherwise gets the falling
+                edge slew-rate. Defaults to True.
 
         Returns:
-            Union[float, Tuple[float]]: slew-rate setting in A/s.
+            float: slew-rate setting in A/s.
         """
 
-        edge_polarity = str(edge_polarity).upper()
-
-        if edge_polarity not in ('BOTH', 'RISE', 'FALL'):
-            raise ValueError(f'Invalid edge_polarity: "{edge_polarity}"')
-
-        if edge_polarity == 'BOTH':
-            responses = (self.instrument.query('CURR:STAT:RISE?'),
-                         self.instrument.query('CURR:STAT:FALL?'))
-            return tuple(map(lambda r: float(r)*(1e6), responses))
-
-        response = self.instrument.query(f'CURR:STAT:{edge_polarity}?')
+        response = self.query_resource(
+            f'CURR:STAT:{"RISE" if get_rising_edge else "FALL"}?'
+        )
         return float(response)*(1e6)  # A/us --> A/s
 
-    def set_dynamic_current(self, current, level=0):
+    def set_dynamic_current(self, current: float, level: int = 0) -> None:
         """
         set_dynamic_current(current, level=0)
 
@@ -229,14 +218,12 @@ class Chroma_63600(Scpi_Instrument):
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:DYN:L1 {float(current)}')
-            self.instrument.write(f'CURR:DYN:L2 {float(current)}')
+            self.write_resource(f'CURR:DYN:L1 {current}')
+            self.write_resource(f'CURR:DYN:L2 {current}')
         else:
-            command_str = f'CURR:DYN:L{int(level)} {float(current)}'
-            self.instrument.write(command_str)
-        return None
+            self.write_resource(f'CURR:DYN:L{level} {current}')
 
-    def get_dynamic_current(self, level):
+    def get_dynamic_current(self, level: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current(level)
 
@@ -249,117 +236,101 @@ class Chroma_63600(Scpi_Instrument):
         """
 
         if level == 0:
-            currents = (float(self.instrument.query('CURR:DYN:L1?')),
-                        float(self.instrument.query('CURR:DYN:L2?')))
-            return currents
+            return (float(self.query_resource('CURR:DYN:L1?')),
+                    float(self.query_resource('CURR:DYN:L2?')))
         else:
-            response = self.instrument.query(f'CURR:DYN:L{int(level)}?')
+            response = self.query_resource(f'CURR:DYN:L{level}?')
             return float(response)
 
-    def set_dynamic_current_slew(self, slew, edge_polarity):
+    def set_dynamic_current_slew(self, slew_rate: float,
+                                 set_rising_edge: bool = True) -> None:
         """
-        set_dynamic_current_slew(slew, edge_polarity)
-
-        slew: float, desired slew-rate setting in A/us
-        edge_polarity: str, edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'
+        set_dynamic_current_slew(slew, set_rising_edge)
 
         changes the slew-rate setting of the load for the specified edge
-        polarity in dynamic current mode. if edge_polarity = 'both', both
-        polarities will be set to the value specified
+        polarity in dynamic current mode.
+
+        slew: float, desired slew-rate setting in A/s
+            set_rising_edge (bool): determines which edge to set the slew-rate
+                of. if true, sets the rising edge, otherwise sets the falling
+                edge slew-rate. Defaults to True.
         """
 
-        if edge_polarity == 'rise':
-            self.instrument.write(f'CURR:DYN:RISE {slew}')
-        elif edge_polarity == 'fall':
-            self.instrument.write(f'CURR:DYN:FALL {slew}')
-        elif edge_polarity == 'both':
-            self.instrument.write(f'CURR:DYN:RISE {slew}')
-            self.instrument.write(f'CURR:DYN:FALL {slew}')
-        else:
-            raise IOError('Invalid option for arg "edge_polarity"')
-        return None
+        sr_a_per_s = slew_rate*1e-6
+        # note: load uses current slew rate in units of A/us, hence the
+        # conversion
 
-    def get_dynamic_current_slew(self, edge_polarity):
+        self.write_resource(
+            f'CURR:DYN:{"RISE" if set_rising_edge else "FALL"} {sr_a_per_s}'
+            )
+
+    def get_dynamic_current_slew(self, get_rising_edge: bool = True
+                                 ) -> float:
         """
-        get_dynamic_current_slew(slew, edge_polarity)
-
-        edge_polarity: str, edge to set the slew-rate of.
-                       valid options are 'rise', 'fall', and 'both'
-
-        returns:
-        slew: float, desired slew-rate setting in A/us,
-              if edge_polarity = 'both' this returns of list of floats
-              [rise rate, fall rate]
+        get_dynamic_current_slew(slew, get_rising_edge)
 
         returns the slew-rate setting of the load for the specified edge
-        polarity in dynamic current mode. if edge_polarity = 'both', both
-        polarities will be returned
+        polarity in dynamic current mode.
+
+        get_rising_edge (bool): determines which edge to get the slew-rate
+            of. if true, gets the rising edge, otherwise gets the falling
+            edge slew-rate. Defaults to True.
+
+        Returns:
+        slew: float, slew-rate setting in A/s,
         """
 
-        if edge_polarity == 'rise':
-            resp = self.instrument.query('CURR:DYN:RISE?')
-            return float(resp)
+        response = self.query_resource(
+            f'CURR:DYN:{"RISE" if get_rising_edge else "FALL"}?'
+        )
 
-        elif edge_polarity == 'fall':
-            resp = self.instrument.query('CURR:DYN:FALL?')
-            return float(resp)
+        # note: load uses current slew rate in units of A/us, hence the
+        # conversion
 
-        elif edge_polarity == 'both':
-            slews = []
-            resp = self.instrument.query('CURR:DYN:RISE?')
-            slews.append(float(resp))
-            resp = self.instrument.query('CURR:DYN:FALL?')
-            slews.append(float(resp))
-            return slews
-        else:
-            raise IOError('Invalid option for arg "edge_polarity"')
+        return float(response)*1e6
 
-    def set_dynamic_current_time(self, on_time, level=0):
+    def set_dynamic_current_time(self, on_time: float, level: int = 0) -> None:
         """
         set_dynamic_current_time(on_time, level=0)
-
-        on_time: float, desired time to spend at level 'level'
-                 min: 10us, max: 100s, 10us steps
-        level (optional): int, level to change setpoint of.
-                          valid options are 0,1,2 (default is 0)
 
         changes the time that the load spends at the specified level in
         dynamic current mode. if level = 0 both levels will be set to the
         value specified
+
+        on_time: float, desired time to spend at level 'level'
+                 min: 10us, max: 100s, resolves to nearest 10us
+        level (optional): int, level to change setpoint of.
+                          valid options are 0,1,2 (default is 0)
         """
 
         if level == 0:
-            self.instrument.write(f'CURR:DYN:T1 {float(on_time)}')
-            self.instrument.write(f'CURR:DYN:T2 {float(on_time)}')
+            self.write_resource(f'CURR:DYN:T1 {on_time}')
+            self.write_resource(f'CURR:DYN:T2 {on_time}')
         else:
-            command_str = f'CURR:DYN:T{int(level)} {float(on_time)}'
-            self.instrument.write(command_str)
-        return None
+            self.write_resource(f'CURR:DYN:T{level} {on_time}')
 
-    def get_dynamic_current_time(self, level):
+    def get_dynamic_current_time(self, level: int
+                                 ) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current_time(level)
+
+        returns the time that the load spends at the specified level in
+        dynamic current mode. if level = 0 both levels will be returned
 
         level : int, level to change setpoint of.
                 valid options are 0,1,2
 
-        returns:
-        on_time: float, time spent at level 'level'
-
-        returns the time that the load spends at the specified level in
-        dynamic current mode. if level = 0 both levels will be returned
+        Returns:
+            on_time: float, time spent at level 'level'
         """
 
         if level == 0:
-            times = (float(self.instrument.query('CURR:DYN:T1?')),
-                     float(self.instrument.query('CURR:DYN:T2?')))
-            return times
-        else:
-            response = self.instrument.query(f'CURR:DYN:T{int(level)}?')
-            return float(response)
+            return (float(self.query_resource('CURR:DYN:T1?')),
+                    float(self.query_resource('CURR:DYN:T2?')))
 
-    def set_dynamic_current_repeat(self, count):
+        return float(self.query_resource(f'CURR:DYN:T{level}?'))
+
+    def set_dynamic_current_repeat(self, count: int) -> None:
         """
         set_dynamic_current_repeat(count)
 
@@ -369,12 +340,11 @@ class Chroma_63600(Scpi_Instrument):
         set-points
         """
 
-        self.instrument.write(f'CURR:DYN:REP {count}')
-        return None
+        self.write_resource(f'CURR:DYN:REP {count}')
 
-    def get_dynamic_current_repeat(self):
+    def get_dynamic_current_repeat(self) -> int:
         """
-        get_dynamic_current_repeat(count)
+        get_dynamic_current_repeat()
 
         returns:
         count: int, number of cycles. max: 65535, min: 0, res: 1
@@ -383,52 +353,48 @@ class Chroma_63600(Scpi_Instrument):
         set-points
         """
 
-        resp = self.instrument.query('CURR:DYN:REP?')
+        response = self.query_resource('CURR:DYN:REP?')
+        return int(response)
 
-        return int(resp)
-
-    def set_resistance(self, resistance, level=0):
+    def set_resistance(self, resistance: float, level: int = 0) -> None:
         """
         set_resistance(resistance, level=0)
-
-        resistance: float, desired resistance setpoint in ohm
-        level (optional): int, level to change setpoint of.
-                          valid options are 0,1,2 (default is 0)
 
         changes the resistance setpoint of the load for the specified level in
         constant resistance mode. if level = 0 both levels will be set to the
         value specified
+
+        resistance: float, desired resistance setpoint in Ohms
+        level (optional): int, level to change setpoint of.
+                          valid options are 0,1,2 (default is 0)
         """
 
         if level == 0:
-            self.instrument.write(f'RES:STAT:L1 {float(resistance)}')
-            self.instrument.write(f'RES:STAT:L2 {float(resistance)}')
+            self.write_resource(f'RES:STAT:L1 {resistance}')
+            self.write_resource(f'RES:STAT:L2 {resistance}')
         else:
-            command_str = f'RES:STAT:L{int(level)} {float(resistance)}'
-            self.instrument.write(command_str)
-        return None
+            self.write_resource(f'RES:STAT:L{level} {resistance}')
 
-    def get_resistance(self, level):
+    def get_resistance(self, level: int) -> Union[Tuple[float], float]:
         """
         get_resistance(level)
-
-        level: int, level to get setpoint of.
-               valid options are 1,2, and 0
 
         reads the resistance setpoint of the load for the specified level in
         constant resistance mode. if level == 0 then it will return a list
         containing both load levels.
+
+        level: int, level to get setpoint of.
+               valid options are 1,2, and 0
         """
 
         if level == 0:
-            resistances = (float(self.instrument.query('RES:STAT:L1?')),
-                           float(self.instrument.query('RES:STAT:L2?')))
-            return resistances
+            return (float(self.query_resource('RES:STAT:L1?')),
+                    float(self.query_resource('RES:STAT:L2?')))
         else:
-            response = self.instrument.query(f'RES:STAT:L{int(level)}?')
+            response = self.query_resource(f'RES:STAT:L{level}?')
             return float(response)
 
-    def set_channel(self, channel):
+    def set_channel(self, channel: int) -> None:
         """
         set_channel(channel)
 
@@ -436,13 +402,12 @@ class Chroma_63600(Scpi_Instrument):
                  valid options are 1-5
 
         Selects the specified Channel to use for software control
-
         """
-        idx = self._channel_index(channel)
-        self.instrument.write(f'CHAN {idx}')
-        return None
 
-    def get_channel(self):
+        idx = self._channel_index(channel)
+        self.write_resource(f'CHAN {idx}')
+
+    def get_channel(self) -> int:
         """
         get_channel()
 
@@ -450,114 +415,113 @@ class Chroma_63600(Scpi_Instrument):
 
         returns: int
         """
-        resp = self.instrument.query('CHAN?')
-        channel = self._channel_index(int(resp), reverse=True)
+
+        response = self.query_resource('CHAN?')
+        channel = self._channel_index(int(response), reverse=True)
         return channel
 
-    def set_mode(self, channel, mode, range_setting=1):
+    def set_mode(self, channel: int, mode: ValidModes,
+                 range_setting: str = "M") -> None:
         """
-        set_mode(channel, mode, range_setting=1)
-
-        channel: int, valid options are 1-5
-
-        mode: str, mode / load type to set the desired channel to
-              valid options can be accessed via the self.valid_modes attribute.
-
-        range_setting: int, range of the given mode.
-                       Valid options are:
-                           0: Low range
-                           1: Medium range
-                           2: High range
+        set_mode(channel, mode, range_setting="M")
 
         Sets the mode of the specified load card
+
+        Args:
+            channel: int, valid options are 1-5
+
+            mode: ValidModes, mode/load type to set the desired channel to
+                valid options can be accessed via the self.ValidModes
+                attribute.
+
+            range_setting: str, range of the given mode. Valid options are:
+                "L", "M", and "H" for Low, Medium, and High range respectively
         """
 
-        if (mode in self.valid_modes) and (range_setting in [0, 1, 2]):
-            ranges = ["L", "M", "H"]
-            self.set_channel(channel)
-            self.instrument.write(f'MODE {mode}{ranges[range_setting]}')
-        else:
-            err_str = f"Invalid mode/range combo: ({mode}, {range_setting})"
-            raise ValueError(err_str)
-        return None
+        if range_setting not in {"L", "M", "H"}:
+            raise ValueError(f"Invalid range: {range_setting}")
 
-    def get_mode(self, channel):
+        self.set_channel(channel)
+        self.write_resource(f'MODE {mode.value}{range_setting}')
+
+    def get_mode(self, channel: int) -> Tuple[ValidModes, str]:
         """
         get_mode(channel)
 
-        channel: int, valid options are 1-5
-
-        returns a tuple (mode, range_setting)
-
-        mode: str, mode / load type to set the desired channel to
-              valid options can be accessed via the self.valid_modes attribute.
-
-        range_setting: int, range of the given mode.
-                       Valid options are:
-                           0: Low range
-                           1: Medium range
-                           2: High range
-
         Gets the load mode from specified load channel
+
+        Args:
+            channel: int, valid options are 1-5
+
+        Returns:
+        Tuple[ValidModes, str]:  load mode (mode, range_setting). Mode
+            (ValidModes), mode/load type to set the desired channel to valid
+            options can be accessed via the self.ValidModes attribute.
+            range_setting (str), range of the given mode. Valid options are:
+            "L", "M", and "H" for Low, Medium, and High range respectiv
         """
 
-        ranges = {"L": 0, "M": 1, "H": 2}
-
         self.set_channel(channel)
-        resp = self.instrument.query('MODE?')
-        resp = resp.strip()
+        response = self.query_resource('MODE?')
 
-        mode, range_setting = resp[0:-1], resp[-1]
+        mode, range_setting = response[0:-1], response[-1]
 
-        return (mode, ranges[range_setting])
+        return (self.ValidModes[mode], range_setting)
 
-    def set_parallel_state(self, state):
+    def set_parallel_state(self, state: bool) -> None:
         """
         set_parallel_state(state)
 
-        state: int, valid options are 0 and 1.
-
-        Enables/Disables parallel mode operation of individual channels wihin
+        Enables/Disables parallel mode operation of individual channels within
         the load.
+
+        Args:
+            state: bool, parallel state.
         """
 
-        self.instrument.write(f'CONF:PARA:INIT {state}')
-        return None
+        self.write_resource(f'CONF:PARA:INIT {1 if state else 0}')
 
-    def get_parallel_state(self):
+    def get_parallel_state(self) -> bool:
         """
         get_parallel_state()
 
-        Returns the state of the loads parallel operation.
-        """
-        resp = self.instrument.query('CONF:PARA:INIT?')
-        resp = resp.strip()
-        if resp == "ON":
-            return True
-        elif resp == "OFF":
-            return False
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        Returns the loads parallel operation state.
 
-    def set_parallel_mode(self, channel, mode):
+        Returns:
+            bool: parallel operation state
+        """
+
+        response = self.query_resource('CONF:PARA:INIT?')
+
+        if response not in {"ON", "OFF"}:
+            raise IOError(f"Unknown response: {response}")
+
+        return response == "ON"
+
+    def set_parallel_mode(self, channel: int, mode: str) -> None:
         """
         set_parallel_mode(channel, mode)
 
-        channel: int, valid options are 1-5
-
-        mode: int, a code corresponding to the parallel mode of the respective
-               channel. Valid options are:
-                    0: None
-                    1: Master
-                    2: Slave
-
         Sets parallel mode for each channel
-        """
-        self.set_channel(channel)
-        self.instrument.write(f'CONF:PARA:MODE {mode}')
-        return None
 
-    def get_parallel_mode(self, channel):
+        Args:
+            channel: int, valid options are 1-5
+
+            mode: str,  the parallel mode of the respective channel. Valid
+                options are: "None", "Master", and "Slave" (case-insensitive)
+        """
+
+        modes = {"none": 0, 'master': 1, 'slave': 2}
+
+        if mode.lower() not in modes.keys():
+            raise ValueError(
+                f'Invalid mode, valid options are {modes.keys()}'
+                )
+
+        self.set_channel(channel)
+        self.write_resource(f'CONF:PARA:MODE {modes[mode.lower()]}')
+
+    def get_parallel_mode(self, channel: int) -> str:
         """
         get_parallel_mode(channel)
 
@@ -571,151 +535,142 @@ class Chroma_63600(Scpi_Instrument):
                     1: Master
                     2: Slave
         """
+
+        modes = {"none", 'master', 'slave'}
+
         self.set_channel(channel)
-        resp = self.instrument.query('CONF:PARA:MODE?')
-        resp = resp.strip()
+        response = self.query_resource('CONF:PARA:MODE?')
 
-        if resp == "NONE":
-            return 0
-        if resp == "MASTER":
-            return 1
-        elif resp == "SLAVE":
-            return 2
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        if response not in modes:
+            raise IOError(f"Unknown response: {response}")
+        return response.lower()
 
-    def set_channel_state(self, channel, state):
+    def set_channel_state(self, channel: int, state: bool) -> None:
         """
         set_channel_state(channel, state)
 
-        channel: int, valid options are 1-5
-        state = 0, 1
-
         Enables/disables the respective load channel
 
+        Args:
+            channel (int): valid options are 1-5
+            state (bool): channel state
         """
 
         self.set_channel(channel)
-        self.instrument.write(f'CHAN:ACT {state}')
-        return None
+        self.write_resource(f'CHAN:ACT {1 if state else 0}')
 
-    def get_channel_state(self, channel):
+    def get_channel_state(self, channel: int) -> bool:
         """
         get_channel_state(channel)
 
-        channel: int, valid options are 1-5
+        returns the state of the output of the specified channel
 
-        Returns whether or not the respective load channel is Enabled/disabled
-        (bool)
+        Args:
+            channel (int): valid options are 1-5
+
+        Returns:
+            bool: whether or not the respective load channel is Enabled
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('CHAN:ACT?')
-        resp = resp.strip()
-        if resp == "ON":
-            return True
-        elif resp == "OFF":
-            return False
-        else:
-            raise IOError(f"Unknown response: {resp}")
+        response = self.query_resource('CHAN:ACT?')
+
+        if response not in {"ON", "OFF"}:
+            raise IOError(f"Unknown response: {response}")
+
+        return (response == "ON")
 
     # # need to investigate what this function actually does
-    # def set_sync_mode(self, channel, state):
+    # def set_sync_mode(self, channel: int, state) -> None:
     #     """
     #     Set sync mode for each channel
     #     """
     #     self.set_channel(channel)
-    #     self.instrument.write(f'CONF:SYNC:MODE {state}')
-    #     return None
+    #     self.write_resource(f'CONF:SYNC:MODE {state}')
 
-    def set_voltage(self, voltage, level=0):
+    def set_voltage(self, voltage: float, level: int = 0) -> None:
         """
         set_voltage(voltage, level=0)
-
-        voltage: float, desired voltage setpoint in Vdc
-        level (optional): int, level to change setpoint of.
-                          valid options are 0,1,2 (default is 0)
 
         changes the voltage setpoint of the load for the specified level in
         constant voltage mode. if level = 0 both levels will be set to the
         value specified
+
+        Args:
+            voltage (float): desired voltage setpoint in Vdc
+            level (int): level to change setpoint of. valid options
+                are 0,1,2 (default is 0).
         """
 
         if level == 0:
-            self.instrument.write(f'VOLT:STAT:L1 {float(voltage)}')
-            self.instrument.write(f'VOLT:STAT:L2 {float(voltage)}')
+            self.write_resource(f'VOLT:STAT:L1 {voltage}')
+            self.write_resource(f'VOLT:STAT:L2 {voltage}')
         else:
-            command_str = f'VOLT:STAT:L{int(level)} {float(voltage)}'
-            self.instrument.write(command_str)
-        return None
+            self.write_resource(f'VOLT:STAT:L{level} {voltage}')
 
-    def get_voltage(self, level):
+    def get_voltage(self, level: int) -> float:
         """
         get_voltage(level)
 
-        level: int, level to get setpoint of.
-               valid options are 1,2, and 0
-
-        reads the voltage setpoint of the load for the specified level in
+        Reads the voltage setpoint of the load for the specified level in
         constant voltage mode. if level == 0 then it will return a list
         containing both load levels.
+
+        Args:
+            level (int): level to get setpoint of. valid options are 1,2, and 0
         """
 
         if level == 0:
-            voltages = (float(self.instrument.query('VOLT:STAT:L1?')),
-                        float(self.instrument.query('VOLT:STAT:L2?')))
-            return voltages
+            return (float(self.query_resource('VOLT:STAT:L1?')),
+                    float(self.query_resource('VOLT:STAT:L2?')))
         else:
-            response = self.instrument.query(f'VOLT:STAT:L{int(level)}?')
+            response = self.query_resource(f'VOLT:STAT:L{level}?')
             return float(response)
 
-    def set_cv_current_limit(self, current):
+    def set_cv_current_limit(self, current: float) -> None:
         """
         set_cv_current_limit(current)
 
-        current: float, desired current setpoint
-
-        changes the current setpoint of the load for the specified level in
+        Changes the current setpoint of the load for the specified level in
         constant voltage mode.
+
+        Returns:
+            float: setpoint current in Amps
         """
 
-        self.instrument.write(f'VOLT:STAT:ILIM {current}')
-        return None
+        self.write_resource(f'VOLT:STAT:ILIM {current}')
 
-    def get_cv_current_limit(self):
+    def get_cv_current_limit(self) -> float:
         """
         get_cv_current_limit()
 
-        returns:
-        current: float, current setpoint in Adc
-
-        returns the current setpoint of the load for the in constant voltage
+        Retries the current setpoint of the load for the in constant voltage
         mode.
+
+        Returns:
+            float:  setpoint current in Adc
         """
 
-        resp = self.instrument.query('VOLT:STAT:ILIM?')
+        response = self.query_resource('VOLT:STAT:ILIM?')
+        return float(response)
 
-        return float(resp)
-
-    def set_dynamic_sine_frequency(self, freq):
+    def set_dynamic_sine_frequency(self, frequency: float) -> None:
 
         """
-        set_dynamic_sine_frequency(freq)
+        set_dynamic_sine_frequency(frequency)
 
         Sets the frequency of the sine wave current used in the
         'advanced sine-wave' mode of operation in Hz. Min/Max setting can be
         determined using the get_dynamic_sine_frequency method with the min/max
         flag.
 
-        Arguments:
-            freq {float} -- desired frequency in Hz
+        Args:
+            frequency (float): desired frequency in Hz
         """
 
-        self.instrument.write(f'ADV:SINE:FREQ {freq}')
-        return None
+        self.write_resource(f'ADV:SINE:FREQ {frequency}')
 
-    def get_dynamic_sine_frequency(self, flag=''):
-
+    def get_dynamic_sine_frequency(self, flag='') -> float:
         """
         get_dynamic_sine_frequency(flag='')
 
@@ -723,46 +678,40 @@ class Chroma_63600(Scpi_Instrument):
         'advanced sine-wave' mode of operation in Hz. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the frequency limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the frequency limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively (Not case-sensitive, default: {''}).
 
         Returns:
-            freq {float} -- current frequency setpoint (or limit) in Hz.
+            float: current frequency setpoint (or limit) in Hz.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
-            raise ValueError(f'Invalid value {flag} for arg "value"')
+        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+            raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        resp = self.instrument.query(f'ADV:SINE:FREQ? {flag}')
-        freq = float(resp)
-        return freq
+        response = self.query_resource(f'ADV:SINE:FREQ? {flag.upper()}')
+        return float(response)
 
-    def set_dynamic_sine_amplitude_ac(self, amp):
+    def set_dynamic_sine_amplitude_ac(self, amplitude: float) -> None:
 
         """
-        set_dynamic_sine_amplitude_ac(amp)
+        set_dynamic_sine_amplitude_ac(amplitude)
 
         Sets the amplitude of the sine wave current used in the
         'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
         determined using the get_dynamic_sine_amplitude_ac method with the
         min/max flag.
 
-        Arguments:
-            freq {float} -- desired amplitude in A_DC
+        Args:
+            amplitude (float): desired amplitude in A_DC
         """
 
-        amp_peak2peak = amp*2  # convert Amplitude to peak-to-peak
-        self.instrument.write(f'ADV:SINE:IAC {amp_peak2peak}')
-        return None
+        amp_peak2peak = amplitude*2  # convert Amplitude to peak-to-peak
+        self.write_resource(f'ADV:SINE:IAC {amp_peak2peak}')
 
-    def get_dynamic_sine_amplitude_ac(self, flag=''):
+    def get_dynamic_sine_amplitude_ac(self, flag: str = '') -> float:
 
         """
         get_dynamic_sine_amplitude_ac(flag='')
@@ -771,32 +720,26 @@ class Chroma_63600(Scpi_Instrument):
         'advanced sine-wave' mode of operation in A_DC. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the amplitude limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the amplitude limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively; Not case-insensitive. Defaults to ''.
 
         Returns:
-            freq {float} -- current amplitude setpoint (or limit) in A_DC.
+            float: current amplitude setpoint (or limit) in A_DC.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
+        if flag.upper() not in {'MIN', 'MAX', ''}:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        resp = self.instrument.query(f'ADV:SINE:IAC? {flag}')
-        amp_peak2peak = float(resp)
-        amp = amp_peak2peak/2  # convert peak-to-peak to Amplitude
-        return amp
+        response = self.query_resource(f'ADV:SINE:IAC? {flag.upper()}')
+        amp_peak2peak = float(response)
+        return amp_peak2peak/2  # convert peak-to-peak to Amplitude
 
-    def set_dynamic_sine_dc_level(self, amp):
-
+    def set_dynamic_sine_dc_offset(self, offset: float) -> None:
         """
-        set_dynamic_sine_dc_level(amp)
+        set_dynamic_sine_dc_offset(offset)
 
         Sets the DC level of the sine wave current used in the
         'advanced sine-wave' mode of operation in A_DC. Min/Max setting can be
@@ -804,14 +747,12 @@ class Chroma_63600(Scpi_Instrument):
         min/max flag.
 
         Arguments:
-            freq {float} -- desired DC level in A_DC
+            freq (float): desired DC offset in A_DC
         """
 
-        self.instrument.write(f'ADV:SINE:IDC {amp}')
-        return None
+        self.write_resource(f'ADV:SINE:IDC {offset}')
 
-    def get_dynamic_sine_dc_level(self, flag=''):
-
+    def get_dynamic_sine_dc_level(self, flag: str = '') -> float:
         """
         get_dynamic_sine_dc_level(flag='')
 
@@ -819,79 +760,55 @@ class Chroma_63600(Scpi_Instrument):
         'advanced sine-wave' mode of operation in A_DC. Can also return the
         Min/Max possible setting with the min/max flag.
 
-        Keyword Arguments:
-            flag {str} -- flag used to determine the DC level limits of the
-            electronic loads sine-wave capabiity. Valid options are 'Min',
-            'Max', and '' for the minimum, maximum, and current settings
-            respectively (Not case-sensitive, default: {''}).
-
-        Raises:
-            ValueError: raised if an invalid flag is passed
+        Kwargs:
+            flag (str): flag used to determine the DC level limits of the
+                electronic loads sine-wave capabiity. Valid options are 'Min',
+                'Max', and '' for the minimum, maximum, and current settings
+                respectively; case-insensitive. Defaults to ''.
 
         Returns:
-            freq {float} -- current DC level setpoint (or limit) in A_DC.
+            float: current DC level setpoint (or limit) in A_DC.
         """
 
-        flag = flag.upper()
-        if flag not in ['MIN', 'MAX', '']:
-            raise ValueError(f'Invalid value {flag} for arg "value"')
+        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+            raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        resp = self.instrument.query(f'ADV:SINE:IDC? {flag}')
-        amp = float(resp)
-        return amp
+        response = self.query_resource(f'ADV:SINE:IDC? {flag.upper()}')
+        return float(response)
 
-    def reset(self):
-        """
-        reset()
-
-        Resets all registers to default settings
-        """
-
-        self.instrument.write('*RST')
-        return None
-
-    def clear_errors(self):
+    def clear_errors(self) -> None:
         """
         clear_errors()
 
         Resets status of load and clears errors
         """
 
-        self.instrument.write('LOAD:PROT:CLE')
-        return None
+        self.write_resource('LOAD:PROT:CLE')
 
-    def get_errors(self, channel, decode=False):
+    def get_errors(
+        self,
+        channel: int
+    ) -> Set[Errors]:
         """
         get_errors(channel)
 
         channel: int, valid options are 1-5
-        decode: bool, whether to decode the status register in a human-readable
-                form
 
-        Returns the status register of the respective load channel. If decode
-        is set to True the function returns a list of string descriptions of
-        the faults set (default is False). The status register contains 1 Byte
-        of possible faults, the bits in the register from bit 0 to 7 corespond
+        Returns the tripped errors registered in the status register of the
+        respective load channel. The status register contains 1 Byte of
+        possible faults, the bits in the register from bit 0 to 7 corespond
         with the following: 'OTP', 'OVP', 'OCP', 'OPP', 'REV', 'SYNC',
         'MAX_LIM', 'REMOTE_INHIBIT'
         """
 
         self.set_channel(channel)
-        resp = self.instrument.query('STAT:CHAN:COND?')
-        status = int(resp.strip())
-        status &= 255  # 2 Byte response only has 1 Byte of information
-        if not decode:
-            return status
-        else:
-            fault_labels = ['OTP', 'OVP', 'OCP', 'OPP',
-                            'REV', 'SYNC', 'MAX_LIM', 'REMOTE_INHIBIT']
-            errors = []
-            for n in range(0, 7):
-                if (status & 2**n) >> n:
-                    errors.append(fault_labels[n])
-            return errors
+        response = self.query_resource('STAT:CHAN:COND?')
+        status = int(response) & 0xff  # 2B response only has 1B of info
 
-    def measure_voltage(self):
+        errors = {self.Errors(n) for n in range(0, 7) if (status & 2**n) >> n}
+        return errors
+
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -899,10 +816,10 @@ class Chroma_63600(Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:VOLT?')
+        response = self.query_resource('MEAS:VOLT?')
         return float(response)
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -910,10 +827,10 @@ class Chroma_63600(Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query('MEAS:CURR?')
+        response = self.query_resource('MEAS:CURR?')
         return float(response)
 
-    def measure_power(self):
+    def measure_power(self) -> float:
         """
         measure_power()
 
@@ -921,158 +838,44 @@ class Chroma_63600(Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query('FETC:POW?')
+        response = self.query_resource('FETC:POW?')
         return float(response)
 
-    def measure_total_voltage(self, return_average=False):
+    def measure_module_voltages(self) -> Tuple[float]:
         """
-        measure_total_voltage()
-
-        return_average: Bool, determines whether a list of the individual load
-                        measurements is returned or the average of all
-                        measurements (default = False).
+        measure_module_voltages()
 
         returns measurement of the voltage present across all loads in Vdc
-        returns: list of floats or float
+        returns: tuple of floats
         """
 
-        response = self.instrument.query('MEAS:ALLV?')
-        voltages = list(map(float, response.split(',')))
+        response = self.query_resource('MEAS:ALLV?')
+        voltages = tuple(map(float, response.split(',')))
 
-        if return_average:
-            return np.mean(voltages)
-        else:
-            return voltages
+        return voltages
 
-    def measure_total_current(self, return_sum=False):
+    def measure_module_currents(self) -> Tuple[float]:
         """
-        measure_total_current()
-
-        return_sum: Bool, determines whether a list of the individual load
-                    measurements is returned or the sum of all measurements
-                    (default = False).
+        measure_module_currents()
 
         returns measurement of the current through all loads in Adc
         returns: list of floats or float
         """
 
-        response = self.instrument.query('MEAS:ALLC?')
-        currents = list(map(float, response.split(',')))
+        response = self.query_resource('MEAS:ALLC?')
+        currents = tuple(map(float, response.split(',')))
 
-        if return_sum:
-            return sum(currents)
-        else:
-            return currents
+        return currents
 
-    def measure_total_power(self, return_sum=False):
+    def measure_module_power(self) -> Tuple[float]:
         """
         measure_total_power()
-
-        return_sum: Bool, determines whether a list of the individual load
-                    measurements is returned or the sum of all measurements
-                    (default = False).
 
         returns measurement of the power consumed by the all loads in W
         returns: list of floats or float
         """
 
-        response = self.instrument.query('MEAS:ALLP?')
-        powers = list(map(float, response.split(',')))
+        response = self.query_resource('MEAS:ALLP?')
+        powers = tuple(map(float, response.split(',')))
 
-        if return_sum:
-            return sum(powers)
-        else:
-            return powers
-
-    def pulse(self, level, duration):
-        """
-        pulse(level, duration)
-
-        level: float/int, current level of "high" state of the pulse in Amps
-        duration: float/int, duration of the "high" state of the pulse in
-                  seconds
-
-        generates a square pulse with height and duration specified by level
-        and duration. will start and return to the previous current level set
-        on the load before the execution of pulse(). level can be less than or
-        greater than the previous current setpoint
-        """
-
-        start_level = self.get_current(1)
-        self.set_current(level)
-        sleep(duration)
-        self.set_current(start_level)
-        return None
-
-    def ramp(self, start, stop, n=100, dt=0.01):
-        """
-        ramp(start, stop, n=100, dt=0.01)
-
-        start: float/int, starting current setpoint of the ramp in Adc
-        stop: float/int, ending current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-
-        generates a linear ramp on the loads current specified by the
-        parameters start, stop, n, and dt. input of the load should be enabled
-        before executing this command. contrary to what this documentation may
-        imply, start can be higher than stop or vise-versa. minimum dt is
-        limited by the communication speed of the interface used to communicate
-        with this device
-        """
-
-        for i in np.linspace(start, stop, int(n)):
-            self.set_current(i)
-            sleep(dt)
-        return None
-
-    def slew(self, start, stop, n=100, dt=0.01, dwell=0):
-        """
-        slew(start, stop, n=100, dt=0.01, dwell=0)
-
-        start: float/int, "low" current setpoint of the ramp in Adc
-        stop: float/int, "high" current setpoint of the ramp in Adc
-        n (optional): int, number of points in the ramp between start and stop
-            default is 100
-        dt (optional): float/int, time between changes in the value of the
-                       setpoint in seconds. default is 0.01 sec
-        dwell (optional): float/int, time to dwell at the "stop" value before
-                          the ramp back to "start". default is 0 sec (no dwell)
-
-        generates a triangular waveform on the loads current specified by the
-        parameters start, stop, n, and dt. optionally, a dwell acan be added at
-        the top of the waveform to create a trapezoidal load shape. input of
-        the load should be enabled before executing this command. contrary to
-        what this documentation may imply, start can be higher than stop or
-        vise-versa. minimum dt is limited by the communication speed of the
-        interface used to communicate with this device
-        """
-
-        self.ramp(start, stop, n=int(n), dt=dt)
-        sleep(dwell)
-        self.ramp(stop, start, n=int(n), dt=dt)
-        return None
-
-    # def config_1Master_xSlave (self, CHROMALOAD_NUMCHUSED, CHROMALOAD_MODE):
-    #     """
-    #     Reset array, Set Ch1 as master remainder as slave \n
-    #     set all channels to one mode as selected \n
-    #     Trun ON parallel mode
-    #     """
-    #     self.reset_all()
-    #     for Slave_Ch in range( 3 , CHROMALOAD_NUMCHUSED + 1, 2):
-    #         self.set_mode(Slave_Ch, '%s' %CHROMALOAD_MODE)
-    #         self.set_parallel_mode(Slave_Ch, 'SLAVE')
-    #         self.set_sync_mode(Slave_Ch, 'SLAVE')
-    #     self.set_mode(1, '%s' %CHROMALOAD_MODE)
-    #     self.set_parallel_mode( 1 , 'MASTER')
-    #     self.set_sync_mode( 1 , 'MASTER')
-    #     self.set_channel(1)
-    #     self.set_parallel_state('ON')
-    #     return None
-
-
-if __name__ == '__main__':
-    pass
+        return powers

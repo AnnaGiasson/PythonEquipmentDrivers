@@ -1,8 +1,9 @@
-from pythonequipmentdrivers import Scpi_Instrument
-from typing import Union
+from typing import Tuple
+
+from pythonequipmentdrivers import VisaResource
 
 
-class Intepro_PSI9000(Scpi_Instrument):
+class Intepro_PSI9000(VisaResource):
     """
     note: with this supply, the device must be locked before it will respond to
           commands
@@ -10,23 +11,21 @@ class Intepro_PSI9000(Scpi_Instrument):
     https://www.inteproate.com/wp-content/uploads/2016/11/Intepro-ModBus-SCPI-User-Manual-A4-new-edits-6_2017.pdf
     """
 
-    def __init__(self, address, **kwargs) -> None:
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.set_lock(True)
 
     def __del__(self) -> None:
-        if hasattr(self, 'instrument'):
-            self.set_lock(False)
+        self.set_lock(False)
         super().__del__()
 
-    def set_lock(self, state: bool):
-        self.instrument.write(f"SYST:LOCK {1 if state else 0}")
+    def set_lock(self, state: bool) -> None:
+        self.write_resource(f"SYST:LOCK {1 if state else 0}")
 
     def get_lock(self) -> True:
-        query = self.instrument.query("SYST:LOCK:OWN?")
-        if query.strip('\n') == 'REMOTE':
-            return True
-        return False
+
+        response = self.query_resource("SYST:LOCK:OWN?")
+        return (response == 'REMOTE')
 
     def set_state(self, state: bool) -> None:
         """
@@ -38,7 +37,7 @@ class Intepro_PSI9000(Scpi_Instrument):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.instrument.write(f"OUTP {1 if state else 0}")
+        self.write_resource(f"OUTP {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -50,10 +49,8 @@ class Intepro_PSI9000(Scpi_Instrument):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        query = self.instrument.query("OUTP?")
-        if query.strip('\n') == "ON":
-            return True
-        return False
+        response = self.query_resource("OUTP?")
+        return (response == "ON")
 
     def on(self) -> None:
         """
@@ -75,61 +72,45 @@ class Intepro_PSI9000(Scpi_Instrument):
 
         self.set_state(False)
 
-    def toggle(self, return_state: bool = False) -> Union[None, bool]:
+    def toggle(self) -> None:
         """
-        toggle(return_state=False)
+        toggle()
 
         Reverses the current state of the Supply's output
-        If return_state = True the boolean state of the supply after toggle()
-        is executed will be returned.
-
-        Args:
-            return_state (bool, optional): Whether or not to return the state
-                of the supply after changing its state. Defaults to False.
-
-        Returns:
-            Union[None, bool]: If return_state == True returns the Supply state
-                (True == enabled, False == disabled), else returns None
         """
 
         self.set_state(self.get_state() ^ True)
 
-        if return_state:
-            return self.get_state()
+    def set_voltage(self, voltage: float) -> None:
+        self.write_resource(f"VOLT {voltage}")
 
-    def set_voltage(self, voltage):
-        self.instrument.write(f"VOLT {voltage}")
-        return None
+    def get_voltage(self) -> float:
+        return float(self.query_resource("VOLT?").strip("V"))
 
-    def get_voltage(self):
-        return float(self.instrument.query("VOLT?").strip("V\n"))
+    def set_current(self, current: float) -> None:
+        self.write_resource(f"CURR {current}")
 
-    def set_current(self, current):
-        self.instrument.write(f"CURR {current}")
-        return None
+    def get_current(self) -> float:
+        return float(self.query_resource("CURR?").strip("A"))
 
-    def get_current(self):
-        return float(self.instrument.query("CURR?").strip("A\n"))
+    def set_power(self, power: float) -> None:
+        self.write_resource(f"POW {power}")
 
-    def set_power(self, power):
-        self.instrument.write(f"POW {power}")
-        return None
+    def get_power(self) -> float:
+        return float(self.query_resource("POW?").strip("W"))
 
-    def get_power(self):
-        return float(self.instrument.query("POW?").strip("W\n"))
+    def measure_voltage(self) -> float:
+        return float(self.query_resource("MEAS:VOLT?").strip("V"))
 
-    def measure_voltage(self):
-        return float(self.instrument.query("MEAS:VOLT?").strip("V\n"))
+    def measure_current(self) -> float:
+        return float(self.query_resource("MEAS:CURR?").strip("A"))
 
-    def measure_current(self):
-        return float(self.instrument.query("MEAS:CURR?").strip("A\n"))
+    def measure_power(self) -> float:
+        return float(self.query_resource("MEAS:POW?").strip("W"))
 
-    def measure_power(self):
-        return float(self.instrument.query("MEAS:POW?").strip("W\n"))
-
-    def measure_array(self):
-        query = self.instrument.query("MEAS:ARR?").strip('\n')
-        v, i, p = query.split(',')
+    def measure_array(self) -> Tuple[float, float, float]:
+        response = self.query_resource("MEAS:ARR?")
+        v, i, p = response.split(',')
 
         v = float(v.strip(' V'))
         i = float(i.strip(' A'))
@@ -137,23 +118,20 @@ class Intepro_PSI9000(Scpi_Instrument):
 
         return v, i, p
 
-    def set_ovp(self, voltage):
-        self.instrument.write(f"SOUR:VOLT:PROT {voltage}")
-        return None
+    def set_ovp(self, voltage: float) -> None:
+        self.write_resource(f"SOUR:VOLT:PROT {voltage}")
 
-    def get_ovp(self):
-        return float(self.instrument.query("SOUR:VOLT:PROT?").strip("V\n"))
+    def get_ovp(self) -> float:
+        return float(self.query_resource("SOUR:VOLT:PROT?").strip("V"))
 
-    def set_ocp(self, current):
-        self.instrument.write(f"SOUR:CURR:PROT {current}")
-        return None
+    def set_ocp(self, current: float) -> None:
+        self.write_resource(f"SOUR:CURR:PROT {current}")
 
-    def get_ocp(self):
-        return float(self.instrument.query("SOUR:CURR:PROT?").strip("A\n"))
+    def get_ocp(self) -> float:
+        return float(self.query_resource("SOUR:CURR:PROT?").strip("A"))
 
-    def set_opp(self, power):
-        self.instrument.write(f"SOUR:POW:PROT {power}")
-        return None
+    def set_opp(self, power: float) -> None:
+        self.write_resource(f"SOUR:POW:PROT {power}")
 
-    def get_opp(self):
-        return float(self.instrument.query("SOUR:POW:PROT?").strip("W\n"))
+    def get_opp(self) -> float:
+        return float(self.query_resource("SOUR:POW:PROT?").strip("W"))

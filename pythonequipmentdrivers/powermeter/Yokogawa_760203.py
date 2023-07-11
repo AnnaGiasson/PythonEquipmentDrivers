@@ -1,7 +1,29 @@
-from pythonequipmentdrivers import Scpi_Instrument
+from enum import Enum
+from typing import List, Tuple, Union
+
+from pythonequipmentdrivers import VisaResource
 
 
-class Yokogawa_760203(Scpi_Instrument):  # 3 phase
+class MeasurementTypes(Enum):
+    v_rms: int = 1
+    i_rms: int = 2
+    p: int = 3
+    s: int = 4
+    q: int = 5
+    Lambda: int = 6
+    phi: int = 7
+    fu: int = 8
+    fi: int = 9
+    unused: int = 10
+
+
+class HarmonicTypes(Enum):
+    voltage: int = 1
+    current: int = 2
+    power: int = 3
+
+
+class Yokogawa_760203(VisaResource):  # 3 phase
     """
     Yokogawa_760203(address)
 
@@ -13,7 +35,10 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
     https://cdn.tmi.yokogawa.com/IM760201-17E.pdf
     """
 
-    def __init__(self, address, **kwargs):
+    _CHANNEL_DATA_SEPARATION_INDEX: int = 10
+    _LIST_DATA_SEPARATION_INDEX: int = 3
+
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
 
         self.set_numeric_data_format('ascii')
@@ -21,28 +46,7 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         self.set_numeric_list_data_pattern(1)
         self.set_harmonic_order(0, 50)
 
-        self._channel_measurement_codes = {'v_rms': 1,
-                                           'i_rms': 2,
-                                           'p': 3,
-                                           's': 4,
-                                           'q': 5,
-                                           'lambda': 6,
-                                           'phi': 7,
-                                           'fu': 8,
-                                           'fi': 9,
-                                           'unused': 10,
-                                           }
-
-        self._channel_data_separation_index = 10
-
-        self._list_measurement_codes = {'voltage': 1,
-                                        'current': 2,
-                                        'power': 3,
-                                        }
-        self._list_data_separation_index = 3
-        return None
-
-    def set_numeric_data_format(self, option):
+    def set_numeric_data_format(self, option: str) -> None:
         """
         set_numeric_data_format(option)
 
@@ -53,14 +57,13 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         """
 
         if option.lower() == "ascii":
-            self.instrument.write('NUM:FORM ASC')
+            self.write_resource('NUM:FORM ASC')
         elif option.lower() == "float":
-            self.instrument.write('NUM:FORM FLO')
+            self.write_resource('NUM:FORM FLO')
         else:
-            raise AttributeError
-        return None
+            raise ValueError('Unknown Option for Arguement option')
 
-    def get_numeric_data_format(self):
+    def get_numeric_data_format(self) -> str:
         """
         get_numeric_data_format()
 
@@ -69,7 +72,7 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         return: str
         """
 
-        response = self.instrument.query('NUM:FORM?')
+        response = self.query_resource('NUM:FORM?')
 
         data_format = response.split(' ')[-1]
         data_format = data_format.rstrip('\n')
@@ -81,54 +84,60 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         else:
             return 'error'
 
-    def set_numeric_data_pattern(self, pattern_number):
+    def set_numeric_data_pattern(self, pattern_number: int) -> None:
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.instrument.write(f'NUM:NORM:PRES {pattern_number}')
-        return None
+        self.write_resource(f'NUM:NORM:PRES {pattern_number}')
 
-    def set_numeric_list_data_pattern(self, pattern_number):
+    def set_numeric_list_data_pattern(self, pattern_number: int) -> None:
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.instrument.write(f'NUM:LIST:PRES {pattern_number}')
-        return None
+        self.write_resource(f'NUM:LIST:PRES {pattern_number}')
 
-    def set_harmonic_pll_source(self, channel, source_type):
-        source_codes = {'voltage': 'U',
-                        'current': 'I'}
+    def set_harmonic_pll_source(self, channel: int,
+                                source_type: HarmonicTypes) -> None:
 
-        command_str = f"HARM:PLLS {source_codes[source_type]}{channel}"
-        self.instrument.write(command_str)
-        return None
+        if source_type == HarmonicTypes.voltage:
+            source_id = 'U'
+        elif source_type == HarmonicTypes.current:
+            source_id = 'I'
+        else:
+            raise ValueError(f'Invalid Source type "{source_type}"')
 
-    def get_channel_data(self, channel, measurment_type: str) -> float:
+        command_str = f"HARM:PLLS {source_id}{channel}"
+        self.write_resource(command_str)
+
+    def get_channel_data(self, channel: Union[int, str],
+                         measurment: MeasurementTypes
+                         ) -> float:
 
         if channel == 'sigma':
             channel = 4
 
-        index = self._channel_data_separation_index*(channel - 1)
-        index += self._channel_measurement_codes[measurment_type]
-        response = self.instrument.query(f"NUM:VAL? {index}")
+        index = self._CHANNEL_DATA_SEPARATION_INDEX*(channel - 1)
+        index += measurment.value
+        response = self.query_resource(f"NUM:VAL? {index}")
 
         return float(response)
 
-    def get_harmonic_pll_source(self):
-        response = self.instrument.query("HARM:PLLS?")
+    def get_harmonic_pll_source(self) -> str:
+        response = self.query_resource("HARM:PLLS?")
         return response.split(' ')[-1].rstrip('\n')
 
-    def set_harmonic_order(self, order_min, order_max):
-        self.instrument.write(f"HARM:ORD {order_min},{order_max}")
-        return None
+    def set_harmonic_order(self, order_min: int, order_max: int) -> None:
+        self.write_resource(f"HARM:ORD {order_min},{order_max}")
 
-    def get_harmonic_order(self):
-        response = self.instrument.query("HARM:ORD?")
+    def get_harmonic_order(self) -> List[int]:
+        response = self.query_resource("HARM:ORD?")
         response = response.split(' ')[-1].rstrip('\n')
 
         return [int(x) for x in response.split(',')]
 
-    def get_harmonic_data(self, channel, harmonic_type, return_total=False):
+    def get_harmonic_data(self, channel: int, harmonic_type: HarmonicTypes,
+                          return_total=False
+                          ) -> Union[List[float], Tuple[List[float], float]]:
         """
         get_harmonic_data(channel, harmonic_type, return_total=False)
 
@@ -143,9 +152,9 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         self.set_harmonic_pll_source(channel, harmonic_type)
 
         # get data
-        index = self._list_data_separation_index*(channel - 1)
-        index += self._list_measurement_codes[harmonic_type]
-        response = self.instrument.query(f"NUM:LIST:VAL? {index}")
+        index = self._LIST_DATA_SEPARATION_INDEX*(channel - 1)
+        index += harmonic_type.value
+        response = self.query_resource(f"NUM:LIST:VAL? {index}")
 
         harmonics = [float(x) for x in response.split(',')]
         if return_total:
@@ -153,7 +162,7 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         else:
             return harmonics[1:]
 
-    def set_current_range(self, current):
+    def set_current_range(self, current: int) -> None:
         """
         set_current_range(current)
 
@@ -168,10 +177,9 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         is sent.
         """
 
-        self.instrument.write(f'CURR:RANG:ALL {int(current)}')
-        return None
+        self.write_resource(f'CURR:RANG:ALL {current}')
 
-    def get_current_range(self):
+    def get_current_range(self) -> Tuple[float]:
         """
         get_current_range(current)
 
@@ -181,11 +189,10 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         get the current range of all phases to use for current measurements.
         each range returns the current level for the top of the range.
         """
-        resp = self.instrument.query('CURR:RANG?')
-        current_ranges = [float(chan.split()[-1]) for chan in resp.split(';')]
-        return tuple(current_ranges)
+        response = self.query_resource('CURR:RANG?')
+        return tuple(float(chan.split()[-1]) for chan in response.split(';'))
 
-    def get_voltage_rms(self, channel):
+    def get_voltage_rms(self, channel: int) -> float:
         """
         get_voltage_rms(channel)
 
@@ -194,52 +201,40 @@ class Yokogawa_760203(Scpi_Instrument):  # 3 phase
         measures voltage present on "channel" in Vrms
         """
 
-        v_rms = self.get_channel_data(channel, 'v_rms')
-        return v_rms
+        return self.get_channel_data(channel, MeasurementTypes.v_rms)
 
-    def get_current_rms(self, channel):
-        i_rms = self.get_channel_data(channel, 'i_rms')
-        return i_rms
+    def get_current_rms(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.i_rms)
 
-    def get_power_real(self, channel):
-        p_real = self.get_channel_data(channel, 'p')
-        return p_real
+    def get_power_real(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.p)
 
-    def get_power_apparent(self, channel):
-        p_apparent = self.get_channel_data(channel, 's')
-        return p_apparent
+    def get_power_apparent(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.s)
 
-    def get_power_reactive(self, channel):
-        p_reactive = self.get_channel_data(channel, 'q')
-        return p_reactive
+    def get_power_reactive(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.q)
 
-    def get_power_factor(self, channel):
-        pf = self.get_channel_data(channel, 'lambda')
-        return pf
+    def get_power_factor(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.Lambda)
 
-    def get_phase_angle(self, channel):
-        phase_angle = self.get_channel_data(channel, 'phi')
-        return phase_angle
+    def get_phase_angle(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.phi)
 
-    def get_frequency_voltage(self, channel):
-        frequency = self.get_channel_data(channel, 'fu')
-        return frequency
+    def get_frequency_voltage(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.fu)
 
-    def get_frequency_current(self, channel):
-        frequency = self.get_channel_data(channel, 'fi')
-        return frequency
+    def get_frequency_current(self, channel: int) -> float:
+        return self.get_channel_data(channel, MeasurementTypes.fi)
 
-    def get_voltage_harmonics(self, channel, return_total=False):
-        v_harm = self.get_harmonic_data(channel, 'voltage',
-                                        return_total=return_total)
-        return v_harm
+    def get_voltage_harmonics(self, channel: int, return_total: bool = False):
+        return self.get_harmonic_data(channel, HarmonicTypes.voltage,
+                                      return_total=return_total)
 
-    def get_current_harmonics(self, channel, return_total=False):
-        i_harm = self.get_harmonic_data(channel, 'current',
-                                        return_total=return_total)
-        return i_harm
+    def get_current_harmonics(self, channel: int, return_total: bool = False):
+        return self.get_harmonic_data(channel, HarmonicTypes.current,
+                                      return_total=return_total)
 
-    def get_power_harmonics(self, channel, return_total=False):
-        p_harm = self.get_harmonic_data(channel, 'power',
-                                        return_total=return_total)
-        return p_harm
+    def get_power_harmonics(self, channel: int, return_total: bool = False):
+        return self.get_harmonic_data(channel, HarmonicTypes.power,
+                                      return_total=return_total)

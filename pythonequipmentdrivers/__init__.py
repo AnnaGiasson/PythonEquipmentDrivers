@@ -1,7 +1,7 @@
-from .core import (Scpi_Instrument, get_devices_addresses, identify_devices,
-                   VisaIOError)
+from .core import (VisaResource, GpibInterface,
+                   find_visa_resources, identify_visa_resources)
 
-from .environment_creation import build_environment
+from .resource_collections import connect_resources, ResourceCollection
 
 from . import utility
 from . import errors
@@ -19,10 +19,10 @@ from . import functiongenerator
 from . import temperaturecontroller
 
 
-__all__ = ['Scpi_Instrument', 'get_devices_addresses', 'identify_devices',
-           'VisaIOError',
+__all__ = ['VisaResource', 'GpibInterface', 'find_visa_resources',
+           'identify_visa_resources',
 
-           'build_environment',
+           'connect_resources', 'ResourceCollection',
 
            'utility', 'errors',
 

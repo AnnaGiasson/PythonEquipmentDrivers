@@ -1,8 +1,7 @@
-from pythonequipmentdrivers import Scpi_Instrument
-from pythonequipmentdrivers import VisaIOError
+from pythonequipmentdrivers import VisaResource
 
 
-class Fluke_45(Scpi_Instrument):
+class Fluke_45(VisaResource):
     """
     Fluke_45(address, factor=1)
 
@@ -20,7 +19,7 @@ class Fluke_45(Scpi_Instrument):
     http://www.ece.ubc.ca/~eng-services/files/manuals/Man_DMM_fluke45.pdf
     """
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
         self.factor = kwargs.get('factor', 1.0)
         self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC'
@@ -33,16 +32,14 @@ class Fluke_45(Scpi_Instrument):
             max_reads = 256
             read_cnt = 0
             while read_cnt <= max_reads:
-                self.instrument.read()
+                self.read_resource()
                 read_cnt += 1
 
         # meter will not respond to reads if the buffer is empty
-        except VisaIOError:
+        except IOError:
             pass  # emptied
 
-        return None
-
-    def _measure_signal(self):
+    def _measure_signal(self) -> float:
         """
         _measure_signal()
 
@@ -52,12 +49,12 @@ class Fluke_45(Scpi_Instrument):
         returns: float
         """
 
-        response = self.instrument.query("VAL?")
-        self.instrument.read()  # to empty the buffer
+        response = self.query_resource("VAL?")
+        _ = self.read_resource()  # to empty the buffer
 
         return self.factor*float(response)
 
-    def set_range(self, n, auto_range=False):
+    def set_range(self, n: int, auto_range: bool = False) -> None:
         """
         set_range(n, auto_range=False)
 
@@ -70,23 +67,19 @@ class Fluke_45(Scpi_Instrument):
         if the auto_range flag is set to True the device will automaticly
         determine which range to be in base on the signal level default is
         False.
-
-        returns: int
         """
 
         if auto_range:
-            self.instrument.write("AUTO")
-            self.instrument.read()  # to empty the buffer
+            self.write_resource("AUTO")
+            _ = self.read_resource()  # to empty the buffer
 
         if n in range(0, 7):
-            self.instrument.write(f"RANGE {n}")
-            self.instrument.read()  # to empty the buffer
+            self.write_resource(f"RANGE {n}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-        return None
-
-    def get_range(self):
+    def get_range(self) -> int:
         """
         get_range()
 
@@ -97,11 +90,11 @@ class Fluke_45(Scpi_Instrument):
         returns: int
         """
 
-        response = self.instrument.query("RANGE1?")
-        self.instrument.read()  # to empty the buffer
+        response = self.query_resource("RANGE1?")
+        _ = self.read_resource()  # to empty the buffer
         return int(response)
 
-    def set_rate(self, rate):
+    def set_rate(self, rate: str) -> None:
         """
         set_rate(rate)
 
@@ -113,14 +106,13 @@ class Fluke_45(Scpi_Instrument):
         """
 
         rate = rate.upper()
-        if rate in ['S', 'M', 'F']:
-            self.instrument.write(f"RATE {rate}")
-            self.instrument.read()  # to empty the buffer
+        if rate in {'S', 'M', 'F'}:
+            self.write_resource(f"RATE {rate}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid rate option, should be 'S','M', or 'F'")
-        return None
 
-    def get_rate(self):
+    def get_rate(self) -> str:
         """
         get_rate()
 
@@ -128,11 +120,11 @@ class Fluke_45(Scpi_Instrument):
         returns: str
         """
 
-        response = self.instrument.query("RATE?")
-        self.instrument.read()  # to empty the buffer
-        return response.rstrip('\r\n')
+        response = self.query_resource("RATE?")
+        _ = self.read_resource()  # to empty the buffer
+        return response
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: str) -> None:
         """
         set_mode(mode)
 
@@ -147,14 +139,13 @@ class Fluke_45(Scpi_Instrument):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self.instrument.write(f"FUNC1 {mode}")
-            self.instrument.read()  # to empty the buffer
+            self.write_resource(f"FUNC1 {mode}")
+            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid mode option, valid options are: "
                              + f"{', '.join(self.valid_modes)}")
-        return None
 
-    def get_mode(self):
+    def get_mode(self) -> str:
         """
         get_mode()
 
@@ -164,11 +155,11 @@ class Fluke_45(Scpi_Instrument):
         returns: str
         """
 
-        response = self.instrument.query("FUNC1?")
-        self.instrument.read()  # to empty the buffer
-        return response.rstrip('\r\n')
+        response = self.query_resource("FUNC1?")
+        _ = self.read_resource()  # to empty the buffer
+        return response
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -178,14 +169,13 @@ class Fluke_45(Scpi_Instrument):
         If the meter is not configured to measure DC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VDC':
             raise IOError("Multimeter is not configured to measure voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_voltage_rms(self):
+    def measure_voltage_rms(self) -> float:
         """
         measure_voltage_rms()
 
@@ -195,14 +185,13 @@ class Fluke_45(Scpi_Instrument):
         If the meter is not configured to measure AC voltage this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'VAC':
             raise IOError("Multimeter is not configured to measure AC voltage")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -212,14 +201,13 @@ class Fluke_45(Scpi_Instrument):
         terminals. If the meter is not configured to measure DC current this
         will raise an exception. This can be remedied by setting the meaurement
         mode with the set_mode method.
-
         """
+
         if self.get_mode() != 'ADC':
             raise IOError("Multimeter is not configured to measure current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_current_rms(self):
+    def measure_current_rms(self) -> float:
         """
         measure_current_rms()
 
@@ -229,14 +217,13 @@ class Fluke_45(Scpi_Instrument):
         terminals. If the meter is not configured to measure AC current this
         will raise an exception. This can be remedied by setting the meaurement
         mode with the set_mode method.
-
         """
+
         if self.get_mode() != 'AAC':
             raise IOError("Multimeter is not configured to measure AC current")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_resistance(self):
+    def measure_resistance(self) -> float:
         """
         measure_resistance()
 
@@ -246,14 +233,13 @@ class Fluke_45(Scpi_Instrument):
         If the meter is not configured to measure resistance this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'OHMS':
             raise IOError("Multimeter is not configured to measure resistance")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()
 
-    def measure_frequency(self):
+    def measure_frequency(self) -> float:
         """
         measure_frequency()
 
@@ -263,9 +249,8 @@ class Fluke_45(Scpi_Instrument):
         If the meter is not configured to measure frequency this will raise an
         exception. This can be remedied by setting the meaurement mode with the
         set_mode method.
-
         """
+
         if self.get_mode() != 'FREQ':
             raise IOError("Multimeter is not configured to measure frequency")
-        else:
-            return self._measure_signal()
+        return self._measure_signal()

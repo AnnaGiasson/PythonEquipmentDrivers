@@ -1,8 +1,10 @@
-from pythonequipmentdrivers import Scpi_Instrument
 from time import sleep
+from typing import Any, List, Union
+
+from pythonequipmentdrivers import VisaResource
 
 
-class HP_34401A(Scpi_Instrument):
+class HP_34401A(VisaResource):
     """
     HP_34401A()
 
@@ -106,7 +108,7 @@ class HP_34401A(Scpi_Instrument):
         if not (mode in self.valid_modes):
             raise ValueError("Invalid mode option")
 
-        self.instrument.write(f"CONF:{self.valid_modes[mode]}")
+        self.write_resource(f"CONF:{self.valid_modes[mode]}")
 
     def get_mode(self) -> str:
         """
@@ -118,8 +120,8 @@ class HP_34401A(Scpi_Instrument):
         returns: str
         """
 
-        response = self.instrument.query("FUNC?")
-        return response.rstrip().replace('"', '')
+        response = self.query_resource("FUNC?")
+        return response.replace('"', '')
 
     def get_error(self, **kwargs) -> str:
         """
@@ -128,7 +130,7 @@ class HP_34401A(Scpi_Instrument):
         Returns:
             [list]: last error in the buffer
         """
-        response = self.instrument.query('SYSTem:ERRor?', **kwargs)
+        response = self.query_resource('SYSTem:ERRor?', **kwargs)
         return self.resp_format(response, str)
 
     def set_trigger(self, trigger: str, **kwargs) -> None:
@@ -160,7 +162,7 @@ class HP_34401A(Scpi_Instrument):
             if not ((delay in valid_delay) or isinstance(delay, (int, float))):
                 raise ValueError(f"Invalid trigger delay. Use: {valid_delay}")
 
-            self.instrument.write(f"TRIG:DELay {delay}")
+            self.write_resource(f"TRIG:DELay {delay}")
 
         if kwargs.get('count', False):
 
@@ -171,19 +173,17 @@ class HP_34401A(Scpi_Instrument):
 
             if not ((count in valid_count) or isinstance(count, int)):
                 # note: if count is not an int the 2nd condition wont execute
-                if isinstance(count, int) and (1 <= count <= 50000):
-                    pass
-                else:
+                if not (isinstance(count, int) and (1 <= count <= 50000)):
                     raise ValueError('Invalid trigger count.'
                                      f' Use: {valid_count} or an int within'
                                      ' the range [1, 50000]')
 
-            self.instrument.write(f"TRIG:COUNt {count}")
+            self.write_resource(f"TRIG:COUNt {count}")
 
-        trigger = str(trigger).upper()
-        if not (trigger in self.valid_trigger):
+        trigger = trigger.upper()
+        if trigger not in self.valid_trigger:
             raise ValueError("Invalid trigger option")
-        self.instrument.write(f"TRIG:{self.valid_trigger[trigger]}")
+        self.write_resource(f"TRIG:{self.valid_trigger[trigger]}")
 
     def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs) -> None:
         """
@@ -200,11 +200,11 @@ class HP_34401A(Scpi_Instrument):
             raise ValueError("Invalid trigger option")
 
         self.trigger_mode = self.valid_trigger[trigger]
-        self.instrument.write(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
+        self.write_resource(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
 
     def get_trigger_source(self, **kwargs) -> str:
 
-        response = self.instrument.query("TRIG:SOUR?", **kwargs)
+        response = self.query_resource("TRIG:SOUR?", **kwargs)
         fmt_resp = self.resp_format(response, str)
 
         self.trigger_mode = self.valid_trigger[fmt_resp]
@@ -230,10 +230,10 @@ class HP_34401A(Scpi_Instrument):
                                  f' Use: {valid_count} or an int within'
                                  ' the range [1, 50000]')
 
-        self.instrument.write(f"TRIG:COUNt {count}", **kwargs)
+        self.write_resource(f"TRIG:COUNt {count}", **kwargs)
 
     def get_trigger_count(self, **kwargs) -> int:
-        response = self.instrument.query("TRIG:COUN?", **kwargs)
+        response = self.query_resource("TRIG:COUN?", **kwargs)
         return int(self.resp_format(response, float))
 
     def measure_voltage(self):
@@ -250,9 +250,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'VOLT':
             raise IOError("Multimeter is not configured to measure voltage")
-        else:
-            response = self.instrument.query("MEAS:VOLT:DC?")
-            return self.factor*float(response)
+        response = self.query_resource("MEAS:VOLT:DC?")
+        return self.factor*float(response)
 
     def measure_voltage_rms(self):
         """
@@ -268,9 +267,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'VOLT:AC':
             raise IOError("Multimeter is not configured to measure AC voltage")
-        else:
-            response = self.instrument.query("MEAS:VOLT:AC?")
-            return self.factor*float(response)
+        response = self.query_resource("MEAS:VOLT:AC?")
+        return self.factor*float(response)
 
     def measure_current(self):
         """
@@ -286,9 +284,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'CURR':
             raise IOError("Multimeter is not configured to measure current")
-        else:
-            response = self.instrument.query("MEAS:CURR:DC?")
-            return self.factor*float(response)
+        response = self.query_resource("MEAS:CURR:DC?")
+        return self.factor*float(response)
 
     def measure_current_rms(self):
         """
@@ -304,9 +301,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'CURR:AC':
             raise IOError("Multimeter is not configured to measure AC current")
-        else:
-            response = self.instrument.query("MEAS:CURR:AC?")
-            return self.factor*float(response)
+        response = self.query_resource("MEAS:CURR:AC?")
+        return self.factor*float(response)
 
     def measure_resistance(self):
         """
@@ -322,9 +318,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'RES':
             raise IOError("Multimeter is not configured to measure resistance")
-        else:
-            response = self.instrument.query("MEAS:RES?")
-            return float(response)
+        response = self.query_resource("MEAS:RES?")
+        return float(response)
 
     def measure_frequency(self):
         """
@@ -340,9 +335,8 @@ class HP_34401A(Scpi_Instrument):
         """
         if self.get_mode() != 'FREQ':
             raise IOError("Multimeter is not configured to measure frequency")
-        else:
-            response = self.instrument.query("MEAS:FREQ?")
-            return float(response)
+        response = self.query_resource("MEAS:FREQ?")
+        return float(response)
 
     def init(self, **kwargs) -> None:
         """
@@ -352,7 +346,7 @@ class HP_34401A(Scpi_Instrument):
         Use fetch_data (FETCh) to get the data.
         """
 
-        self.instrument.write('INITiate', **kwargs)
+        self.write_resource('INITiate', **kwargs)
 
     def fetch_data(self, **kwargs) -> float:
         """
@@ -361,7 +355,7 @@ class HP_34401A(Scpi_Instrument):
         Returns:
             [list, float]: data in meter memory resulting from all scans
         """
-        response = self.instrument.query('FETC?', **kwargs)
+        response = self.query_resource('FETC?', **kwargs)
         return self.resp_format(response, float)
 
     def abort(self, **kwargs) -> None:
@@ -370,7 +364,7 @@ class HP_34401A(Scpi_Instrument):
 
         Send VISA ABORt, stop the scan!!
         """
-        self.instrument.write('ABORt', **kwargs)
+        self.write_resource('ABORt', **kwargs)
 
     def trigger(self, wait: bool = True, **kwargs) -> None:
         """
@@ -388,7 +382,7 @@ class HP_34401A(Scpi_Instrument):
         """
 
         if self.trigger_mode == self.valid_trigger['BUS']:
-            self.instrument.write('*TRG', **kwargs)
+            self.write_resource('*TRG', **kwargs)
         else:
             print(f"Trigger not configured, set as: {self.trigger_mode}"
                   f" should be {self.valid_trigger['BUS']}")
@@ -401,15 +395,15 @@ class HP_34401A(Scpi_Instrument):
             # then this will take way too long
 
     def set_sample_count(self, count: int, **kwargs) -> None:
-        self.instrument.write(f"SAMP:COUN {int(count)}", **kwargs)
+        self.write_resource(f"SAMP:COUN {count}", **kwargs)
 
-    def get_sample_count(self, **kwargs):
-        response = self.instrument.query("SAMP:COUN?", **kwargs)
+    def get_sample_count(self, **kwargs) -> int:
+        response = self.query_resource("SAMP:COUN?", **kwargs)
         self.sample_count = int(self.resp_format(response, float))
         return self.sample_count
 
-    def config(self, mode='volt', acdc='dc',
-               signal_range='auto', resolution=None,
+    def config(self, mode: str = 'volt', acdc: str = 'dc',
+               signal_range: str = 'auto', resolution=None,
                nplc=0.02, **kwargs) -> None:
         """config_chan(#)
 
@@ -433,7 +427,7 @@ class HP_34401A(Scpi_Instrument):
         valid_acdc = {'DC': ':DC',
                       'AC': ':AC'}
 
-        mode = str(mode).upper()
+        mode = mode.upper()
         if mode not in self.valid_modes:
             raise ValueError("Invalid mode option")
         mode = self.valid_modes[mode]
@@ -442,13 +436,13 @@ class HP_34401A(Scpi_Instrument):
         usecurrent = (mode == self.valid_modes['CURR'])
         useres = (mode == self.valid_modes['RES'])
 
-        acdc = str(acdc).upper()
-        if not (acdc in valid_acdc):
+        acdc = acdc.upper()
+        if acdc not in valid_acdc:
             raise ValueError("Invalid acdc option")
         acdc = valid_acdc[acdc] if not usefreq else ''
 
         # if range is not provided, cannot use nplc in CONF command
-        signal_range = str(signal_range).upper()
+        signal_range = signal_range.upper()
         if signal_range == 'AUTO':
             signal_range = False
 
@@ -487,10 +481,12 @@ class HP_34401A(Scpi_Instrument):
         for cmd_str in cmds:
             if kwargs.get('verbose', False):
                 print(cmd_str)
-            self.instrument.write(cmd_str, **kwargs)
+            self.write_resource(cmd_str, **kwargs)
 
-    def resp_format(self, response, resp_type: type = int):
-        """resp_format(response(str data), type(int/float/etc))
+    def resp_format(self, response: str,
+                    resp_type: type = int) -> Union[Any, List[Any]]:
+        """
+        resp_format(response(str data), type(int/float/etc))
 
         Args:
             response (str): string of data to parse
@@ -500,7 +496,6 @@ class HP_34401A(Scpi_Instrument):
             list[type], or type: return is a list if more than 1 element
                                  otherwise returns the single element as type
         """
-        response = response.strip()
         if '@' in response:
             start = response.find('@')  # note this returns -1 if not found
             stop = -1
@@ -510,10 +505,8 @@ class HP_34401A(Scpi_Instrument):
         # that works out OK because data needs to be parsed from the first
         # character anyway, so this is not an error, but I don't like
         # that it isn't explicitly trying to find the correct character
-        try:
-            response = list(map(resp_type, response[start+1:stop].split(',')))
-        except ValueError:
-            raise
+        response = list(map(resp_type, response[start+1:stop].split(',')))
+
         if len(response) == 1:
             return response[0]
         return response
@@ -527,4 +520,4 @@ class HP_34401A(Scpi_Instrument):
         return self.measure_time
 
     def set_local(self, **kwargs) -> None:
-        self.instrument.write("SYSTem:LOCal", **kwargs)
+        self.write_resource("SYSTem:LOCal", **kwargs)

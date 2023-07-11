@@ -30,15 +30,16 @@ more easily reusable.
 
 """
 
-from typing import Tuple, Union
-import pythonequipmentdrivers as ped
-from pathlib import Path
 import json
-from time import sleep
 from itertools import product
+from pathlib import Path
+from time import sleep
+from typing import Tuple, Union
+
+import pythonequipmentdrivers as ped
 
 
-class Test_Environment(ped.EnvironmentSetup):
+class Test_Environment:
 
     g_i_drive: float = 200
     g_i_mon: float = 2000
@@ -56,8 +57,8 @@ class Test_Environment(ped.EnvironmentSetup):
     of tests.
 
     Args:
-        equipment_setup (str, Path, dict): equipment configuration information
-            to instatiate an EnvironmentSetup object. See
+        equipment_setup (str, Path, dict): equipment config information to
+            instatiate an EnvironmentSetup object. See
             help(pythonequipmentdrivers.EnvironmentSetup) for more information.
 
     Kwargs:
@@ -65,6 +66,11 @@ class Test_Environment(ped.EnvironmentSetup):
             to run any initialization sequences for equipment that are present
             in "equipment_setup". Defaults to False.
     """
+
+    def __init__(self, config: Union[str, Path, dict],
+                 init: bool = False) -> None:
+
+        self.equipment = ped.connect_resources(config=config, init=init)
 
     def set_operating_point(self, **op_point) -> None:
 
@@ -101,16 +107,16 @@ class Test_Environment(ped.EnvironmentSetup):
         """
 
         # set levels
-        self.source.set_voltage(voltage)
+        self.equipment.source.set_voltage(voltage)
 
         # enable/disable
         if kwargs.get("enable", False):
-            if not self.source.get_state():
-                self.source.on()
+            if not self.equipment.source.get_state():
+                self.equipment.source.on()
 
         elif kwargs.get("disable", False):
-            if self.source.get_state():
-                self.source.off()
+            if self.equipment.source.get_state():
+                self.equipment.source.off()
 
     @staticmethod
     def __onsemi_v_ref_to_dc(v_ref: float) -> float:
@@ -142,20 +148,23 @@ class Test_Environment(ped.EnvironmentSetup):
                 level. Defaults to False.
         """
 
+        func_gen = self.equipment.function_gen
         channel = kwargs.get('v_ref_chan', 2)
 
         # set levels
-        self.function_gen.set_pulse_dc(self.__onsemi_v_ref_to_dc(voltage),
-                                       source=channel)
+        v_drive = self.__onsemi_v_ref_to_dc(voltage)
+        func_gen.set_pulse_dc(v_drive, source=channel)
 
         # enable/disable
         if kwargs.get("enable", False):
-            if not self.function_gen.get_output_state(source=channel):
-                self.function_gen.set_output_state(1, source=channel)
+            device_state = func_gen.get_output_state(source=channel)
+            if not device_state:
+                func_gen.set_output_state(True, source=channel)
 
         elif kwargs.get("disable", False):
-            if self.function_gen.get_output_state(source=channel):
-                self.function_gen.set_output_state(0, source=channel)
+            device_state = func_gen.get_output_state(source=channel)
+            if device_state:
+                func_gen.set_output_state(False, source=channel)
 
     def set_i_out(self, current, **kwargs) -> None:
         """
@@ -177,24 +186,26 @@ class Test_Environment(ped.EnvironmentSetup):
                 level. Defaults to False.
         """
 
+        func_gen = self.equipment.function_gen
         channel = kwargs.get('i_drive_chan', 1)
 
         # set levels
-        self.function_gen.set_voltage_high(current/self.g_i_drive,
-                                           source=channel)
+        func_gen.set_voltage_high(current/self.g_i_drive, source=channel)
 
         if kwargs.get("current_low", False):
             v_drive = kwargs.get("current_low")/self.g_i_drive
-            self.function_gen.set_voltage_low(v_drive, source=channel)
+            func_gen.set_voltage_low(v_drive, source=channel)
 
         # enable/disable
         if kwargs.get("enable", False):
-            if not self.function_gen.get_output_state(source=channel):
-                self.function_gen.set_output_state(1, source=channel)
+            device_state = func_gen.get_output_state(source=channel)
+            if not device_state:
+                func_gen.set_output_state(True, source=channel)
 
         elif kwargs.get("disable", False):
-            if self.function_gen.get_output_state(source=channel):
-                self.function_gen.set_output_state(0, source=channel)
+            device_state = func_gen.get_output_state(source=channel)
+            if device_state:
+                func_gen.set_output_state(False, source=channel)
 
     def set_v_aux(self, voltage=5.1, channel=1, **kwargs) -> None:
         """
@@ -254,46 +265,48 @@ class Test_Environment(ped.EnvironmentSetup):
 
     def adjust_scope(self, **op_point) -> None:
 
+        scope = self.equipment.oscilloscope
+
         if op_point.get('v_out', False):
 
-            v_o = op_point.get('v_out')
+            v_o = op_point['v_out']
             k_ratio = 48  # ratio between the intermidiate and output voltages
 
-            self.oscilloscope.set_channel_offset(3, -v_o)
-            self.oscilloscope.set_channel_offset(4, -v_o*k_ratio)
+            scope.set_channel_offset(3, -v_o)
+            scope.set_channel_offset(4, -v_o*k_ratio)
 
         if op_point.get('v_in', False):
-
-            self.oscilloscope.set_channel_offset(1, -op_point.get('v_in'))
+            scope.set_channel_offset(1, -op_point['v_in'])
 
         if op_point.get('i_out', False):
 
-            i_o = op_point.get('i_out')
+            i_o = op_point['i_out']
 
-            self.oscilloscope.set_channel_scale(5, (i_o/self.g_i_mon)/7)
-            self.oscilloscope.set_channel_offset(5, -4, use_divisions=True)
-            self.oscilloscope.set_channel_scale(7, i_o/self.g_i_drive/7)
-            self.oscilloscope.set_channel_offset(7, -4, use_divisions=True)
+            scope.set_channel_scale(5, (i_o/self.g_i_mon)/7)
+            scope.set_channel_offset(5, -4, use_divisions=True)
+            scope.set_channel_scale(7, i_o/self.g_i_drive/7)
+            scope.set_channel_offset(7, -4, use_divisions=True)
 
-            self.oscilloscope.set_trigger_level(0.5*i_o/self.g_i_drive)
+            scope.set_trigger_level(0.5*i_o/self.g_i_drive)
 
     def collect_data(self, **kwargs) -> Tuple[float]:
 
         # trigger environment
 
         sleep(0.5)  # let op point settle
-        self.oscilloscope.trigger_single()
+        self.equipment.oscilloscope.trigger_single()
 
         sleep(2)  # scope arming
-        self.function_gen.trigger()
+        self.equipment.function_gen.trigger()
 
         sleep(kwargs.get('meas_delay', 0))
 
         # get data & scope image
 
-        datum = self.oscilloscope.get_measure_data(*range(1, 13))
+        datum = self.equipment.oscilloscope.get_measure_data(*range(1, 13))
 
-        self.oscilloscope.get_image(kwargs.get('image_name', 'capture'))
+        image_path = kwargs.get('image_name', 'capture')
+        self.equipment.oscilloscope.get_image(image_path)
 
         return datum
 
@@ -373,9 +386,9 @@ class Matrix_Test():
         # create data table / add header row
         self.data_file = kwargs.get('file_name', 'data')
         if self.test_config.get("data_columns", False):
-            ped.utility.log_data(self.test_dir.joinpath(self.data_file),
-                                 *self.test_config["data_columns"],
-                                 init=True)
+            ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
+                                   *self.test_config["data_columns"],
+                                   init=True)
 
     def read_test_config(self, test_config: Union[str, Path]) -> None:
         if isinstance(test_config, (str, Path)):
@@ -425,8 +438,8 @@ class Matrix_Test():
                                                    image_name=fpath)
 
                 # save data to file
-                ped.utility.log_data(self.test_dir.joinpath(self.data_file),
-                                     v_o, v_i, i_o, *datum)
+                ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
+                                       v_o, v_i, i_o, *datum)
                 self.user_fb.test_data_logged(fpath)
 
                 # prepare for next iteration
@@ -446,6 +459,6 @@ class Matrix_Test():
 
 if __name__ == "__main__":
     cwd = Path(__file__).parent
-    env = Test_Environment(cwd / 'equipment_configuration.json', init=True)
+    env = Test_Environment(config=cwd / 'equipment.config', init=True)
     test = Matrix_Test(env, test_config=cwd/'test_configuration.json')
     test.run()
