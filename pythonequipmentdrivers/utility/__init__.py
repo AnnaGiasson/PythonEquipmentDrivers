@@ -9,4 +9,5 @@ __all__ = (
     'create_test_log',
     'dump_array_data',
     'Logger',
-    'AttrDict')
+    'AttrDict'
+)

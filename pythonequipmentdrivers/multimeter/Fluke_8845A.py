@@ -16,9 +16,6 @@ class Fluke_8845A(HP_34401A):
     shunt. This factor defaults to 1 (no effect on measurement).
     """
 
-    def __init__(self, address, **kwargs):
-        super().__init__(address, **kwargs)
-
     def disable_cmd_emulation_mode(self):
         """
         disable_cmd_emulation_mode()
@@ -26,4 +23,5 @@ class Fluke_8845A(HP_34401A):
         Disable the Fluke 45 command set emulation mode i.e. use Fluke8845
         native commands.
         """
+        
         self.write_resource("L1")
