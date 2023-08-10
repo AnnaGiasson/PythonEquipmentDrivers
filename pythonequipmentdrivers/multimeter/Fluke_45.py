@@ -4,6 +4,12 @@ from pythonequipmentdrivers import VisaResource
 from pythonequipmentdrivers.core import rm
 
 
+class Fluke45SerialError(Exception):
+    """
+    Exception class for the Fluke45's serial specific errors
+    """
+
+
 class Fluke_45(VisaResource):
     """
     Fluke_45(address, factor=1)
@@ -87,6 +93,16 @@ class Fluke_45(VisaResource):
         else:
             self._is_serial = False
 
+    def _check_serial_response(self, message: str, resp: str) -> None:
+        if resp == "=>":
+            return
+        elif resp == "?>":
+            raise Fluke45SerialError(f"{repr(message)} resulted in a command error")
+        elif resp == "!>":
+            raise Fluke45SerialError(f"{repr(message)} resulted in an execution error")
+        else:
+            raise Fluke45SerialError(f"{repr(message)} resulted in an unknown error")
+
     def _get_visa_resource(self) -> pyvisa.resources.Resource:
         """Obtain the device's visa resource without accessing protected members of parent class"""
         for resource in rm.list_opened_resources():
@@ -117,7 +133,7 @@ class Fluke_45(VisaResource):
         """
         response = super().write_resource(message, **kwargs)
         if self._is_serial:
-            _ = self.read_resource()  # to empty the buffer
+            self._check_serial_response(message, self.read_resource())
         return response
 
     def query_resource(self, message: str, **kwargs) -> str:
@@ -125,11 +141,9 @@ class Fluke_45(VisaResource):
         Fluke45 specific query_resource function
         takes care of serial response if the device uses serial
         """
-        # TODO: an incorrect command will cause the serial response to end up in
-        # response then the read_resource() will time out, need to handle better
         response = super().query_resource(message, **kwargs)
         if self._is_serial:
-            _ = self.read_resource()  # to empty the buffer
+            self._check_serial_response(message, self.read_resource())
         return response
 
     def fetch_data(self) -> float:
