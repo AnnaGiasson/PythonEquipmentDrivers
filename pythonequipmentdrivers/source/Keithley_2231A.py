@@ -10,12 +10,13 @@ class Keithley_2231A(VisaResource):
     object for accessing basic functionallity of the Keithley DC supply
     """
 
-    def __init__(self, address: str, **kwargs) -> None:
+    def __init__(self, address: str, channel: int = None, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        self.set_access_remote('remote')
+        self.channel = channel
+        self.set_access_remote("remote")
 
     def __del__(self) -> None:
-        self.set_access_remote('local')
+        self.set_access_remote("local")
         super().__del__()
 
     def set_access_remote(self, mode: str) -> None:
@@ -27,14 +28,14 @@ class Keithley_2231A(VisaResource):
         set access to the device inferface to 'remote' or 'local'
         """
 
-        if mode.lower() == 'remote':
-            self.write_resource('SYSTem:RWLock')
-        elif mode.lower() == 'local':
-            self.write_resource('SYSTem:LOCal')
+        if mode.lower() == "remote":
+            self.write_resource("SYSTem:RWLock")
+        elif mode.lower() == "local":
+            self.write_resource("SYSTem:LOCal")
         else:
             raise ValueError(
                 'Unknown option for arg "mode", should be "remote" or "local"'
-                    )
+            )
 
     def set_channel(self, channel: int) -> None:
         """
@@ -46,7 +47,21 @@ class Keithley_2231A(VisaResource):
         Selects the specified Channel to use for software control
         """
 
-        self.write_resource(f'INST:NSEL {channel}')
+        self.write_resource(f"INST:NSEL {channel}")
+
+    def _update_channel(self, override_channel):
+        """Handles updating the device channel setting"""
+
+        if override_channel is not None:
+            self.set_channel(override_channel)
+        elif self.channel is not None:
+            self.set_channel(self.channel)
+        else:
+            raise TypeError(
+                "Channel number must be provided if it is not provided during"
+                + "initialization"
+            )
+        return
 
     def get_channel(self) -> int:
         """
@@ -57,10 +72,10 @@ class Keithley_2231A(VisaResource):
         returns: int
         """
 
-        response = self.query_resource('INST:NSEL?')
+        response = self.query_resource("INST:NSEL?")
         return int(response)
 
-    def set_state(self, state: bool, channel: int) -> None:
+    def set_state(self, state: bool, channel: int = None) -> None:
         """
         set_state(state, channel)
 
@@ -72,10 +87,10 @@ class Keithley_2231A(VisaResource):
                 are 1-3
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         self.write_resource(f"CHAN:OUTP {1 if state else 0}")
 
-    def get_state(self, channel: int) -> bool:
+    def get_state(self, channel: int = None) -> bool:
         """
         get_state(channel)
 
@@ -89,13 +104,13 @@ class Keithley_2231A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         response = self.query_resource("CHAN:OUTP?")
-        if response not in ("ON", '1'):
+        if response not in ("ON", "1"):
             return False
         return True
 
-    def on(self, channel: int) -> None:
+    def on(self, channel: int = None) -> None:
         """
         on(channel)
 
@@ -109,7 +124,7 @@ class Keithley_2231A(VisaResource):
 
         self.set_state(True, channel)
 
-    def off(self, channel: int) -> None:
+    def off(self, channel: int = None) -> None:
         """
         off(channel)
 
@@ -123,7 +138,7 @@ class Keithley_2231A(VisaResource):
 
         self.set_state(False, channel)
 
-    def toggle(self, channel: int) -> None:
+    def toggle(self, channel: int = None) -> None:
         """
         toggle(channel)
 
@@ -136,66 +151,66 @@ class Keithley_2231A(VisaResource):
 
         self.set_state(self.get_state() ^ True, channel)
 
-    def set_voltage(self, voltage: float, channel: int) -> None:
+    def set_voltage(self, voltage: float, channel: int = None) -> None:
         """
         set_voltage(voltage)
 
         voltage: float or int, amplitude to set output to in Vdc
 
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
+        channel: int=None, the index of the channel to set. Valid options are 1,2,3.
 
         set the output voltage setpoint of channel "channel" specified by
         "voltage"
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         self.write_resource(f"SOUR:VOLT {voltage}")
 
-    def get_voltage(self, channel: int) -> float:
+    def get_voltage(self, channel: int = None) -> float:
         """
         get_voltage()
 
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
+        channel: int=None, the index of the channel to set. Valid options are 1,2,3.
 
         gets the output voltage setpoint in Vdc
 
         returns: float
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         response = self.query_resource("SOUR:VOLT?")
         return float(response)
 
-    def set_current(self, current: float, channel: int) -> None:
+    def set_current(self, current: float, channel: int = None) -> None:
         """
         set_current(current)
 
         current: float/int, current limit setpoint in Adc
 
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
+        channel: int=None, the index of the channel to set. Valid options are 1,2,3.
 
         sets the current limit setting for the power supply in Adc
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         self.write_resource(f"SOUR:CURR {current}")
 
-    def get_current(self, channel: int) -> float:
+    def get_current(self, channel: int = None) -> float:
         """
         get_current()
 
-        channel: int, the index of the channel to set. Valid options are 1,2,3.
+        channel: int=None, the index of the channel to set. Valid options are 1,2,3.
 
         gets the current limit setting for the power supply in Adc
 
         returns: float
         """
 
-        self.set_channel(channel)
+        self._update_channel(channel)
         response = self.query_resource("SOUR:CURR?")
         return float(response)
 
-    def measure_voltage(self, channel: int) -> float:
+    def measure_voltage(self, channel: int = None) -> float:
         """
         measure_voltage()
 
@@ -205,11 +220,11 @@ class Keithley_2231A(VisaResource):
         returns: float
         """
 
-        self.set_channel(channel)
-        response = self.query_resource('MEAS:VOLT?')
+        self._update_channel(channel)
+        response = self.query_resource("MEAS:VOLT?")
         return float(response)
 
-    def measure_current(self, channel: int) -> float:
+    def measure_current(self, channel: int = None) -> float:
         """
         measure_current()
 
@@ -219,6 +234,6 @@ class Keithley_2231A(VisaResource):
         returns: float
         """
 
-        self.set_channel(channel)
-        response = self.query_resource('MEAS:CURR?')
+        self._update_channel(channel)
+        response = self.query_resource("MEAS:CURR?")
         return float(response)
