@@ -1,3 +1,5 @@
+from typing import Union
+
 import pyvisa
 from pyvisa.constants import BufferOperation
 from pythonequipmentdrivers import VisaResource
@@ -28,7 +30,7 @@ class Fluke_45(VisaResource):
     http://www.ece.ubc.ca/~eng-services/files/manuals/Man_DMM_fluke45.pdf
     """
 
-    valid_modes = ("AAC", "ADC", "VAC", "VDC" "OHMS", "FREQ", "CONT")
+    valid_modes = ("AAC", "ADC", "VAC", "VDC", "OHMS", "FREQ", "CONT")
     ranges = (
         (
             {"VDC", "VAC"},
@@ -45,7 +47,7 @@ class Fluke_45(VisaResource):
             ),
         ),
         (
-            {"OHM"},
+            {"OHMS"},
             (
                 (
                     {"M", "F"},
@@ -79,19 +81,20 @@ class Fluke_45(VisaResource):
         ),
     )
 
-    def __init__(self, address: str, **kwargs) -> None:
+    def __init__(self, address: str, legacy_ranges=True, **kwargs) -> None:
+        # must be set before calling parent constructor
+        self._is_serial = True if "asrl" in address.lower() else False
+        self._legacy_ranges = legacy_ranges
         super().__init__(address, **kwargs)
         self.factor = kwargs.get("factor", 1.0)
 
-        if "asrl" in address.lower():
-            self._is_serial = True
+        # now do the rest of the preparations for a serial Fluke 45
+        if self._is_serial:
             # self._flush_receive_buffer()
             visa_resource = self._get_visa_resource()
             visa_resource.flush(BufferOperation.discard_receive_buffer)
             visa_resource.write_termination = "\r\n"
             visa_resource.read_termination = "\r\n"
-        else:
-            self._is_serial = False
 
     def _check_serial_response(self, message: str, resp: str) -> None:
         if resp == "=>":
@@ -131,10 +134,9 @@ class Fluke_45(VisaResource):
         Fluke45 specific write_resource function
         takes care of serial response if the device uses serial
         """
-        response = super().write_resource(message, **kwargs)
+        super().write_resource(message, **kwargs)
         if self._is_serial:
             self._check_serial_response(message, self.read_resource())
-        return response
 
     def query_resource(self, message: str, **kwargs) -> str:
         """
@@ -167,7 +169,7 @@ class Fluke_45(VisaResource):
         For use with a Fluke 8845A. Enables the Fluke 45 command set emulation
         mode.
         """
-        self.write("L2")
+        self.write_resource("L2")
 
     def set_local(self):
         """
@@ -177,7 +179,7 @@ class Fluke_45(VisaResource):
         """
         if self._is_serial:
             # there is a specific serial command
-            self.write("LOCS")
+            self.write_resource("LOCS")
         else:
             # use the GPIB method
             super().set_local()
@@ -192,15 +194,13 @@ class Fluke_45(VisaResource):
                 if rate not in valid_rates:
                     continue
                 for range_, command in max_values:
-                    if value < range_ and not reverse_lookup:
+                    if value <= range_ and not reverse_lookup:
                         return command
                     elif command == value and reverse_lookup:
                         return range_
                 raise ValueError(f"{value=} is greater than highest range")
 
-    def set_range(
-        self, signal_range: float = None, n: int = None, auto_range: bool = False
-    ) -> None:
+    def set_range(self, n: Union[int, float], auto_range: bool = False) -> None:
         """
         set_range(n, auto_range=False)
 
@@ -219,8 +219,8 @@ class Fluke_45(VisaResource):
             self.write_resource("AUTO")
             return
 
-        if signal_range is not None:
-            n = self._get_range_number(signal_range)
+        if not self._legacy_ranges:
+            n = self._get_range_number(n)
 
         if n in range(0, 7):
             self.write_resource(f"RANGE {n}")
@@ -238,9 +238,10 @@ class Fluke_45(VisaResource):
         returns: int
         """
 
-        response = self.query_resource("RANGE1?")
-
-        return int(response)
+        n = int(self.query_resource("RANGE1?"))
+        if not self._legacy_ranges:
+            n = self._get_range_number(n, reverse_lookup=True)
+        return n
 
     def set_rate(self, rate: str) -> None:
         """
@@ -287,7 +288,7 @@ class Fluke_45(VisaResource):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self.write_resource(f"FUNC1 {mode}")
+            self.write_resource(f"{mode}")
 
         else:
             raise ValueError(
@@ -412,9 +413,13 @@ class Fluke_45(VisaResource):
         Configure the meter trigger source
 
         source (str): { INTernal or EXTernal }
+
+        Caution: if external trigger is configured and a read of the meter is
+        requested but no measurement is present, the remote interface will
+        crash/lockup and you will have to reboot the meter manually ¯\_(ツ)_/¯
         """
         trigger_type_num = 2 if "ext" in trigger.lower() else 1
-        self.write(f"TRIGGER {trigger_type_num}")
+        self.write_resource(f"TRIGGER {trigger_type_num}")
 
     def trigger(self) -> None:
         """
@@ -422,13 +427,11 @@ class Fluke_45(VisaResource):
 
         Send the trigger commmand
         """
-        self.instrument.write("*TRG")
+        self.write_resource("*TRG")
 
-    def config(
-        self, mode: str, rate: str, signal_range: float = None, range_n: int = None
-    ):
+    def config(self, mode: str, rate: str, range_: Union[int, float]):
         """
-        set_mode_adv(mode, range_n, rate)
+        config(mode, rate, signal_range, range_n)
 
         A one stop shop to configure the most common operating parameters
 
@@ -438,14 +441,14 @@ class Fluke_45(VisaResource):
                 which correspond to AC current, DC current, AV voltage, DC voltage,
                 resistence, frequency, and continuity respectively (not case
                 sensitive)
-            range_n (float, optional): Set the current range setting used for measurements.
-                valid settings are the integers 1 through 7, meaning of the index
-                depends on which measurement is being performed.
-            signal_range (float, optional): measurement range. Defaults to 'auto'
             rate (str): speed of sampling
                 valid options are 'S','M', or 'F' for slow, medium, and fast
                 respectively (not case sensitive)
+            signal_range (float, optional): measurement range. Defaults to 'auto'
+            range_n (float, optional): Set the current range setting used for measurements.
+                valid settings are the integers 1 through 7, meaning of the index
+                depends on which measurement is being performed.
         """
         self.set_mode(mode)
-        self.set_range(n=range_n, signal_range=signal_range)
+        self.set_range(range_)
         self.set_rate(rate)
