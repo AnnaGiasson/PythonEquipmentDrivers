@@ -14,11 +14,17 @@ class Fluke45SerialError(Exception):
 
 class Fluke_45(VisaResource):
     """
-    Fluke_45(address, factor=1)
+    Fluke_45(address, factor=1, legacy_ranges=True)
 
     address : str, address of the connected multimeter
 
     factor: float, multiplicitive scale for all measurements defaults to 1.
+
+    legacy_ranges: bool, if true (default) traditional integer range values
+    are used per the Fluke 45 manual. If false, the range value related to the
+    measurement magnitude. A range will be set that is >= the specified
+    measurement value. The functionality automatically takes into account
+    the current mode and rate settings.
 
     object for accessing basic functionallity of the Fluke 45 Multimeter.
     The factor term allows for measurements to be multiplied by some number
@@ -31,27 +37,27 @@ class Fluke_45(VisaResource):
     """
 
     valid_modes = ("AAC", "ADC", "VAC", "VDC", "OHMS", "FREQ", "CONT")
-    ranges = (
+    ranges = [
         (
             {"VDC", "VAC"},
-            (
-                ({"M", "F"}, ((0.3, 1), (3, 2), (30, 3), (300, 4), (1000, 5))),
-                ({"S"}, ((0.1, 1), (1, 2), (10, 3), (100, 4), (1000, 5))),
-            ),
+            [
+                ({"M", "F"}, [(0.3, 1), (3, 2), (30, 3), (300, 4), (1000, 5)]),
+                ({"S"}, [(0.1, 1), (1, 2), (10, 3), (100, 4), (1000, 5)]),
+            ],
         ),
         (
             {"ADC", "AAC"},
-            (
-                ({"M", "F"}, ((0.03, 1), (0.1, 2), (10, 3))),
-                ({"S"}, ((0.01, 1), (0.1, 2), (10, 3))),
-            ),
+            [
+                ({"M", "F"}, [(0.03, 1), (0.1, 2), (10, 3)]),
+                ({"S"}, [(0.01, 1), (0.1, 2), (10, 3)]),
+            ],
         ),
         (
             {"OHMS"},
-            (
+            [
                 (
                     {"M", "F"},
-                    (
+                    [
                         (300, 1),
                         (3e3, 2),
                         (3e4, 3),
@@ -59,11 +65,11 @@ class Fluke_45(VisaResource):
                         (3e6, 5),
                         (3e7, 6),
                         (3e8, 7),
-                    ),
+                    ],
                 ),
                 (
                     {"S"},
-                    (
+                    [
                         (100, 1),
                         (1e3, 2),
                         (1e4, 3),
@@ -71,17 +77,19 @@ class Fluke_45(VisaResource):
                         (1e6, 5),
                         (1e7, 6),
                         (1e8, 7),
-                    ),
+                    ],
                 ),
-            ),
+            ],
         ),
         (
             {"FREQ"},
-            (({"S", "M", "F"}, ((1e3, 1), (1e4, 2), (1e5, 3), (1e6, 4), (1e7, 5))),),
+            [
+                ({"S", "M", "F"}, [(1e3, 1), (1e4, 2), (1e5, 3), (1e6, 4), (1e7, 5)]),
+            ],
         ),
-    )
+    ]
 
-    def __init__(self, address: str, legacy_ranges=True, **kwargs) -> None:
+    def __init__(self, address: str, legacy_ranges: bool = True, **kwargs) -> None:
         # must be set before calling parent constructor
         self._is_serial = True if "asrl" in address.lower() else False
         self._legacy_ranges = legacy_ranges
@@ -204,13 +212,17 @@ class Fluke_45(VisaResource):
         """
         set_range(n, auto_range=False)
 
-        n: int, range mode to set
+        n: int|float, depends on value provided for legacy_ranges
         auto_range: bool, whether to enable autoranging (default is False)
 
         Set the current range setting used for measurements.
-            valid settings are the integers 1 through 7, meaning of the index
-            depends on which measurement is being performed.
-        if the auto_range flag is set to True the device will automaticly
+            If legacy_ranges==True then valid settings are the integers 1
+            through 7, and meaning of the index depends on which measurement
+            is being performed.
+            If legacy_ranges==False then the value of n should be the max
+            measurement value that is expected. The DMM will be set to a
+            range that is >= n.
+        if the auto_range flag is set to True the device will automatically
         determine which range to be in base on the signal level default is
         False.
         """
@@ -227,15 +239,18 @@ class Fluke_45(VisaResource):
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-    def get_range(self) -> int:
+    def get_range(self) -> Union[int, float]:
         """
         get_range()
 
         Retrieve the current range setting used for measurements.
-        Return value is an index from 1 to 7, meaning of the index depends
-        on which measurement is being performed.
+            If legacy_ranges==True then an integer 1 to 7 is returned,
+            and meaning of the index depends on which measurement
+            is being performed.
+            If legacy_ranges==False then the value returned is the max
+            measurement value for the current range.
 
-        returns: int
+        returns: int|float
         """
 
         n = int(self.query_resource("RANGE1?"))
