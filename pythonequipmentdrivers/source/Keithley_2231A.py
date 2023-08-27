@@ -3,9 +3,15 @@ from pythonequipmentdrivers import VisaResource
 
 class Keithley_2231A(VisaResource):
     """
-    Keithley_2231A(address)
+    Keithley_2231A(address, channel)
 
     address : str, address of the connected power supply
+    channel : int, if not None this instance will be associated
+        with a particular output channel. The channel argument will no longer
+        need to be supplied for any subsequent method call. However, supplying
+        the channel argument will override the channel that is associated
+        with the instance.
+
 
     object for accessing basic functionallity of the Keithley DC supply
     """
