@@ -444,9 +444,9 @@ class Fluke_45(VisaResource):
         """
         self.write_resource("*TRG")
 
-    def config(self, mode: str, rate: str, range_: Union[int, float]):
+    def config(self, mode: str, rate: str, signal_range: Union[int, float]):
         """
-        config(mode, rate, signal_range, range_n)
+        config(mode, rate, range_)
 
         A one stop shop to configure the most common operating parameters
 
@@ -459,11 +459,14 @@ class Fluke_45(VisaResource):
             rate (str): speed of sampling
                 valid options are 'S','M', or 'F' for slow, medium, and fast
                 respectively (not case sensitive)
-            signal_range (float, optional): measurement range. Defaults to 'auto'
-            range_n (float, optional): Set the current range setting used for measurements.
-                valid settings are the integers 1 through 7, meaning of the index
-                depends on which measurement is being performed.
+            signal_range: int|float, depends on value provided for legacy_ranges
+                If legacy_ranges==True then valid settings are the integers 1
+                through 7, and meaning of the index depends on which measurement
+                is being performed.
+                If legacy_ranges==False then the value of n should be the max
+                measurement value that is expected. The DMM will be set to a
+                range that is >= n.
         """
         self.set_mode(mode)
-        self.set_range(range_)
         self.set_rate(rate)
+        self.set_range(signal_range)
