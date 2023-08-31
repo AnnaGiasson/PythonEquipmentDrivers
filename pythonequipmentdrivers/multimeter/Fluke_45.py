@@ -1,13 +1,30 @@
+from typing import Union
+
+import pyvisa
+from pyvisa.constants import BufferOperation
 from pythonequipmentdrivers import VisaResource
+from pythonequipmentdrivers.core import rm
+
+
+class Fluke45SerialError(Exception):
+    """
+    Exception class for the Fluke45's serial specific errors
+    """
 
 
 class Fluke_45(VisaResource):
     """
-    Fluke_45(address, factor=1)
+    Fluke_45(address, factor=1, legacy_ranges=True)
 
     address : str, address of the connected multimeter
 
     factor: float, multiplicitive scale for all measurements defaults to 1.
+
+    legacy_ranges: bool, if true (default) traditional integer range values
+    are used per the Fluke 45 manual. If false, the range value related to the
+    measurement magnitude. A range will be set that is >= the specified
+    measurement value. The functionality automatically takes into account
+    the current mode and rate settings.
 
     object for accessing basic functionallity of the Fluke 45 Multimeter.
     The factor term allows for measurements to be multiplied by some number
@@ -19,12 +36,93 @@ class Fluke_45(VisaResource):
     http://www.ece.ubc.ca/~eng-services/files/manuals/Man_DMM_fluke45.pdf
     """
 
-    def __init__(self, address: str, **kwargs) -> None:
-        super().__init__(address, **kwargs)
-        self.factor = kwargs.get('factor', 1.0)
-        self.valid_modes = ('AAC', 'ADC', 'VAC', 'VDC'
-                            'OHMS', 'FREQ', 'CONT')
+    valid_modes = ("AAC", "ADC", "VAC", "VDC", "OHMS", "FREQ", "CONT")
+    ranges = [
+        (
+            {"VDC", "VAC"},
+            [
+                ({"M", "F"}, [(0.3, 1), (3, 2), (30, 3), (300, 4), (1000, 5)]),
+                ({"S"}, [(0.1, 1), (1, 2), (10, 3), (100, 4), (1000, 5)]),
+            ],
+        ),
+        (
+            {"ADC", "AAC"},
+            [
+                ({"M", "F"}, [(0.03, 1), (0.1, 2), (10, 3)]),
+                ({"S"}, [(0.01, 1), (0.1, 2), (10, 3)]),
+            ],
+        ),
+        (
+            {"OHMS"},
+            [
+                (
+                    {"M", "F"},
+                    [
+                        (300, 1),
+                        (3e3, 2),
+                        (3e4, 3),
+                        (3e5, 4),
+                        (3e6, 5),
+                        (3e7, 6),
+                        (3e8, 7),
+                    ],
+                ),
+                (
+                    {"S"},
+                    [
+                        (100, 1),
+                        (1e3, 2),
+                        (1e4, 3),
+                        (1e5, 4),
+                        (1e6, 5),
+                        (1e7, 6),
+                        (1e8, 7),
+                    ],
+                ),
+            ],
+        ),
+        (
+            {"FREQ"},
+            [
+                ({"S", "M", "F"}, [(1e3, 1), (1e4, 2), (1e5, 3), (1e6, 4), (1e7, 5)]),
+            ],
+        ),
+    ]
 
+    def __init__(self, address: str, legacy_ranges: bool = True, **kwargs) -> None:
+        # must be set before calling parent constructor
+        self._is_serial = True if "asrl" in address.lower() else False
+        self._legacy_ranges = legacy_ranges
+        super().__init__(address, **kwargs)
+        self.factor = kwargs.get("factor", 1.0)
+
+        # now do the rest of the preparations for a serial Fluke 45
+        if self._is_serial:
+            # self._flush_receive_buffer()
+            visa_resource = self._get_visa_resource()
+            visa_resource.flush(BufferOperation.discard_receive_buffer)
+            visa_resource.write_termination = "\r\n"
+            visa_resource.read_termination = "\r\n"
+
+    def _check_serial_response(self, message: str, resp: str) -> None:
+        if resp == "=>":
+            return
+        elif resp == "?>":
+            raise Fluke45SerialError(f"{repr(message)} resulted in a command error")
+        elif resp == "!>":
+            raise Fluke45SerialError(f"{repr(message)} resulted in an execution error")
+        else:
+            raise Fluke45SerialError(f"{repr(message)} resulted in an unknown error")
+
+    def _get_visa_resource(self) -> pyvisa.resources.Resource:
+        """Obtain the device's visa resource without accessing protected members of parent class"""
+        for resource in rm.list_opened_resources():
+            if resource.resource_name == self.address:
+                return resource
+        raise RuntimeError("Unable to find a resource matching the device")
+
+    def _flush_receive_buffer(self):
+        """alternate method for flushing the receive buffer"""
         # ensure RS232 buffer is empty
         try:
             # ensure exit of loop, not sure if the read buffer is even big
@@ -39,9 +137,28 @@ class Fluke_45(VisaResource):
         except IOError:
             pass  # emptied
 
-    def _measure_signal(self) -> float:
+    def write_resource(self, message: str, **kwargs) -> None:
         """
-        _measure_signal()
+        Fluke45 specific write_resource function
+        takes care of serial response if the device uses serial
+        """
+        super().write_resource(message, **kwargs)
+        if self._is_serial:
+            self._check_serial_response(message, self.read_resource())
+
+    def query_resource(self, message: str, **kwargs) -> str:
+        """
+        Fluke45 specific query_resource function
+        takes care of serial response if the device uses serial
+        """
+        response = super().query_resource(message, **kwargs)
+        if self._is_serial:
+            self._check_serial_response(message, self.read_resource())
+        return response
+
+    def fetch_data(self) -> float:
+        """
+        fetch_data()
 
         returns the value of the current measurement selected on the
         multimeter display
@@ -50,49 +167,96 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("VAL?")
-        _ = self.read_resource()  # to empty the buffer
 
-        return self.factor*float(response)
+        return self.factor * float(response)
 
-    def set_range(self, n: int, auto_range: bool = False) -> None:
+    def enable_cmd_emulation_mode(self) -> None:
+        """
+        enable_cmd_emulation_mode()
+
+        For use with a Fluke 8845A. Enables the Fluke 45 command set emulation
+        mode.
+        """
+        self.write_resource("L2")
+
+    def set_local(self):
+        """
+        set_local()
+
+        Set the DMM to local mode
+        """
+        if self._is_serial:
+            # there is a specific serial command
+            self.write_resource("LOCS")
+        else:
+            # use the GPIB method
+            super().set_local()
+
+    def _get_range_number(self, value, reverse_lookup=False):
+        mode = self.get_mode()
+        rate = self.get_rate()
+        for valid_modes, rates_list in self.ranges:
+            if mode not in valid_modes:
+                continue
+            for valid_rates, max_values in rates_list:
+                if rate not in valid_rates:
+                    continue
+                for range_, command in max_values:
+                    if value <= range_ and not reverse_lookup:
+                        return command
+                    elif command == value and reverse_lookup:
+                        return range_
+                raise ValueError(f"{value=} is greater than highest range")
+
+    def set_range(self, n: Union[int, float], auto_range: bool = False) -> None:
         """
         set_range(n, auto_range=False)
 
-        n: int, range mode to set
+        n: int|float, depends on value provided for legacy_ranges
         auto_range: bool, whether to enable autoranging (default is False)
 
         Set the current range setting used for measurements.
-            valid settings are the integers 1 through 7, meaning of the index
-            depends on which measurement is being performed.
-        if the auto_range flag is set to True the device will automaticly
+            If legacy_ranges==True then valid settings are the integers 1
+            through 7, and meaning of the index depends on which measurement
+            is being performed.
+            If legacy_ranges==False then the value of n should be the max
+            measurement value that is expected. The DMM will be set to a
+            range that is >= n.
+        if the auto_range flag is set to True the device will automatically
         determine which range to be in base on the signal level default is
         False.
         """
 
         if auto_range:
             self.write_resource("AUTO")
-            _ = self.read_resource()  # to empty the buffer
+            return
+
+        if not self._legacy_ranges:
+            n = self._get_range_number(n)
 
         if n in range(0, 7):
             self.write_resource(f"RANGE {n}")
-            _ = self.read_resource()  # to empty the buffer
         else:
             raise ValueError("Invalid range option, should be 1-7")
 
-    def get_range(self) -> int:
+    def get_range(self) -> Union[int, float]:
         """
         get_range()
 
         Retrieve the current range setting used for measurements.
-        Return value is an index from 1 to 7, meaning of the index depends
-        on which measurement is being performed.
+            If legacy_ranges==True then an integer 1 to 7 is returned,
+            and meaning of the index depends on which measurement
+            is being performed.
+            If legacy_ranges==False then the value returned is the max
+            measurement value for the current range.
 
-        returns: int
+        returns: int|float
         """
 
-        response = self.query_resource("RANGE1?")
-        _ = self.read_resource()  # to empty the buffer
-        return int(response)
+        n = int(self.query_resource("RANGE1?"))
+        if not self._legacy_ranges:
+            n = self._get_range_number(n, reverse_lookup=True)
+        return n
 
     def set_rate(self, rate: str) -> None:
         """
@@ -106,9 +270,9 @@ class Fluke_45(VisaResource):
         """
 
         rate = rate.upper()
-        if rate in {'S', 'M', 'F'}:
+        if rate in {"S", "M", "F"}:
             self.write_resource(f"RATE {rate}")
-            _ = self.read_resource()  # to empty the buffer
+
         else:
             raise ValueError("Invalid rate option, should be 'S','M', or 'F'")
 
@@ -121,7 +285,7 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("RATE?")
-        _ = self.read_resource()  # to empty the buffer
+
         return response
 
     def set_mode(self, mode: str) -> None:
@@ -139,11 +303,13 @@ class Fluke_45(VisaResource):
 
         mode = mode.upper()
         if mode in self.valid_modes:
-            self.write_resource(f"FUNC1 {mode}")
-            _ = self.read_resource()  # to empty the buffer
+            self.write_resource(f"{mode}")
+
         else:
-            raise ValueError("Invalid mode option, valid options are: "
-                             + f"{', '.join(self.valid_modes)}")
+            raise ValueError(
+                "Invalid mode option, valid options are: "
+                + f"{', '.join(self.valid_modes)}"
+            )
 
     def get_mode(self) -> str:
         """
@@ -156,7 +322,7 @@ class Fluke_45(VisaResource):
         """
 
         response = self.query_resource("FUNC1?")
-        _ = self.read_resource()  # to empty the buffer
+
         return response
 
     def measure_voltage(self) -> float:
@@ -171,9 +337,9 @@ class Fluke_45(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'VDC':
+        if self.get_mode() != "VDC":
             raise IOError("Multimeter is not configured to measure voltage")
-        return self._measure_signal()
+        return self.fetch_data()
 
     def measure_voltage_rms(self) -> float:
         """
@@ -187,9 +353,9 @@ class Fluke_45(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'VAC':
+        if self.get_mode() != "VAC":
             raise IOError("Multimeter is not configured to measure AC voltage")
-        return self._measure_signal()
+        return self.fetch_data()
 
     def measure_current(self) -> float:
         """
@@ -203,9 +369,9 @@ class Fluke_45(VisaResource):
         mode with the set_mode method.
         """
 
-        if self.get_mode() != 'ADC':
+        if self.get_mode() != "ADC":
             raise IOError("Multimeter is not configured to measure current")
-        return self._measure_signal()
+        return self.fetch_data()
 
     def measure_current_rms(self) -> float:
         """
@@ -219,9 +385,9 @@ class Fluke_45(VisaResource):
         mode with the set_mode method.
         """
 
-        if self.get_mode() != 'AAC':
+        if self.get_mode() != "AAC":
             raise IOError("Multimeter is not configured to measure AC current")
-        return self._measure_signal()
+        return self.fetch_data()
 
     def measure_resistance(self) -> float:
         """
@@ -235,9 +401,9 @@ class Fluke_45(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'OHMS':
+        if self.get_mode() != "OHMS":
             raise IOError("Multimeter is not configured to measure resistance")
-        return self._measure_signal()
+        return self.fetch_data()
 
     def measure_frequency(self) -> float:
         """
@@ -251,6 +417,56 @@ class Fluke_45(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'FREQ':
+        if self.get_mode() != "FREQ":
             raise IOError("Multimeter is not configured to measure frequency")
-        return self._measure_signal()
+        return self.fetch_data()
+
+    def set_trigger_source(self, trigger: str) -> None:
+        """
+        set_trigger_source(trigger)
+
+        Configure the meter trigger source
+
+        source (str): { INTernal or EXTernal }
+
+        Caution: if external trigger is configured and a read of the meter is
+        requested but no measurement is present, the remote interface will
+        crash/lockup and you will have to reboot the meter manually ¯\_(ツ)_/¯
+        """
+        trigger_type_num = 2 if "ext" in trigger.lower() else 1
+        self.write_resource(f"TRIGGER {trigger_type_num}")
+
+    def trigger(self) -> None:
+        """
+        trigger()
+
+        Send the trigger commmand
+        """
+        self.write_resource("*TRG")
+
+    def config(self, mode: str, rate: str, signal_range: Union[int, float]):
+        """
+        config(mode, rate, range_)
+
+        A one stop shop to configure the most common operating parameters
+
+        Args:
+            mode (str): type of measurement to be done
+                valid modes are 'AAC', 'ADC','VAC', 'VDC','OHMS', 'FREQ', 'CONT'
+                which correspond to AC current, DC current, AV voltage, DC voltage,
+                resistence, frequency, and continuity respectively (not case
+                sensitive)
+            rate (str): speed of sampling
+                valid options are 'S','M', or 'F' for slow, medium, and fast
+                respectively (not case sensitive)
+            signal_range: int|float, depends on value provided for legacy_ranges
+                If legacy_ranges==True then valid settings are the integers 1
+                through 7, and meaning of the index depends on which measurement
+                is being performed.
+                If legacy_ranges==False then the value of n should be the max
+                measurement value that is expected. The DMM will be set to a
+                range that is >= n.
+        """
+        self.set_mode(mode)
+        self.set_rate(rate)
+        self.set_range(signal_range)
