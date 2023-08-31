@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Tuple, Union
+import importlib
 
-import win32com.client
 
 API_LINK = "OmicronLab.VectorNetworkAnalysis.AutomationInterface"
 
@@ -16,7 +16,7 @@ class LevelUnit(Enum):
     Vrms = 2
 
 
-class Bode100():
+class Bode100:
     """
     Class for interfacing with the Bode100 network analyzer
 
@@ -25,12 +25,18 @@ class Bode100():
     """
 
     def __init__(self) -> None:
-
         self._measurement = None
 
         try:
-            self._automation_interface = win32com.client.Dispatch(API_LINK)
-        except win32com.client.pywintypes.com_error as error:
+            self.win32com_client = importlib.import_module("win32com.client")
+        except ImportError as exc:
+            raise ImportError(
+                "win32com package is a required dependency of Bode100"
+            ) from exc
+
+        try:
+            self._automation_interface = self.win32com_client.Dispatch(API_LINK)
+        except self.win32com_client.pywintypes.com_error as error:
             raise ConnectionError(f"Could not load device API: {error}")
 
         if not self._automation_interface.ScanForFreeDevices():
@@ -38,30 +44,28 @@ class Bode100():
 
         try:
             self._connection = self._automation_interface.Connect()
-        except win32com.client.pywintypes.com_error as error:
+        except self.win32com_client.pywintypes.com_error as error:
             self._connection = None
-            raise ConnectionError("Unable to connect to an availble device",
-                                  error)
+            raise ConnectionError("Unable to connect to an availble device", error)
 
         self.serial_number = self._connection.serialNumber
 
     def __del__(self) -> None:
-
         self.clear_measurement()
         self.disconnect()
         self._automation_interface.Dispose()
 
     def reconnect(self) -> None:
-
         if self._connection is not None:
-            raise IOError('Device is already connected')
+            raise IOError("Device is already connected")
 
-        self._connection = self._automation_interface.ConnectWithSerialNumber(self.serial_number)
+        self._connection = self._automation_interface.ConnectWithSerialNumber(
+            self.serial_number
+        )
 
     def disconnect(self) -> None:
-
         if self._connection is None:
-            raise IOError('Cannot disconnect and nonexistant connection')
+            raise IOError("Cannot disconnect and nonexistant connection")
 
         self._connection.ShutDown()
         self._connection = None
@@ -76,12 +80,12 @@ class Bode100():
         CALIBRATION_MANDATORY = 5
 
     class _ExecutionStateDescriptions(Enum):
-        OK = 'Measurement successfully completed.'
-        OVERLOAD = 'Overload detected. Check OverloadLevel.'
-        ERROR = 'Unknown error occurred during measurement. Check the Log for further information.'
-        DEVICE_LOST = 'Device connection lost during measurement.'
-        CANCELLED = 'Execution stopped by user.'
-        CALIBRATION_MANDATORY = 'Calibration mandatory for this measurement mode.'
+        OK = "Measurement successfully completed."
+        OVERLOAD = "Overload detected. Check OverloadLevel."
+        ERROR = "Unknown error occurred during measurement. Check the Log for further information."
+        DEVICE_LOST = "Device connection lost during measurement."
+        CANCELLED = "Execution stopped by user."
+        CALIBRATION_MANDATORY = "Calibration mandatory for this measurement mode."
 
     # not made as a subclass so it can be reference within GainPhaseConfig
     LevelUnit = LevelUnit
@@ -95,7 +99,9 @@ class Bode100():
         use_50ohm_termination_channel1: bool = False
         use_50ohm_termination_channel2: bool = False
         receiver_bandwidth: int = 1000  # Hz
-        dut_settling_time: float = 0.0  # time in sec (converted to ms in class for the API)
+        dut_settling_time: float = (
+            0.0  # time in sec (converted to ms in class for the API)
+        )
         start_frequency: float = 1000.0  # Hz
         stop_frequency: float = 1e6  # Hz
         number_of_points: int = 401
@@ -103,9 +109,7 @@ class Bode100():
         level_unit: LevelUnit = LevelUnit.Vpp
         source_level: Union[float, Tuple[Tuple[float, float]]] = 0.1
 
-    def configure_gain_phase_measurement(self,
-                                         config: GainPhaseConfig) -> None:
-
+    def configure_gain_phase_measurement(self, config: GainPhaseConfig) -> None:
         # check for connection and create measurement object
         if self._connection is None:
             self._measurement = None
@@ -119,32 +123,42 @@ class Bode100():
         self._measurement.Attenuation.Channel1 = config.attenuation_channel1
         self._measurement.Attenuation.Channel2 = config.attenuation_channel2
         #   API Enum value for 50 Ohm = 0, 1 = 1 MOhm
-        self._measurement.TerminationChannel1 = 0 if config.use_50ohm_termination_channel1 else 1
-        self._measurement.TerminationChannel2 = 0 if config.use_50ohm_termination_channel2 else 1
+        self._measurement.TerminationChannel1 = (
+            0 if config.use_50ohm_termination_channel1 else 1
+        )
+        self._measurement.TerminationChannel2 = (
+            0 if config.use_50ohm_termination_channel2 else 1
+        )
 
         # configure reciever
-        self._measurement.ReceiverBandwidth = config.receiver_bandwidth*1e3  # convert from Hz to mHz
-        self._measurement.DutSettlingTime = config.dut_settling_time*1e3  # convert from sec to ms
+        self._measurement.ReceiverBandwidth = (
+            config.receiver_bandwidth * 1e3
+        )  # convert from Hz to mHz
+        self._measurement.DutSettlingTime = (
+            config.dut_settling_time * 1e3
+        )  # convert from sec to ms
 
         # configure signal injection
         if isinstance(config.source_level, (tuple, list)):  # shaped level
-
             shaping_interface = self._measurement.Shaping.SourceShaping
             shaping_interface.IsEnabled = True
             shaping_interface.LevelUnit = config.level_unit.value
 
             shaping_interface.Clear()  # remove any existing settings
-            for (freq, level) in config.source_level:
+            for freq, level in config.source_level:
                 shaping_interface.Add(freq, level)
 
         else:  # fixed level
-            self._measurement.SetSourceLevel(config.source_level, config.level_unit.value)
+            self._measurement.SetSourceLevel(
+                config.source_level, config.level_unit.value
+            )
 
-        self._measurement.ConfigureSweep(config.start_frequency,
-                                         config.stop_frequency,
-                                         config.number_of_points,
-                                         1 if config.use_log_spacing else 0  # called "SweepMode" in API
-                                         )
+        self._measurement.ConfigureSweep(
+            config.start_frequency,
+            config.stop_frequency,
+            config.number_of_points,
+            1 if config.use_log_spacing else 0,  # called "SweepMode" in API
+        )
         #   SweepMode Enum: 0=Linearspacing, 1=LogSpacing, 2=Custom points (not implemented here)
 
     def clear_measurement(self) -> None:
@@ -156,41 +170,41 @@ class Bode100():
     @property
     def measurement_duration(self) -> float:
         if self._measurement is None:
-            return float('nan')
+            return float("nan")
         return self._measurement.CalculateMeasurementTime()
 
     def execute_measurement(self) -> None:
-
         if self._measurement is None:
-            raise ValueError('No measurement configured')
+            raise ValueError("No measurement configured")
 
         try:
             status_code = self._measurement.ExecuteMeasurement()
-        except win32com.client.pywintypes.com_error as error:
+        except self.win32com_client.pywintypes.com_error as error:
             self.stop_execution()
             raise IOError(error.excepinfo[2])
 
         state = self._ExecutionState(status_code)
 
         if state != self._ExecutionState.OK:
-            raise Exception(state.name,
-                            self._ExecutionStateDescriptions[state.name].value)
+            raise Exception(
+                state.name, self._ExecutionStateDescriptions[state.name].value
+            )
 
     def stop_execution(self) -> None:
         if self._measurement is not None:
             self._measurement.StopCurrentExecution()
 
-    def read_gain_phase_results(self,
-                                use_db: bool = True, use_deg: bool = True,
-                                wrap_phase: bool = True) -> GainPhaseResult:
+    def read_gain_phase_results(
+        self, use_db: bool = True, use_deg: bool = True, wrap_phase: bool = True
+    ) -> GainPhaseResult:
         # Error check
         if self._measurement is None:
-            raise ValueError('No measurement configured')
+            raise ValueError("No measurement configured")
 
         results = self._measurement.Results
 
         if results.Count == 0:
-            raise ValueError('No measurement executed')
+            raise ValueError("No measurement executed")
 
         # get data
         freq = results.MeasurementFrequencies
