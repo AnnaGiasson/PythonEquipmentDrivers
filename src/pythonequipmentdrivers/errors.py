@@ -1,4 +1,3 @@
-
 class UnsupportedResourceError(Exception):
     def __init__(self, message="Device is not supported", *args):
         super().__init__(message, *args)

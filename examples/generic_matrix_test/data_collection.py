@@ -67,24 +67,23 @@ class Test_Environment:
             in "equipment_setup". Defaults to False.
     """
 
-    def __init__(self, config: Union[str, Path, dict],
-                 init: bool = False) -> None:
+    def __init__(self, config: Union[str, Path, dict], init: bool = False) -> None:
 
         self.equipment = ped.connect_resources(config=config, init=init)
 
     def set_operating_point(self, **op_point) -> None:
 
-        if op_point.get('v_dr', False) is not None:
-            self.set_v_aux(op_point.get('v_dr'))
+        if op_point.get("v_dr", False) is not None:
+            self.set_v_aux(op_point.get("v_dr"))
 
-        if op_point.get('v_out', False) is not None:
-            self.set_v_out(op_point.get('v_out'))
+        if op_point.get("v_out", False) is not None:
+            self.set_v_out(op_point.get("v_out"))
 
-        if op_point.get('v_in', False) is not None:
-            self.set_v_in(op_point.get('v_in'))
+        if op_point.get("v_in", False) is not None:
+            self.set_v_in(op_point.get("v_in"))
 
-        if op_point.get('i_out', False) is not None:
-            self.set_i_out(op_point.get('i_out'))
+        if op_point.get("i_out", False) is not None:
+            self.set_i_out(op_point.get("i_out"))
 
     def set_v_in(self, voltage, **kwargs) -> None:
         """
@@ -126,7 +125,7 @@ class Test_Environment:
         """
 
         # more accurate equation determined through regression
-        return min([max([102.71584607*v_ref - 32.04081548, 2.0]), 98.0])
+        return min([max([102.71584607 * v_ref - 32.04081548, 2.0]), 98.0])
 
     def set_v_out(self, voltage: float, **kwargs) -> None:
         """
@@ -149,7 +148,7 @@ class Test_Environment:
         """
 
         func_gen = self.equipment.function_gen
-        channel = kwargs.get('v_ref_chan', 2)
+        channel = kwargs.get("v_ref_chan", 2)
 
         # set levels
         v_drive = self.__onsemi_v_ref_to_dc(voltage)
@@ -187,13 +186,13 @@ class Test_Environment:
         """
 
         func_gen = self.equipment.function_gen
-        channel = kwargs.get('i_drive_chan', 1)
+        channel = kwargs.get("i_drive_chan", 1)
 
         # set levels
-        func_gen.set_voltage_high(current/self.g_i_drive, source=channel)
+        func_gen.set_voltage_high(current / self.g_i_drive, source=channel)
 
         if kwargs.get("current_low", False):
-            v_drive = kwargs.get("current_low")/self.g_i_drive
+            v_drive = kwargs.get("current_low") / self.g_i_drive
             func_gen.set_voltage_low(v_drive, source=channel)
 
         # enable/disable
@@ -244,9 +243,9 @@ class Test_Environment:
         self.set_v_aux(enable=True)
         sleep(0.5)  # give time for controller to wake up
 
-        self.set_v_out(kwargs.get('v_out', 0.8), enable=True)
-        self.set_i_out(kwargs.get('i_out', 10), current_low=0, enable=True)
-        self.set_v_in(kwargs.get('v_in', 40), enable=True)
+        self.set_v_out(kwargs.get("v_out", 0.8), enable=True)
+        self.set_i_out(kwargs.get("i_out", 10), current_low=0, enable=True)
+        self.set_v_in(kwargs.get("v_in", 40), enable=True)
 
         sleep(0.5)  # let DUT boot
 
@@ -267,27 +266,27 @@ class Test_Environment:
 
         scope = self.equipment.oscilloscope
 
-        if op_point.get('v_out', False):
+        if op_point.get("v_out", False):
 
-            v_o = op_point['v_out']
+            v_o = op_point["v_out"]
             k_ratio = 48  # ratio between the intermidiate and output voltages
 
             scope.set_channel_offset(3, -v_o)
-            scope.set_channel_offset(4, -v_o*k_ratio)
+            scope.set_channel_offset(4, -v_o * k_ratio)
 
-        if op_point.get('v_in', False):
-            scope.set_channel_offset(1, -op_point['v_in'])
+        if op_point.get("v_in", False):
+            scope.set_channel_offset(1, -op_point["v_in"])
 
-        if op_point.get('i_out', False):
+        if op_point.get("i_out", False):
 
-            i_o = op_point['i_out']
+            i_o = op_point["i_out"]
 
-            scope.set_channel_scale(5, (i_o/self.g_i_mon)/7)
+            scope.set_channel_scale(5, (i_o / self.g_i_mon) / 7)
             scope.set_channel_offset(5, -4, use_divisions=True)
-            scope.set_channel_scale(7, i_o/self.g_i_drive/7)
+            scope.set_channel_scale(7, i_o / self.g_i_drive / 7)
             scope.set_channel_offset(7, -4, use_divisions=True)
 
-            scope.set_trigger_level(0.5*i_o/self.g_i_drive)
+            scope.set_trigger_level(0.5 * i_o / self.g_i_drive)
 
     def collect_data(self, **kwargs) -> Tuple[float]:
 
@@ -299,45 +298,43 @@ class Test_Environment:
         sleep(2)  # scope arming
         self.equipment.function_gen.trigger()
 
-        sleep(kwargs.get('meas_delay', 0))
+        sleep(kwargs.get("meas_delay", 0))
 
         # get data & scope image
 
         datum = self.equipment.oscilloscope.get_measure_data(*range(1, 13))
 
-        image_path = kwargs.get('image_name', 'capture')
+        image_path = kwargs.get("image_name", "capture")
         self.equipment.oscilloscope.get_image(image_path)
 
         return datum
 
 
-class User_Feedback():
+class User_Feedback:
 
     @staticmethod
     def initialization(directory, images, raw_data) -> None:
 
-        print('Test environment initialized')
+        print("Test environment initialized")
 
-        print(f'Created test directory: {directory}')
+        print(f"Created test directory: {directory}")
         if images:
-            print("Saving images\n"
-                  f"\tdirectory: {Path(directory) / 'images'}")
+            print("Saving images\n" f"\tdirectory: {Path(directory) / 'images'}")
         if raw_data:
-            print("Saving raw data\n"
-                  f"\tdirectory: {Path(directory) / 'raw_data'}")
-        print('')
+            print("Saving raw data\n" f"\tdirectory: {Path(directory) / 'raw_data'}")
+        print("")
 
     @staticmethod
     def test_start() -> None:
-        print('\n***** Starting Test *****\n')
+        print("\n***** Starting Test *****\n")
 
     @staticmethod
     def test_progress(**op_point) -> None:
 
-        print('Testing Op point ', end='')
+        print("Testing Op point ", end="")
         for key, val in op_point.items():
-            print(f'|  {key} = {val}  |', end='')
-        print('')
+            print(f"|  {key} = {val}  |", end="")
+        print("")
 
     @staticmethod
     def test_finish() -> None:
@@ -345,54 +342,59 @@ class User_Feedback():
 
     @staticmethod
     def test_error(error) -> None:
-        print('\n!!!!!!!!!!!!!!!!!!!!!!!! '
-              'An error has occured which interrupted testing'
-              ' !!!!!!!!!!!!!!!!!!!!!!!!\n')
-        print(f'Error: {error}\n')
+        print(
+            "\n!!!!!!!!!!!!!!!!!!!!!!!! "
+            "An error has occured which interrupted testing"
+            " !!!!!!!!!!!!!!!!!!!!!!!!\n"
+        )
+        print(f"Error: {error}\n")
 
     @staticmethod
     def test_data_logged(file_name: Path) -> None:
-        print('\tMeasurement data saved to file.')
-        print(f'\tScope image saved to file: {Path(file_name).name}')
+        print("\tMeasurement data saved to file.")
+        print(f"\tScope image saved to file: {Path(file_name).name}")
 
     @staticmethod
     def idling() -> None:
-        print('\tCooling Down .....\n')
+        print("\tCooling Down .....\n")
 
 
-class Matrix_Test():
+class Matrix_Test:
 
-    def __init__(self, test_env: Test_Environment,
-                 test_config, **kwargs) -> None:
+    def __init__(self, test_env: Test_Environment, test_config, **kwargs) -> None:
 
         # Using MVC architecture, this class is the Controller
-        self.test_env = test_env        # Model
+        self.test_env = test_env  # Model
         self.user_fb = User_Feedback()  # View
 
         self.read_test_config(test_config)  # parameters that define the test
 
         # set up file structure
-        self.base_directory = kwargs.get("base_directory", Path('.').resolve())
+        self.base_directory = kwargs.get("base_directory", Path(".").resolve())
 
-        save_images = kwargs.get('images', False)
-        save_raw_data = kwargs.get('raw_data', False)
-        self.test_dir = ped.utility.create_test_log(self.base_directory,
-                                                    images=save_images,
-                                                    raw_data=save_raw_data,
-                                                    **self.test_config)
+        save_images = kwargs.get("images", False)
+        save_raw_data = kwargs.get("raw_data", False)
+        self.test_dir = ped.utility.create_test_log(
+            self.base_directory,
+            images=save_images,
+            raw_data=save_raw_data,
+            **self.test_config,
+        )
 
         self.user_fb.initialization(self.test_dir, save_images, save_raw_data)
 
         # create data table / add header row
-        self.data_file = kwargs.get('file_name', 'data')
+        self.data_file = kwargs.get("file_name", "data")
         if self.test_config.get("data_columns", False):
-            ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
-                                   *self.test_config["data_columns"],
-                                   init=True)
+            ped.utility.log_to_csv(
+                self.test_dir.joinpath(self.data_file),
+                *self.test_config["data_columns"],
+                init=True,
+            )
 
     def read_test_config(self, test_config: Union[str, Path]) -> None:
         if isinstance(test_config, (str, Path)):
-            with open(test_config, 'r') as f:
+            with open(test_config, "r") as f:
                 self.test_config = json.load(f)
         elif isinstance(test_config, dict):
             self.test_config = test_config
@@ -407,45 +409,46 @@ class Matrix_Test():
         try:
 
             # temp/reused variables
-            v_out_list = self.test_config.get('v_out_list')
-            v_in_list = self.test_config.get('v_in_list')
-            i_out_list = self.test_config.get('i_out_list')
+            v_out_list = self.test_config.get("v_out_list")
+            v_in_list = self.test_config.get("v_in_list")
+            i_out_list = self.test_config.get("i_out_list")
             i_out_max = max(i_out_list)
 
-            meas_delay = self.test_config.get('meas_delay', 0.5)
+            meas_delay = self.test_config.get("meas_delay", 0.5)
 
             # begin test
             self.user_fb.test_start()
-            self.test_env.initialize(v_in=v_in_list[0],
-                                     v_out=v_out_list[0],
-                                     i_out=i_out_list[0])
+            self.test_env.initialize(
+                v_in=v_in_list[0], v_out=v_out_list[0], i_out=i_out_list[0]
+            )
 
             # main test loop
-            for (v_o, v_i, i_o) in product(v_out_list, v_in_list, i_out_list):
+            for v_o, v_i, i_o in product(v_out_list, v_in_list, i_out_list):
 
                 # prepare setup
                 self.user_fb.test_progress(v_out=v_o, v_in=v_i, i_out=i_o)
-                self.test_env.set_operating_point(v_out=v_o, v_in=v_i,
-                                                  i_out=i_o)
+                self.test_env.set_operating_point(v_out=v_o, v_in=v_i, i_out=i_o)
 
                 self.test_env.adjust_scope(v_out=v_o, v_in=v_i, i_out=i_o)
 
                 # get data
-                fpath = fname_template.format(int(1e3*v_o), int(v_i), int(i_o))
-                fpath = self.test_dir / 'images' / fpath
+                fpath = fname_template.format(int(1e3 * v_o), int(v_i), int(i_o))
+                fpath = self.test_dir / "images" / fpath
 
-                datum = self.test_env.collect_data(meas_delay=meas_delay,
-                                                   image_name=fpath)
+                datum = self.test_env.collect_data(
+                    meas_delay=meas_delay, image_name=fpath
+                )
 
                 # save data to file
-                ped.utility.log_to_csv(self.test_dir.joinpath(self.data_file),
-                                       v_o, v_i, i_o, *datum)
+                ped.utility.log_to_csv(
+                    self.test_dir.joinpath(self.data_file), v_o, v_i, i_o, *datum
+                )
                 self.user_fb.test_data_logged(fpath)
 
                 # prepare for next iteration
                 self.test_env.idle()
                 self.user_fb.idling()
-                sleep(20*i_o/i_out_max)  # cool down after full load
+                sleep(20 * i_o / i_out_max)  # cool down after full load
 
         except ped.VisaIOError as error:
             self.user_fb.test_error(error)
@@ -459,6 +462,6 @@ class Matrix_Test():
 
 if __name__ == "__main__":
     cwd = Path(__file__).parent
-    env = Test_Environment(config=cwd / 'equipment.config', init=True)
-    test = Matrix_Test(env, test_config=cwd/'test_configuration.json')
+    env = Test_Environment(config=cwd / "equipment.config", init=True)
+    test = Matrix_Test(env, test_config=cwd / "test_configuration.json")
     test.run()

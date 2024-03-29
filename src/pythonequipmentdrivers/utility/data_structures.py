@@ -20,7 +20,7 @@ class AttrDict(dict):
         return super().__setitem__(__k, v)
 
     def __setattr__(self, __name: str, __value: Any) -> None:
-        #self[__name] = __value
+        # self[__name] = __value
         self.__setitem__(__name, __value)
 
     def __getattr__(self, __name: str) -> None:

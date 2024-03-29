@@ -23,53 +23,73 @@ class Keysight_34461A(HP_34401A):
     https://literature.cdn.keysight.com/litweb/pdf/34460-90901.pdf
     """
 
-    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                    '0.1', '1', '10', '100', '1000'}
+    valid_ranges = {"AUTO", "MIN", "MAX", "DEF", "0.1", "1", "10", "100", "1000"}
 
-    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '0.0001', '0.001', '0.01', '0.1', '1', '3'}
+    valid_cranges = {
+        "AUTO",
+        "MIN",
+        "MAX",
+        "DEF",
+        "0.0001",
+        "0.001",
+        "0.01",
+        "0.1",
+        "1",
+        "3",
+    }
 
-    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+    valid_Rranges = {
+        "AUTO",
+        "MIN",
+        "MAX",
+        "DEF",
+        "100",
+        "1E3",
+        "10E3",
+        "100E3",
+        "1E6",
+        "10E6",
+        "100E6",
+    }
 
     def set_display_text(self, text: str) -> None:
         self.write_resource(f'DISP:TEXT "{text}"')
 
     def get_display_text(self) -> str:
-        response = self.query_resource('DISP:TEXT?')
-        return response.replace('"', '')
+        response = self.query_resource("DISP:TEXT?")
+        return response.replace('"', "")
 
     def clear_display_text(self) -> None:
         self.set_display_text("")
 
     def set_display_state(self, state: bool) -> None:
         if state:
-            self.write_resource('DISP ON')
+            self.write_resource("DISP ON")
         else:
-            self.write_resource('DISP OFF')
+            self.write_resource("DISP OFF")
 
     def get_display_state(self) -> bool:
-        response = self.query_resource('DISP?')
+        response = self.query_resource("DISP?")
         return bool(int(response))
 
     def set_display_mode(self, mode: str) -> None:
 
         mode = str(mode).upper()
-        if mode not in {'NUM', 'HIST', 'TCH', 'MET'}:
+        if mode not in {"NUM", "HIST", "TCH", "MET"}:
             raise ValueError(f'Invalid mode for arg "mode" ({mode})')
 
-        self.write_resource(f'DISP:VIEW {mode}')
+        self.write_resource(f"DISP:VIEW {mode}")
 
     def get_display_mode(self) -> str:
-        response = self.query_resource('DISP:VIEW?')
+        response = self.query_resource("DISP:VIEW?")
         return response
 
     def set_label_text(self, label: str) -> None:
         self.write_resource(f'SYSTEM:LABEL "{label}"')
 
     def get_label_text(self) -> str:
-        response = self.query_resource('SYSTEM:LABEL?')
-        return response.replace('"', '')
+        response = self.query_resource("SYSTEM:LABEL?")
+        return response.replace('"', "")
 
     def clear_label_text(self) -> None:
-        self.set_label_text('')
+        self.set_label_text("")

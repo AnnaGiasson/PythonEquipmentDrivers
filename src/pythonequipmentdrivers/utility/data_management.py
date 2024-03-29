@@ -5,8 +5,7 @@ from pathlib import Path
 from time import asctime, strftime
 from typing import Any, Dict, Iterable, List, Optional
 
-__all__ = ("log_to_csv", "dump_data", "dump_array_data", "create_test_log",
-           "Logger")
+__all__ = ("log_to_csv", "dump_data", "dump_array_data", "create_test_log", "Logger")
 
 
 def log_to_csv(file_path: Path, *data: Any, init: bool = False) -> None:
@@ -67,13 +66,13 @@ def log_to_csv(file_path: Path, *data: Any, init: bool = False) -> None:
 
     file_path = Path(file_path)
     # add/correct file extension
-    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+    file_path_ext = file_path.parent / f"{file_path.stem}.csv"
 
     if init:
         file_path_ext.touch()  # create file
 
-    with open(file_path_ext, 'w' if init else 'a') as f:
-        print(*data, sep=',', file=f)
+    with open(file_path_ext, "w" if init else "a") as f:
+        print(*data, sep=",", file=f)
 
 
 def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
@@ -111,19 +110,21 @@ def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
     file_path = Path(file_path)
 
     # add/correct file extension
-    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+    file_path_ext = file_path.parent / f"{file_path.stem}.csv"
     file_path_ext.touch()  # create file
 
-    with open(file_path_ext, 'w') as f:
+    with open(file_path_ext, "w") as f:
 
         for item in data:
-            print(*item, sep=',', file=f)
+            print(*item, sep=",", file=f)
 
 
-def dump_array_data(file_path: Path,
-                    data: Iterable[Iterable[any]],
-                    init: bool = False,
-                    fill_value: Optional[str] = None) -> None:
+def dump_array_data(
+    file_path: Path,
+    data: Iterable[Iterable[any]],
+    init: bool = False,
+    fill_value: Optional[str] = None,
+) -> None:
     """
     dump_array_data(file_path, data, init=False, longest=False,
     fill_value=None)
@@ -195,15 +196,15 @@ def dump_array_data(file_path: Path,
     """
 
     file_path = Path(file_path)
-    file_path_ext = file_path.parent / f'{file_path.stem}.csv'
+    file_path_ext = file_path.parent / f"{file_path.stem}.csv"
 
     if fill_value is not None:  # create generator
         rows = zip_longest(*data, fillvalue=fill_value)
     else:
         rows = zip(*data)
 
-    with open(file_path_ext, 'w' if init else 'a') as f:
-        print(*rows, sep=',', end='\n', file=f)
+    with open(file_path_ext, "w" if init else "a") as f:
+        print(*rows, sep=",", end="\n", file=f)
 
 
 def create_test_log(base_dir, images=False, raw_data=False, **test_info):
@@ -272,27 +273,31 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
         Path-like object: The path to the newly created directory structure.
     """
 
-    test_name = test_info.get('test_name', 'test_data')
+    test_name = test_info.get("test_name", "test_data")
     file_t_stamp = strftime(r"%Y%m%d%H%M%S")
-    test_info['run_time'] = strftime(r"%Y/%m/%d %H:%M:%S")
+    test_info["run_time"] = strftime(r"%Y/%m/%d %H:%M:%S")
 
     # make base directory for test log
-    test_dir = Path(base_dir) / f'{test_name}_{file_t_stamp}'
+    test_dir = Path(base_dir) / f"{test_name}_{file_t_stamp}"
     test_dir.mkdir(exist_ok=False)  # arg prevents accidently overwriting
 
     # optional sub-directories for images or raw data files
     if images:
-        (test_dir / 'images').mkdir()
+        (test_dir / "images").mkdir()
     if raw_data:
-        (test_dir / 'raw_data').mkdir()
+        (test_dir / "raw_data").mkdir()
 
     # dump config dictionary to file if kwargs were passed
     if test_info:
-        with open(test_dir / f'{test_name}_{file_t_stamp}.json', 'w') as f:
-            json.dump(test_info, f, indent=4,
-                      check_circular=True,
-                      allow_nan=True,
-                      sort_keys=False)
+        with open(test_dir / f"{test_name}_{file_t_stamp}.json", "w") as f:
+            json.dump(
+                test_info,
+                f,
+                indent=4,
+                check_circular=True,
+                allow_nan=True,
+                sort_keys=False,
+            )
 
     return test_dir  # return newly created directory
 
@@ -300,6 +305,7 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
 @dataclass
 class LoggerFileDirectory:
     """file directory structure object for a Logger instance"""
+
     root_dir: Path
     message_log_path: Path = field(init=False)
     data_log_path: Path = field(init=False)
@@ -310,21 +316,24 @@ class LoggerFileDirectory:
     def __post_init__(self):
         self.root_dir = Path(self.root_dir).resolve()
 
-        self.message_log_path = self.root_dir.joinpath('message_log.txt')
-        self.data_log_path = self.root_dir.joinpath('data.csv')
-        self.image_dir = self.root_dir.joinpath('images')
-        self.raw_data_dir = self.root_dir.joinpath('raw_data')
-        self.metadata_path = self.root_dir.joinpath('metadata.json')
+        self.message_log_path = self.root_dir.joinpath("message_log.txt")
+        self.data_log_path = self.root_dir.joinpath("data.csv")
+        self.image_dir = self.root_dir.joinpath("images")
+        self.raw_data_dir = self.root_dir.joinpath("raw_data")
+        self.metadata_path = self.root_dir.joinpath("metadata.json")
 
 
 class Logger:
 
-    def __init__(self, root_dir: Path,
-                 print_messages: bool = True,
-                 log_table_data: bool = False,
-                 log_images: bool = False,
-                 log_raw_data: bool = False,
-                 **metadata) -> None:
+    def __init__(
+        self,
+        root_dir: Path,
+        print_messages: bool = True,
+        log_table_data: bool = False,
+        log_images: bool = False,
+        log_raw_data: bool = False,
+        **metadata,
+    ) -> None:
         """
         Creates a file logging object that can log information to file while
         also printing it to screen (optional)
@@ -364,37 +373,40 @@ class Logger:
 
         if self._is_existing_log_present():
             if not self._can_resume_log():
-                raise Exception('Logging session can only be resumed if the '
-                                'same directory structure is used')
+                raise Exception(
+                    "Logging session can only be resumed if the "
+                    "same directory structure is used"
+                )
 
-            messages.append(f'({asctime()}) Resuming existing logging session')
+            messages.append(f"({asctime()}) Resuming existing logging session")
         else:
             parent_dir = self.file_directory.root_dir.parent
             self.file_directory.message_log_path.touch(exist_ok=False)
             messages.append(
-                f'({asctime()}) Message Log Created\n\t'
-                f'{self.file_directory.message_log_path.relative_to(parent_dir)}')
+                f"({asctime()}) Message Log Created\n\t"
+                f"{self.file_directory.message_log_path.relative_to(parent_dir)}"
+            )
 
             if log_table_data:
                 self.file_directory.data_log_path.touch(exist_ok=False)
                 messages.append(
-                    'Tabular data log created Log Created: \n\t'
-                    f'{self.file_directory.data_log_path.relative_to(parent_dir)}'
-                    )
+                    "Tabular data log created Log Created: \n\t"
+                    f"{self.file_directory.data_log_path.relative_to(parent_dir)}"
+                )
 
             if log_images:
                 self.file_directory.image_dir.mkdir(exist_ok=False)
                 messages.append(
-                    'Image subdirectory created: \n\t'
-                    f'{self.file_directory.image_dir.relative_to(parent_dir)}'
-                    )
+                    "Image subdirectory created: \n\t"
+                    f"{self.file_directory.image_dir.relative_to(parent_dir)}"
+                )
 
             if log_raw_data:
                 self.file_directory.raw_data_dir.mkdir(exist_ok=False)
                 messages.append(
-                    'Raw Data subdirectory created: \n\t'
-                    f'{self.file_directory.raw_data_dir.relative_to(parent_dir)}'
-                    )
+                    "Raw Data subdirectory created: \n\t"
+                    f"{self.file_directory.raw_data_dir.relative_to(parent_dir)}"
+                )
 
         if metadata:
             self.log_metadata(**metadata)
@@ -402,7 +414,7 @@ class Logger:
         self.log_message(*messages)
 
     def __del__(self) -> None:
-        self.log_message(f'({asctime()}) Message Log Closed')
+        self.log_message(f"({asctime()}) Message Log Closed")
 
     def _can_resume_log(self) -> bool:
         """
@@ -415,7 +427,7 @@ class Logger:
         criteria = (
             self.log_table_data ^ self.file_directory.data_log_path.exists(),
             self.log_images ^ self.file_directory.image_dir.exists(),
-            self.log_raw_data ^ self.file_directory.raw_data_dir.exists()
+            self.log_raw_data ^ self.file_directory.raw_data_dir.exists(),
         )
 
         can_resume = not any(criteria)
@@ -435,19 +447,21 @@ class Logger:
         is not of type str it will be cast to str before writing to file.
         """
 
-        with open(self.file_directory.message_log_path, 'a') as file:
-            print(*messages, sep='\n', end='\n', file=file)
+        with open(self.file_directory.message_log_path, "a") as file:
+            print(*messages, sep="\n", end="\n", file=file)
 
         if self.print_messages:
-            print(*messages, sep='\n')
+            print(*messages, sep="\n")
 
     def log_data(self, *data: Any) -> None:
         """logs an arbitrary number of arguments to a new row in a csv file"""
 
         if not self.log_table_data:
-            message = ('Attempted to log data to non-existing file. '
-                       'Configure logger with "log_table_data" when '
-                       'instantiating to log data')
+            message = (
+                "Attempted to log data to non-existing file. "
+                'Configure logger with "log_table_data" when '
+                "instantiating to log data"
+            )
             self.log_message(message)
             raise IOError(message)
 
@@ -462,14 +476,20 @@ class Logger:
             existing_metadata[key] = value
 
         # save to file
-        with open(self.file_directory.metadata_path, 'w') as file:
-            json.dump(existing_metadata, file, indent=4, check_circular=True,
-                      allow_nan=True, sort_keys=False)
+        with open(self.file_directory.metadata_path, "w") as file:
+            json.dump(
+                existing_metadata,
+                file,
+                indent=4,
+                check_circular=True,
+                allow_nan=True,
+                sort_keys=False,
+            )
 
     def get_metadata(self) -> Dict[str, Any]:
         if not self.file_directory.metadata_path.exists():
             return dict()
 
-        with open(self.file_directory.metadata_path, 'r') as file:
+        with open(self.file_directory.metadata_path, "r") as file:
             metadata = json.load(file)
         return metadata
