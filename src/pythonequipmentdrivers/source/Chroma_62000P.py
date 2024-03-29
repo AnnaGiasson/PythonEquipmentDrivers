@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Chroma_62000P(VisaResource):
@@ -34,8 +34,8 @@ class Chroma_62000P(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.query_resource("CONF:OUTP?").rstrip('\n')
-        return ("ON" in response)
+        response = self.query_resource("CONF:OUTP?").rstrip("\n")
+        return "ON" in response
 
     def on(self) -> None:
         """
@@ -179,7 +179,7 @@ class Chroma_62000P(VisaResource):
 
         """
 
-        self.write_resource(f'SOUR:VOLT:LIM:HIGH {v_limit}')
+        self.write_resource(f"SOUR:VOLT:LIM:HIGH {v_limit}")
 
     def get_voltage_limit(self) -> float:
         """
@@ -192,7 +192,7 @@ class Chroma_62000P(VisaResource):
             v_limit (float): voltage limit in Vdc
         """
 
-        response = self.query_resource('SOUR:VOLT:LIM:HIGH?')
+        response = self.query_resource("SOUR:VOLT:LIM:HIGH?")
         return float(response)
 
     def measure_voltage(self) -> float:
@@ -270,15 +270,28 @@ class Chroma_62000P(VisaResource):
 
         # encoded as a bit mask, elements in this tuple represent the meaning
         # of each bit with the tuple index representing the bit weight.
-        message_responses = ('OVP', 'OCP', 'OPP', 'Remote_Inhibit',
-                             'OTP', 'Fan_Lock', 'Sense_Fault', 'Series_Fault',
-                             'Bus_OVP', 'AC_Fault', 'Fold_Back_CV_to_CC',
-                             'Fold_Back_CC_to_CV', 'Reserved', 'Reserved',
-                             'Reserved', 'Reserved')
+        message_responses = (
+            "OVP",
+            "OCP",
+            "OPP",
+            "Remote_Inhibit",
+            "OTP",
+            "Fan_Lock",
+            "Sense_Fault",
+            "Series_Fault",
+            "Bus_OVP",
+            "AC_Fault",
+            "Fold_Back_CV_to_CC",
+            "Fold_Back_CC_to_CV",
+            "Reserved",
+            "Reserved",
+            "Reserved",
+            "Reserved",
+        )
 
         response = self.query_resource("FETC:STAT?")
 
-        message_code, state, mode = response.split(',')
+        message_code, state, mode = response.split(",")
 
         message_code = int(message_code)
         messages = []
@@ -286,28 +299,27 @@ class Chroma_62000P(VisaResource):
             if message_code & (1 << n):
                 messages.append(msg)
 
-        messages = ','.join(messages)
+        messages = ",".join(messages)
 
-        output_state = (state == 'ON')
+        output_state = state == "ON"
 
         return (messages, output_state, mode)
 
     def set_program_type(self, program_type: str) -> None:
 
-        valid_program_types = {'STEP', 'LIST', 'CP'}
+        valid_program_types = {"STEP", "LIST", "CP"}
 
         if program_type.upper() not in valid_program_types:
-            raise ValueError('Invalid program type'
-                             f', use: {valid_program_types}')
+            raise ValueError("Invalid program type" f", use: {valid_program_types}")
 
-        self.write_resource(f'PROG:MODE {program_type}')
+        self.write_resource(f"PROG:MODE {program_type}")
 
     def set_program(self, n: int) -> None:
-        self.write_resource(f'PROG:SEL {int(n)}')
+        self.write_resource(f"PROG:SEL {int(n)}")
 
     def get_program_type(self) -> str:
 
-        response = self.query_resource('PROG:MODE?')
+        response = self.query_resource("PROG:MODE?")
         return response.lower()
 
     def build_program(self, *sequence: Dict[str, Any], **kwargs) -> None:
@@ -372,14 +384,14 @@ class Chroma_62000P(VisaResource):
         """
 
         if not (1 <= len(sequence) <= 100):
-            raise ValueError('Program must have between 1-100 Sequences')
+            raise ValueError("Program must have between 1-100 Sequences")
 
         # initialization
         cmds = []
         cmds.append(f'PROG:SEL {int(kwargs.get("program_number", 1))}')
 
-        if kwargs.get('clear', True):
-            cmds.append('PROG:CLEAR')
+        if kwargs.get("clear", True):
+            cmds.append("PROG:CLEAR")
 
         # 0 links to no program
         cmds.append(f'PROG:LINK {int(kwargs.get("link", 0))}')
@@ -390,11 +402,13 @@ class Chroma_62000P(VisaResource):
             self.write_resource(cmd)
 
         # build program
-        valid_sequence_types = ('AUTO',  # move to next sequence after "time"
-                                'MANUAL',  # wait until front panel pressed
-                                'TRIGGER',  # wait for sine wave on pin 8 of
-                                            # analog interface
-                                'SKIP')  # skip this sequence and move to next
+        valid_sequence_types = (
+            "AUTO",  # move to next sequence after "time"
+            "MANUAL",  # wait until front panel pressed
+            "TRIGGER",  # wait for sine wave on pin 8 of
+            # analog interface
+            "SKIP",
+        )  # skip this sequence and move to next
 
         for n, seq in enumerate(sequence, start=1):
 
@@ -404,14 +418,14 @@ class Chroma_62000P(VisaResource):
             cmds.clear()  # clear command queue
 
             # create new sequence
-            cmds.append(f'PROG:ADD {n}')
-            cmds.append(f'PROG:SEQ:SEL {n}')
+            cmds.append(f"PROG:ADD {n}")
+            cmds.append(f"PROG:SEQ:SEL {n}")
 
             # set sequence type
-            seq_type = str(seq.get('type', 'AUTO')).upper()
+            seq_type = str(seq.get("type", "AUTO")).upper()
             if seq_type not in valid_sequence_types:
                 raise ValueError(f'Invalid Sequence type "{seq_type}"')
-            cmds.append(f'PROG:SEQ:TYPE {seq_type}')
+            cmds.append(f"PROG:SEQ:TYPE {seq_type}")
 
             # set sequence parameters
             cmds.append(f'PROG:SEQ:VOLT {float(seq.get("voltage", 0))}')  # V
@@ -421,84 +435,89 @@ class Chroma_62000P(VisaResource):
             #   slew-rate arg is in V/s but it actually needs to be sent
             #   in V/ms
             volt_slew = float(seq.get("voltage_slew", 1000))  # V/s
-            cmds.append(f'PROG:SEQ:VOLT:SLEW {volt_slew/1e3}')  # V/ms
+            cmds.append(f"PROG:SEQ:VOLT:SLEW {volt_slew/1e3}")  # V/ms
 
             curr_slew = seq.get("current_slew", "INF")
             if isinstance(curr_slew, str):
-                if (curr_slew.upper() != 'INF'):
-                    raise ValueError('Current Slew-rate must be a float or'
-                                     'the string "INF"')
+                if curr_slew.upper() != "INF":
+                    raise ValueError(
+                        "Current Slew-rate must be a float or" 'the string "INF"'
+                    )
                 else:
-                    cmds.append('PROG:SEQ:CURR:SLEWINF')
+                    cmds.append("PROG:SEQ:CURR:SLEWINF")
             else:
                 #   slew-rate arg is in A/s but it actually needs to be sent
                 #   in A/ms
-                cmds.append(f'PROG:SEQ:CURR:SLEW {float(curr_slew)/1000}')
+                cmds.append(f"PROG:SEQ:CURR:SLEW {float(curr_slew)/1000}")
 
             #   TTL is an 8-bit number, sets the voltage of 8 of the digitial
             #   pins on the back of the source (pins 12 -> 19, TTL0 -> TTL7).
             #   Uses 5 V Logic
             ttl = int(seq.get("ttl", 0))
             if not (0 <= ttl <= 255):
-                raise ValueError('TTL Must be an int in the range 0-255')
-            cmds.append(f'PROG:SEQ:TTL {ttl}')
+                raise ValueError("TTL Must be an int in the range 0-255")
+            cmds.append(f"PROG:SEQ:TTL {ttl}")
 
             for cmd in cmds:  # send commands in queue
                 self.write_resource(cmd)
         else:
-            if kwargs.get('save', False):
-                self.write_resource('PROG:SAVE')
+            if kwargs.get("save", False):
+                self.write_resource("PROG:SAVE")
 
-    def get_program(self, program_type: str,
-                    program_number: int
-                    ) -> Tuple[Dict[str, int], List[Dict[str, Any]]]:
+    def get_program(
+        self, program_type: str, program_number: int
+    ) -> Tuple[Dict[str, int], List[Dict[str, Any]]]:
 
         # select specified program
         self.set_program_type(program_type)
         self.set_program(program_number)
 
         # get program metadata
-        N = int(self.query_resource('PROG:MAX?'))  # number of sequences
+        N = int(self.query_resource("PROG:MAX?"))  # number of sequences
 
-        options = {'program_number': program_number,
-                   'count': int(self.query_resource('PROG:COUNT?')),
-                   'link': int(self.query_resource('PROG:LINK?'))}
+        options = {
+            "program_number": program_number,
+            "count": int(self.query_resource("PROG:COUNT?")),
+            "link": int(self.query_resource("PROG:LINK?")),
+        }
 
-        valid_sequence_types = ('AUTO',  # move to next sequence after "time"
-                                'MANUAL',  # wait until front panel pressed
-                                'TRIGGER',  # wait for sine wave on pin 8 of
-                                            # analog interface
-                                'SKIP')  # skip this sequence and move to next
+        valid_sequence_types = (
+            "AUTO",  # move to next sequence after "time"
+            "MANUAL",  # wait until front panel pressed
+            "TRIGGER",  # wait for sine wave on pin 8 of
+            # analog interface
+            "SKIP",
+        )  # skip this sequence and move to next
 
         # retrive info on each sequence
         program = []
         seq = {}
-        for n in range(1, N+1, 1):
+        for n in range(1, N + 1, 1):
             seq.clear()
-            self.write_resource(f'PROG:SEQ:SEL {n}')  # select sequence
+            self.write_resource(f"PROG:SEQ:SEL {n}")  # select sequence
 
-            response = self.query_resource('PROG:SEQ?')
-            type_, volt, volt_sr, curr, curr_sr, ttl, t = response.split(',')
+            response = self.query_resource("PROG:SEQ?")
+            type_, volt, volt_sr, curr, curr_sr, ttl, t = response.split(",")
 
             # decode into same format used in self.build_program
-            seq['type'] = valid_sequence_types[int(type_)]  # index into a list
+            seq["type"] = valid_sequence_types[int(type_)]  # index into a list
 
-            seq['voltage'] = float(volt)
-            seq['voltage_slew'] = float(volt_sr)*1e3  # convert to V/s for user
+            seq["voltage"] = float(volt)
+            seq["voltage_slew"] = float(volt_sr) * 1e3  # convert to V/s for user
 
-            seq['current'] = float(curr)
-            if ('INF' in curr_sr):
-                seq['current_slew'] = 'INF'
+            seq["current"] = float(curr)
+            if "INF" in curr_sr:
+                seq["current_slew"] = "INF"
             else:
-                seq['current_slew'] = float(curr_sr)
+                seq["current_slew"] = float(curr_sr)
 
             # convert to A/s for user output
-            if isinstance(seq['current_slew'], float):
-                seq['current_slew']*1e3
+            if isinstance(seq["current_slew"], float):
+                seq["current_slew"] * 1e3
 
-            seq['ttl'] = int(ttl)
+            seq["ttl"] = int(ttl)
 
-            seq['time'] = float(t)
+            seq["time"] = float(t)
 
             program.append(seq.copy())  # add to program list
 
@@ -511,7 +530,7 @@ class Chroma_62000P(VisaResource):
         if n != 0:
             self.set_program(n)
 
-        self.write_resource('PROG:RUN ON')
+        self.write_resource("PROG:RUN ON")
 
     def halt_program(self) -> None:
         """
@@ -519,54 +538,63 @@ class Chroma_62000P(VisaResource):
 
         Ends execution of the current program if one is running.
         """
-        self.write_resource('PROG:RUN OFF')
+        self.write_resource("PROG:RUN OFF")
 
     def get_program_state(self) -> bool:
 
-        response = self.query_resource('PROG:RUN?')
+        response = self.query_resource("PROG:RUN?")
 
-        return (response == 'ON')
+        return response == "ON"
 
     def v_step_program(self, start: float, stop: float, t: float) -> None:
 
         # convert time to h:m:s (max is 99:59:59.99)
         h, m, s = (0, 0, 0)
         while t >= 3600:
-            h, t = (h+1, t-3600)
+            h, t = (h + 1, t - 3600)
         while t >= 60:
-            m, t = (m+1, t-60)
+            m, t = (m + 1, t - 60)
         s += t
 
-        cmds = (f'PROG:STEP:STARTV {float(start)}',
-                f'PROG:STEP:ENDV {float(stop)}',
-                f'PROG:STEP:TIME {int(h)},{int(m)},{float(s)}')
+        cmds = (
+            f"PROG:STEP:STARTV {float(start)}",
+            f"PROG:STEP:ENDV {float(stop)}",
+            f"PROG:STEP:TIME {int(h)},{int(m)},{float(s)}",
+        )
 
         for cmd in cmds:
             self.write_resource(cmd)
 
-    def cp_program(self, voltage: float = 0, current: float = 0,
-                   power: float = 0, tracking_speed: int = 50) -> None:
+    def cp_program(
+        self,
+        voltage: float = 0,
+        current: float = 0,
+        power: float = 0,
+        tracking_speed: int = 50,
+    ) -> None:
 
-        if not(1 <= int(tracking_speed) <= 100):
+        if not (1 <= int(tracking_speed) <= 100):
             # 1 == least aggressive most stable
             # 100 == most aggressive least stable
-            raise ValueError('tracking_speed must be between 1-100')
+            raise ValueError("tracking_speed must be between 1-100")
 
-        cmds = (f'PROG:CP:RESP {int(tracking_speed)}',
-                f'PROG:CP:VOLT {float(voltage)}',
-                f'PROG:CP:CURR {float(current)}',
-                f'PROG:CP:POW {float(power)}')
+        cmds = (
+            f"PROG:CP:RESP {int(tracking_speed)}",
+            f"PROG:CP:VOLT {float(voltage)}",
+            f"PROG:CP:CURR {float(current)}",
+            f"PROG:CP:POW {float(power)}",
+        )
 
         for cmd in cmds:
             self.write_resource(cmd)
 
     def get_system_errors(self):
 
-        response = self.query_resource('SYST:ERR?')
+        response = self.query_resource("SYST:ERR?")
 
-        error_status = response.split(',')
+        error_status = response.split(",")
 
         error_code = int(error_status[0])
-        error_message = error_status[1].replace('"', '')
+        error_message = error_status[1].replace('"', "")
 
         return (error_code, error_message)

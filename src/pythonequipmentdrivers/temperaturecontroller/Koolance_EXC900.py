@@ -1,9 +1,9 @@
 import logging
+from dataclasses import dataclass
 from time import time
 from typing import Literal
-from pythonequipmentdrivers import VisaResource
-from dataclasses import dataclass
 
+from ..core import VisaResource
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +17,11 @@ class Register:
     b: int
 
     def float_to_mrb(self, value: float) -> int:
-        n = round((self.m*value + self.b)*10**self.r)
+        n = round((self.m * value + self.b) * 10**self.r)
         return n
 
     def mrb_to_float(self, n: int) -> float:
-        value = (1/self.m)*(n*10**(-1*self.r) - self.b)
+        value = (1 / self.m) * (n * 10 ** (-1 * self.r) - self.b)
         return value
 
 
@@ -65,7 +65,7 @@ class Koolance_EXC900(VisaResource):
         if self._last_read_data_time is None:
             return True
 
-        time_since_last_read = (time() - self._last_read_data_time)
+        time_since_last_read = time() - self._last_read_data_time
         return time_since_last_read > self._read_data_max_age
 
     def _read_data(self) -> bytes:
@@ -109,7 +109,7 @@ class Koolance_EXC900(VisaResource):
         out_dict: dict[str, float] = {}
 
         for name, reg in self.DATA_REGISTER_MAP.items():
-            value = data[reg.offset: reg.offset + reg.n_bytes]
+            value = data[reg.offset : reg.offset + reg.n_bytes]
             n = int.from_bytes(value, byteorder="big")
 
             out_dict[name] = reg.mrb_to_float(n)
@@ -144,7 +144,7 @@ class Koolance_EXC900(VisaResource):
             n = reg.float_to_mrb(value)
 
             val_bytes = n.to_bytes(reg.n_bytes, "big")
-            data[reg.offset: reg.offset + reg.n_bytes] = val_bytes
+            data[reg.offset : reg.offset + reg.n_bytes] = val_bytes
 
         data[0:2] = [0xCF, 0x04]  # configure the command bytes for a write
         data[2:14] = 12 * [0]  # set read-only locations to 0
@@ -172,7 +172,7 @@ class Koolance_EXC900(VisaResource):
         self,
         temp: float,
         sensor_config: str = Literal["liq", "ext"],
-        use_ambient: bool = False
+        use_ambient: bool = False,
     ) -> None:
         """
         set_temperature(temp, sensor_config="liq", use_ambient=False)
@@ -185,17 +185,16 @@ class Koolance_EXC900(VisaResource):
                 temperature setting. Defaults to False.
         """
         if sensor_config not in {"liq", "ext"}:  # , "liq_amb", "ext_amb"}:
-            raise ValueError(
-                f"sensor_config={sensor_config} is not a valid option")
+            raise ValueError(f"sensor_config={sensor_config} is not a valid option")
 
         sensor_setting = f"usr_temp_sp_{sensor_config}"
         if use_ambient:
-            sensor_setting += '_amb'
+            sensor_setting += "_amb"
 
         self.update_settings(**{sensor_setting: temp})
 
     def measure_temperature(
-        self, sensor: Literal['liq', 'ext', 'amb'] = "liq"
+        self, sensor: Literal["liq", "ext", "amb"] = "liq"
     ) -> float:
         """
         measure_temperature()
@@ -215,7 +214,7 @@ class Koolance_EXC900(VisaResource):
         except KeyError:
             raise ValueError(f"sensor={sensor} is not a valid option")
 
-    def get_units(self) -> Literal['C', 'F']:
+    def get_units(self) -> Literal["C", "F"]:
         """
         get_units()
 
@@ -229,7 +228,7 @@ class Koolance_EXC900(VisaResource):
         units_val = self.read_settings()["units"]
         return "C" if units_val == 1 else "F"
 
-    def set_units(self, unit: Literal['C', 'F']) -> None:
+    def set_units(self, unit: Literal["C", "F"]) -> None:
         """
         set_units(unit)
 

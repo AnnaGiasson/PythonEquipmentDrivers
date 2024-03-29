@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
-from pythonequipmentdrivers import VisaResource
+
+from ..core import VisaResource
 
 
 class Lecroy_WR8xxx(VisaResource):

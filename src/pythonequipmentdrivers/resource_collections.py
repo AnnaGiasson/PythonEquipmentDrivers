@@ -2,8 +2,7 @@ import json
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Tuple, Union, Iterator
-
+from typing import Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 

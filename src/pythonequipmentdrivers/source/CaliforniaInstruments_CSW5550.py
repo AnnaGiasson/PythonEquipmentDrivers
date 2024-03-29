@@ -1,4 +1,4 @@
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class CaliforniaInstruments_CSW5550(VisaResource):
@@ -33,7 +33,7 @@ class CaliforniaInstruments_CSW5550(VisaResource):
         """
 
         response = self.query_resource("OUTP?")
-        return (int(response) == 1)
+        return int(response) == 1
 
     def on(self) -> None:
         """

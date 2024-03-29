@@ -1,4 +1,4 @@
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class HP_6632A(VisaResource):
@@ -21,7 +21,7 @@ class HP_6632A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.write_resource(f'OUTP:STAT {1 if state else 0}')
+        self.write_resource(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -33,8 +33,8 @@ class HP_6632A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.query_resource("OUTP:STAT?").rstrip('\n')
-        return (int(response) == 1)
+        response = self.query_resource("OUTP:STAT?").rstrip("\n")
+        return int(response) == 1
 
     def on(self) -> None:
         """
@@ -122,7 +122,7 @@ class HP_6632A(VisaResource):
         potentiometer on the front panel
         """
 
-        resp = self.query_resource('SOUR:VOLT:PROT?')
+        resp = self.query_resource("SOUR:VOLT:PROT?")
         return float(resp)
 
     def set_ocp_state(self, state: bool) -> None:
@@ -137,7 +137,7 @@ class HP_6632A(VisaResource):
             state (bool): Whether or not Over-Current Protection is active
         """
 
-        self.write_resource(f'SOUR:CURR:PROT:STATE {1 if state else 0}')
+        self.write_resource(f"SOUR:CURR:PROT:STATE {1 if state else 0}")
 
     def get_ocp_state(self) -> bool:
         """
@@ -150,7 +150,7 @@ class HP_6632A(VisaResource):
         Args:
             state (bool): Whether or not Over-Current Protection is active
         """
-        response = self.query_resource('SOUR:CURR:PROT:STATE?')
+        response = self.query_resource("SOUR:CURR:PROT:STATE?")
         return int(response) == 1
 
     def measure_voltage(self) -> float:

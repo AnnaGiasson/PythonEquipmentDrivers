@@ -1,12 +1,13 @@
-from typing import Set, Tuple, Union
-from pythonequipmentdrivers import VisaResource
 from enum import Enum
+from typing import Set, Tuple, Union
 
+from ..core import VisaResource
 
 # Look into programming "sequences" and "programs" to the device. See basic
 # description in the users manual ~pg 118 (4-32)
 
 # add set/get methods for the current and resistance ranges
+
 
 class Chroma_63600(VisaResource):
     """
@@ -18,15 +19,15 @@ class Chroma_63600(VisaResource):
     """
 
     class ValidModes(Enum):
-        CC = 'CC'
-        CR = 'CR'
-        CV = 'CV'
-        CP = 'CP'
-        CZ = 'CZ'
-        CCD = 'CCD'
-        CCFS = 'CCFS'
-        TIM = 'TIM'
-        SWD = 'SWD'
+        CC = "CC"
+        CR = "CR"
+        CV = "CV"
+        CP = "CP"
+        CZ = "CZ"
+        CCD = "CCD"
+        CCFS = "CCFS"
+        TIM = "TIM"
+        SWD = "SWD"
 
     class Errors(Enum):
         OTP = 0
@@ -61,11 +62,11 @@ class Chroma_63600(VisaResource):
         """
 
         if reverse:
-            return int((channel + 1)/2)
+            return int((channel + 1) / 2)
 
         if (channel > 5) and (channel < 1):
             raise ValueError("Invalid Channel Number")
-        return 2*channel - 1
+        return 2 * channel - 1
 
     def set_state(self, state: bool) -> None:
         """
@@ -89,7 +90,7 @@ class Chroma_63600(VisaResource):
             bool: Load state (True == enabled, False == disabled)
         """
 
-        return (self.query_resource("LOAD?") == "ON")
+        return self.query_resource("LOAD?") == "ON"
 
     def on(self) -> None:
         """
@@ -133,10 +134,10 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.write_resource(f'CURR:STAT:L1 {current}')
-            self.write_resource(f'CURR:STAT:L2 {current}')
+            self.write_resource(f"CURR:STAT:L1 {current}")
+            self.write_resource(f"CURR:STAT:L2 {current}")
         else:
-            self.write_resource(f'CURR:STAT:L{level} {current}')
+            self.write_resource(f"CURR:STAT:L{level} {current}")
 
     def get_current(self, level: int) -> Union[float, Tuple[float]]:
         """
@@ -156,14 +157,17 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.query_resource('CURR:STAT:L1?')),
-                    float(self.query_resource('CURR:STAT:L2?')))
+            return (
+                float(self.query_resource("CURR:STAT:L1?")),
+                float(self.query_resource("CURR:STAT:L2?")),
+            )
 
-        response = self.query_resource(f'CURR:STAT:L{level}?')
+        response = self.query_resource(f"CURR:STAT:L{level}?")
         return float(response)
 
-    def set_current_slew_rate(self, slew_rate: float,
-                              set_rising_edge: bool = True) -> None:
+    def set_current_slew_rate(
+        self, slew_rate: float, set_rising_edge: bool = True
+    ) -> None:
         """
         set_current_slew(slew_rate, set_rising_edge)
 
@@ -177,7 +181,7 @@ class Chroma_63600(VisaResource):
                 edge slew-rate. Defaults to True.
         """
 
-        slew_rate = float(slew_rate)*(1e-6)  # A/s --> A/us
+        slew_rate = float(slew_rate) * (1e-6)  # A/s --> A/us
 
         self.write_resource(
             f'CURR:STAT:{"RISE" if set_rising_edge else "FALL"} {slew_rate}'
@@ -202,7 +206,7 @@ class Chroma_63600(VisaResource):
         response = self.query_resource(
             f'CURR:STAT:{"RISE" if get_rising_edge else "FALL"}?'
         )
-        return float(response)*(1e6)  # A/us --> A/s
+        return float(response) * (1e6)  # A/us --> A/s
 
     def set_dynamic_current(self, current: float, level: int = 0) -> None:
         """
@@ -218,10 +222,10 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.write_resource(f'CURR:DYN:L1 {current}')
-            self.write_resource(f'CURR:DYN:L2 {current}')
+            self.write_resource(f"CURR:DYN:L1 {current}")
+            self.write_resource(f"CURR:DYN:L2 {current}")
         else:
-            self.write_resource(f'CURR:DYN:L{level} {current}')
+            self.write_resource(f"CURR:DYN:L{level} {current}")
 
     def get_dynamic_current(self, level: int) -> Union[float, Tuple[float]]:
         """
@@ -236,14 +240,17 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.query_resource('CURR:DYN:L1?')),
-                    float(self.query_resource('CURR:DYN:L2?')))
+            return (
+                float(self.query_resource("CURR:DYN:L1?")),
+                float(self.query_resource("CURR:DYN:L2?")),
+            )
         else:
-            response = self.query_resource(f'CURR:DYN:L{level}?')
+            response = self.query_resource(f"CURR:DYN:L{level}?")
             return float(response)
 
-    def set_dynamic_current_slew(self, slew_rate: float,
-                                 set_rising_edge: bool = True) -> None:
+    def set_dynamic_current_slew(
+        self, slew_rate: float, set_rising_edge: bool = True
+    ) -> None:
         """
         set_dynamic_current_slew(slew, set_rising_edge)
 
@@ -256,16 +263,15 @@ class Chroma_63600(VisaResource):
                 edge slew-rate. Defaults to True.
         """
 
-        sr_a_per_s = slew_rate*1e-6
+        sr_a_per_s = slew_rate * 1e-6
         # note: load uses current slew rate in units of A/us, hence the
         # conversion
 
         self.write_resource(
             f'CURR:DYN:{"RISE" if set_rising_edge else "FALL"} {sr_a_per_s}'
-            )
+        )
 
-    def get_dynamic_current_slew(self, get_rising_edge: bool = True
-                                 ) -> float:
+    def get_dynamic_current_slew(self, get_rising_edge: bool = True) -> float:
         """
         get_dynamic_current_slew(slew, get_rising_edge)
 
@@ -287,7 +293,7 @@ class Chroma_63600(VisaResource):
         # note: load uses current slew rate in units of A/us, hence the
         # conversion
 
-        return float(response)*1e6
+        return float(response) * 1e6
 
     def set_dynamic_current_time(self, on_time: float, level: int = 0) -> None:
         """
@@ -304,13 +310,12 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.write_resource(f'CURR:DYN:T1 {on_time}')
-            self.write_resource(f'CURR:DYN:T2 {on_time}')
+            self.write_resource(f"CURR:DYN:T1 {on_time}")
+            self.write_resource(f"CURR:DYN:T2 {on_time}")
         else:
-            self.write_resource(f'CURR:DYN:T{level} {on_time}')
+            self.write_resource(f"CURR:DYN:T{level} {on_time}")
 
-    def get_dynamic_current_time(self, level: int
-                                 ) -> Union[float, Tuple[float]]:
+    def get_dynamic_current_time(self, level: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current_time(level)
 
@@ -325,10 +330,12 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.query_resource('CURR:DYN:T1?')),
-                    float(self.query_resource('CURR:DYN:T2?')))
+            return (
+                float(self.query_resource("CURR:DYN:T1?")),
+                float(self.query_resource("CURR:DYN:T2?")),
+            )
 
-        return float(self.query_resource(f'CURR:DYN:T{level}?'))
+        return float(self.query_resource(f"CURR:DYN:T{level}?"))
 
     def set_dynamic_current_repeat(self, count: int) -> None:
         """
@@ -340,7 +347,7 @@ class Chroma_63600(VisaResource):
         set-points
         """
 
-        self.write_resource(f'CURR:DYN:REP {count}')
+        self.write_resource(f"CURR:DYN:REP {count}")
 
     def get_dynamic_current_repeat(self) -> int:
         """
@@ -353,7 +360,7 @@ class Chroma_63600(VisaResource):
         set-points
         """
 
-        response = self.query_resource('CURR:DYN:REP?')
+        response = self.query_resource("CURR:DYN:REP?")
         return int(response)
 
     def set_resistance(self, resistance: float, level: int = 0) -> None:
@@ -370,10 +377,10 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.write_resource(f'RES:STAT:L1 {resistance}')
-            self.write_resource(f'RES:STAT:L2 {resistance}')
+            self.write_resource(f"RES:STAT:L1 {resistance}")
+            self.write_resource(f"RES:STAT:L2 {resistance}")
         else:
-            self.write_resource(f'RES:STAT:L{level} {resistance}')
+            self.write_resource(f"RES:STAT:L{level} {resistance}")
 
     def get_resistance(self, level: int) -> Union[Tuple[float], float]:
         """
@@ -388,10 +395,12 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.query_resource('RES:STAT:L1?')),
-                    float(self.query_resource('RES:STAT:L2?')))
+            return (
+                float(self.query_resource("RES:STAT:L1?")),
+                float(self.query_resource("RES:STAT:L2?")),
+            )
         else:
-            response = self.query_resource(f'RES:STAT:L{level}?')
+            response = self.query_resource(f"RES:STAT:L{level}?")
             return float(response)
 
     def set_channel(self, channel: int) -> None:
@@ -405,7 +414,7 @@ class Chroma_63600(VisaResource):
         """
 
         idx = self._channel_index(channel)
-        self.write_resource(f'CHAN {idx}')
+        self.write_resource(f"CHAN {idx}")
 
     def get_channel(self) -> int:
         """
@@ -416,12 +425,13 @@ class Chroma_63600(VisaResource):
         returns: int
         """
 
-        response = self.query_resource('CHAN?')
+        response = self.query_resource("CHAN?")
         channel = self._channel_index(int(response), reverse=True)
         return channel
 
-    def set_mode(self, channel: int, mode: ValidModes,
-                 range_setting: str = "M") -> None:
+    def set_mode(
+        self, channel: int, mode: ValidModes, range_setting: str = "M"
+    ) -> None:
         """
         set_mode(channel, mode, range_setting="M")
 
@@ -442,7 +452,7 @@ class Chroma_63600(VisaResource):
             raise ValueError(f"Invalid range: {range_setting}")
 
         self.set_channel(channel)
-        self.write_resource(f'MODE {mode.value}{range_setting}')
+        self.write_resource(f"MODE {mode.value}{range_setting}")
 
     def get_mode(self, channel: int) -> Tuple[ValidModes, str]:
         """
@@ -462,7 +472,7 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        response = self.query_resource('MODE?')
+        response = self.query_resource("MODE?")
 
         mode, range_setting = response[0:-1], response[-1]
 
@@ -479,7 +489,7 @@ class Chroma_63600(VisaResource):
             state: bool, parallel state.
         """
 
-        self.write_resource(f'CONF:PARA:INIT {1 if state else 0}')
+        self.write_resource(f"CONF:PARA:INIT {1 if state else 0}")
 
     def get_parallel_state(self) -> bool:
         """
@@ -491,7 +501,7 @@ class Chroma_63600(VisaResource):
             bool: parallel operation state
         """
 
-        response = self.query_resource('CONF:PARA:INIT?')
+        response = self.query_resource("CONF:PARA:INIT?")
 
         if response not in {"ON", "OFF"}:
             raise IOError(f"Unknown response: {response}")
@@ -511,15 +521,13 @@ class Chroma_63600(VisaResource):
                 options are: "None", "Master", and "Slave" (case-insensitive)
         """
 
-        modes = {"none": 0, 'master': 1, 'slave': 2}
+        modes = {"none": 0, "master": 1, "slave": 2}
 
         if mode.lower() not in modes.keys():
-            raise ValueError(
-                f'Invalid mode, valid options are {modes.keys()}'
-                )
+            raise ValueError(f"Invalid mode, valid options are {modes.keys()}")
 
         self.set_channel(channel)
-        self.write_resource(f'CONF:PARA:MODE {modes[mode.lower()]}')
+        self.write_resource(f"CONF:PARA:MODE {modes[mode.lower()]}")
 
     def get_parallel_mode(self, channel: int) -> str:
         """
@@ -536,10 +544,10 @@ class Chroma_63600(VisaResource):
                     2: Slave
         """
 
-        modes = {"none", 'master', 'slave'}
+        modes = {"none", "master", "slave"}
 
         self.set_channel(channel)
-        response = self.query_resource('CONF:PARA:MODE?')
+        response = self.query_resource("CONF:PARA:MODE?")
 
         if response not in modes:
             raise IOError(f"Unknown response: {response}")
@@ -557,7 +565,7 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        self.write_resource(f'CHAN:ACT {1 if state else 0}')
+        self.write_resource(f"CHAN:ACT {1 if state else 0}")
 
     def get_channel_state(self, channel: int) -> bool:
         """
@@ -573,12 +581,12 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        response = self.query_resource('CHAN:ACT?')
+        response = self.query_resource("CHAN:ACT?")
 
         if response not in {"ON", "OFF"}:
             raise IOError(f"Unknown response: {response}")
 
-        return (response == "ON")
+        return response == "ON"
 
     # # need to investigate what this function actually does
     # def set_sync_mode(self, channel: int, state) -> None:
@@ -603,10 +611,10 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            self.write_resource(f'VOLT:STAT:L1 {voltage}')
-            self.write_resource(f'VOLT:STAT:L2 {voltage}')
+            self.write_resource(f"VOLT:STAT:L1 {voltage}")
+            self.write_resource(f"VOLT:STAT:L2 {voltage}")
         else:
-            self.write_resource(f'VOLT:STAT:L{level} {voltage}')
+            self.write_resource(f"VOLT:STAT:L{level} {voltage}")
 
     def get_voltage(self, level: int) -> float:
         """
@@ -621,10 +629,12 @@ class Chroma_63600(VisaResource):
         """
 
         if level == 0:
-            return (float(self.query_resource('VOLT:STAT:L1?')),
-                    float(self.query_resource('VOLT:STAT:L2?')))
+            return (
+                float(self.query_resource("VOLT:STAT:L1?")),
+                float(self.query_resource("VOLT:STAT:L2?")),
+            )
         else:
-            response = self.query_resource(f'VOLT:STAT:L{level}?')
+            response = self.query_resource(f"VOLT:STAT:L{level}?")
             return float(response)
 
     def set_cv_current_limit(self, current: float) -> None:
@@ -638,7 +648,7 @@ class Chroma_63600(VisaResource):
             float: setpoint current in Amps
         """
 
-        self.write_resource(f'VOLT:STAT:ILIM {current}')
+        self.write_resource(f"VOLT:STAT:ILIM {current}")
 
     def get_cv_current_limit(self) -> float:
         """
@@ -651,11 +661,10 @@ class Chroma_63600(VisaResource):
             float:  setpoint current in Adc
         """
 
-        response = self.query_resource('VOLT:STAT:ILIM?')
+        response = self.query_resource("VOLT:STAT:ILIM?")
         return float(response)
 
     def set_dynamic_sine_frequency(self, frequency: float) -> None:
-
         """
         set_dynamic_sine_frequency(frequency)
 
@@ -668,9 +677,9 @@ class Chroma_63600(VisaResource):
             frequency (float): desired frequency in Hz
         """
 
-        self.write_resource(f'ADV:SINE:FREQ {frequency}')
+        self.write_resource(f"ADV:SINE:FREQ {frequency}")
 
-    def get_dynamic_sine_frequency(self, flag='') -> float:
+    def get_dynamic_sine_frequency(self, flag="") -> float:
         """
         get_dynamic_sine_frequency(flag='')
 
@@ -688,14 +697,13 @@ class Chroma_63600(VisaResource):
             float: current frequency setpoint (or limit) in Hz.
         """
 
-        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+        if (flag != "") and (flag.upper() not in {"MIN", "MAX"}):
             raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        response = self.query_resource(f'ADV:SINE:FREQ? {flag.upper()}')
+        response = self.query_resource(f"ADV:SINE:FREQ? {flag.upper()}")
         return float(response)
 
     def set_dynamic_sine_amplitude_ac(self, amplitude: float) -> None:
-
         """
         set_dynamic_sine_amplitude_ac(amplitude)
 
@@ -708,11 +716,10 @@ class Chroma_63600(VisaResource):
             amplitude (float): desired amplitude in A_DC
         """
 
-        amp_peak2peak = amplitude*2  # convert Amplitude to peak-to-peak
-        self.write_resource(f'ADV:SINE:IAC {amp_peak2peak}')
+        amp_peak2peak = amplitude * 2  # convert Amplitude to peak-to-peak
+        self.write_resource(f"ADV:SINE:IAC {amp_peak2peak}")
 
-    def get_dynamic_sine_amplitude_ac(self, flag: str = '') -> float:
-
+    def get_dynamic_sine_amplitude_ac(self, flag: str = "") -> float:
         """
         get_dynamic_sine_amplitude_ac(flag='')
 
@@ -730,12 +737,12 @@ class Chroma_63600(VisaResource):
             float: current amplitude setpoint (or limit) in A_DC.
         """
 
-        if flag.upper() not in {'MIN', 'MAX', ''}:
+        if flag.upper() not in {"MIN", "MAX", ""}:
             raise ValueError(f'Invalid value {flag} for arg "value"')
 
-        response = self.query_resource(f'ADV:SINE:IAC? {flag.upper()}')
+        response = self.query_resource(f"ADV:SINE:IAC? {flag.upper()}")
         amp_peak2peak = float(response)
-        return amp_peak2peak/2  # convert peak-to-peak to Amplitude
+        return amp_peak2peak / 2  # convert peak-to-peak to Amplitude
 
     def set_dynamic_sine_dc_offset(self, offset: float) -> None:
         """
@@ -750,9 +757,9 @@ class Chroma_63600(VisaResource):
             freq (float): desired DC offset in A_DC
         """
 
-        self.write_resource(f'ADV:SINE:IDC {offset}')
+        self.write_resource(f"ADV:SINE:IDC {offset}")
 
-    def get_dynamic_sine_dc_level(self, flag: str = '') -> float:
+    def get_dynamic_sine_dc_level(self, flag: str = "") -> float:
         """
         get_dynamic_sine_dc_level(flag='')
 
@@ -770,10 +777,10 @@ class Chroma_63600(VisaResource):
             float: current DC level setpoint (or limit) in A_DC.
         """
 
-        if (flag != '') and (flag.upper() not in {'MIN', 'MAX'}):
+        if (flag != "") and (flag.upper() not in {"MIN", "MAX"}):
             raise ValueError(f'Invalid value {flag} for arg "flag"')
 
-        response = self.query_resource(f'ADV:SINE:IDC? {flag.upper()}')
+        response = self.query_resource(f"ADV:SINE:IDC? {flag.upper()}")
         return float(response)
 
     def clear_errors(self) -> None:
@@ -783,12 +790,9 @@ class Chroma_63600(VisaResource):
         Resets status of load and clears errors
         """
 
-        self.write_resource('LOAD:PROT:CLE')
+        self.write_resource("LOAD:PROT:CLE")
 
-    def get_errors(
-        self,
-        channel: int
-    ) -> Set[Errors]:
+    def get_errors(self, channel: int) -> Set[Errors]:
         """
         get_errors(channel)
 
@@ -802,8 +806,8 @@ class Chroma_63600(VisaResource):
         """
 
         self.set_channel(channel)
-        response = self.query_resource('STAT:CHAN:COND?')
-        status = int(response) & 0xff  # 2B response only has 1B of info
+        response = self.query_resource("STAT:CHAN:COND?")
+        status = int(response) & 0xFF  # 2B response only has 1B of info
 
         errors = {self.Errors(n) for n in range(0, 7) if (status & 2**n) >> n}
         return errors
@@ -816,7 +820,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.query_resource('MEAS:VOLT?')
+        response = self.query_resource("MEAS:VOLT?")
         return float(response)
 
     def measure_current(self) -> float:
@@ -827,7 +831,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.query_resource('MEAS:CURR?')
+        response = self.query_resource("MEAS:CURR?")
         return float(response)
 
     def measure_power(self) -> float:
@@ -838,7 +842,7 @@ class Chroma_63600(VisaResource):
         returns: float
         """
 
-        response = self.query_resource('FETC:POW?')
+        response = self.query_resource("FETC:POW?")
         return float(response)
 
     def measure_module_voltages(self) -> Tuple[float]:
@@ -849,8 +853,8 @@ class Chroma_63600(VisaResource):
         returns: tuple of floats
         """
 
-        response = self.query_resource('MEAS:ALLV?')
-        voltages = tuple(map(float, response.split(',')))
+        response = self.query_resource("MEAS:ALLV?")
+        voltages = tuple(map(float, response.split(",")))
 
         return voltages
 
@@ -862,8 +866,8 @@ class Chroma_63600(VisaResource):
         returns: list of floats or float
         """
 
-        response = self.query_resource('MEAS:ALLC?')
-        currents = tuple(map(float, response.split(',')))
+        response = self.query_resource("MEAS:ALLC?")
+        currents = tuple(map(float, response.split(",")))
 
         return currents
 
@@ -875,7 +879,7 @@ class Chroma_63600(VisaResource):
         returns: list of floats or float
         """
 
-        response = self.query_resource('MEAS:ALLP?')
-        powers = tuple(map(float, response.split(',')))
+        response = self.query_resource("MEAS:ALLP?")
+        powers = tuple(map(float, response.split(",")))
 
         return powers

@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Any, List, Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class HP_34401A(VisaResource):
@@ -22,66 +22,81 @@ class HP_34401A(VisaResource):
     http://ecee.colorado.edu/~mathys/ecen1400/pdf/references/HP34401A_BenchtopMultimeter.pdf
     """
 
-    valid_modes = {'VDC': "VOLT:DC",
-                   'VOLT': 'VOLT',
-                   'VAC': "VOLT:AC",
-                   'ADC': "CURR:DC",
-                   'AAC': "CURR:AC",
-                   'CURR': 'CURR',
-                   'V': 'VOLT',
-                   'A': 'CURR',
-                   'FREQ': "FREQ",
-                   'F': 'FREQ',
-                   'OHMS': "RES",
-                   'O': 'RES',
-                   'RES': 'RES',
-                   'FRES': 'FRES',
-                   'DIOD': "DIOD",
-                   'D': 'DIOD',
-                   'CONT': "CONT",
-                   'PER': "PER",
-                   'P': 'PER'}
+    valid_modes = {
+        "VDC": "VOLT:DC",
+        "VOLT": "VOLT",
+        "VAC": "VOLT:AC",
+        "ADC": "CURR:DC",
+        "AAC": "CURR:AC",
+        "CURR": "CURR",
+        "V": "VOLT",
+        "A": "CURR",
+        "FREQ": "FREQ",
+        "F": "FREQ",
+        "OHMS": "RES",
+        "O": "RES",
+        "RES": "RES",
+        "FRES": "FRES",
+        "DIOD": "DIOD",
+        "D": "DIOD",
+        "CONT": "CONT",
+        "PER": "PER",
+        "P": "PER",
+    }
 
-    valid_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                    '0.1', '1', '10', '100', '300'}
+    valid_ranges = {"AUTO", "MIN", "MAX", "DEF", "0.1", "1", "10", "100", "300"}
 
-    valid_cranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '0.01', '0.1', '1', '3'}
+    valid_cranges = {"AUTO", "MIN", "MAX", "DEF", "0.01", "0.1", "1", "3"}
 
-    valid_Rranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                     '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+    valid_Rranges = {
+        "AUTO",
+        "MIN",
+        "MAX",
+        "DEF",
+        "100",
+        "1E3",
+        "10E3",
+        "100E3",
+        "1E6",
+        "10E6",
+        "100E6",
+    }
 
-    nplc = {'0.02', '0.2', '1', '2', '10', '20', '100', '200', 'MIN', 'MAX'}
+    nplc = {"0.02", "0.2", "1", "2", "10", "20", "100", "200", "MIN", "MAX"}
 
-    valid_resolutions = {'0.02': 0.0001,  # lookup based on nplc
-                         '0.2': 0.00001,  # this * range = resolution
-                         '1': 0.000003,
-                         '2': 0.0000022,
-                         '10': 0.000001,
-                         '20': 0.0000008,
-                         '100': 0.0000003,
-                         '200': 0.00000022,
-                         'MIN': 0.0001,
-                         'MAX': 0.00000022}
+    valid_resolutions = {
+        "0.02": 0.0001,  # lookup based on nplc
+        "0.2": 0.00001,  # this * range = resolution
+        "1": 0.000003,
+        "2": 0.0000022,
+        "10": 0.000001,
+        "20": 0.0000008,
+        "100": 0.0000003,
+        "200": 0.00000022,
+        "MIN": 0.0001,
+        "MAX": 0.00000022,
+    }
 
-    valid_trigger = {'BUS': 'BUS',
-                     'IMMEDIATE': 'IMMediate',
-                     'IMM': 'IMMediate',
-                     'EXTERNAL': 'EXTernal',
-                     'EXT': 'EXTernal',
-                     'ALARM1': 'ALARm1',
-                     'ALARM2': 'ALARm2',
-                     'ALARM3': 'ALARm3',
-                     'ALARM4': 'ALARm4',
-                     'TIMER': 'TIMer',
-                     'TIME': 'TIMer',
-                     'TIM': 'TIMer'}
+    valid_trigger = {
+        "BUS": "BUS",
+        "IMMEDIATE": "IMMediate",
+        "IMM": "IMMediate",
+        "EXTERNAL": "EXTernal",
+        "EXT": "EXTernal",
+        "ALARM1": "ALARm1",
+        "ALARM2": "ALARm2",
+        "ALARM3": "ALARm3",
+        "ALARM4": "ALARm4",
+        "TIMER": "TIMer",
+        "TIME": "TIMer",
+        "TIM": "TIMer",
+    }
 
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        self.factor = kwargs.get('factor', 1.0)
+        self.factor = kwargs.get("factor", 1.0)
         self.nplc_default = 1  # power line cycles to average
-        self.line_frequency = kwargs.get('line_frequency', float(50))  # Hz
+        self.line_frequency = kwargs.get("line_frequency", float(50))  # Hz
         self.sample_count = self.get_sample_count()
         self.measure_time = self.set_measure_time()
         self.trigger_mode = self.get_trigger_source()
@@ -121,7 +136,7 @@ class HP_34401A(VisaResource):
         """
 
         response = self.query_resource("FUNC?")
-        return response.replace('"', '')
+        return response.replace('"', "")
 
     def get_error(self, **kwargs) -> str:
         """
@@ -130,7 +145,7 @@ class HP_34401A(VisaResource):
         Returns:
             [list]: last error in the buffer
         """
-        response = self.query_resource('SYSTem:ERRor?', **kwargs)
+        response = self.query_resource("SYSTem:ERRor?", **kwargs)
         return self.resp_format(response, str)
 
     def set_trigger(self, trigger: str, **kwargs) -> None:
@@ -149,34 +164,36 @@ class HP_34401A(VisaResource):
             valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'.
         """
 
-        valid_delay = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM'}
-        valid_count = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM', 'INF', 'INFINITE'}
+        valid_delay = {"MIN", "MINIMUM", "MAX", "MAXIMUM"}
+        valid_count = {"MIN", "MINIMUM", "MAX", "MAXIMUM", "INF", "INFINITE"}
 
-        if kwargs.get('delay', False):
+        if kwargs.get("delay", False):
 
-            if isinstance(kwargs['delay'], str):
-                delay = kwargs['delay'].upper()
+            if isinstance(kwargs["delay"], str):
+                delay = kwargs["delay"].upper()
             else:
-                delay = kwargs['delay']
+                delay = kwargs["delay"]
 
             if not ((delay in valid_delay) or isinstance(delay, (int, float))):
                 raise ValueError(f"Invalid trigger delay. Use: {valid_delay}")
 
             self.write_resource(f"TRIG:DELay {delay}")
 
-        if kwargs.get('count', False):
+        if kwargs.get("count", False):
 
-            if isinstance(kwargs['count'], str):
-                count = kwargs['count'].upper()
+            if isinstance(kwargs["count"], str):
+                count = kwargs["count"].upper()
             else:
-                count = kwargs['count']
+                count = kwargs["count"]
 
             if not ((count in valid_count) or isinstance(count, int)):
                 # note: if count is not an int the 2nd condition wont execute
                 if not (isinstance(count, int) and (1 <= count <= 50000)):
-                    raise ValueError('Invalid trigger count.'
-                                     f' Use: {valid_count} or an int within'
-                                     ' the range [1, 50000]')
+                    raise ValueError(
+                        "Invalid trigger count."
+                        f" Use: {valid_count} or an int within"
+                        " the range [1, 50000]"
+                    )
 
             self.write_resource(f"TRIG:COUNt {count}")
 
@@ -185,7 +202,7 @@ class HP_34401A(VisaResource):
             raise ValueError("Invalid trigger option")
         self.write_resource(f"TRIG:{self.valid_trigger[trigger]}")
 
-    def set_trigger_source(self, trigger: str = 'IMMEDIATE', **kwargs) -> None:
+    def set_trigger_source(self, trigger: str = "IMMEDIATE", **kwargs) -> None:
         """
         set_trigger(trigger)
 
@@ -217,7 +234,7 @@ class HP_34401A(VisaResource):
         Args:
             count (int): how many readings to take when triggered
         """
-        valid_count = {'MIN', 'MINIMUM', 'MAX', 'MAXIMUM', 'INF', 'INFINITE'}
+        valid_count = {"MIN", "MINIMUM", "MAX", "MAXIMUM", "INF", "INFINITE"}
 
         count = count.upper() if isinstance(count, str) else count
 
@@ -226,9 +243,11 @@ class HP_34401A(VisaResource):
             if isinstance(count, int) and (1 <= count <= 50000):
                 pass
             else:
-                raise ValueError('Invalid trigger count.'
-                                 f' Use: {valid_count} or an int within'
-                                 ' the range [1, 50000]')
+                raise ValueError(
+                    "Invalid trigger count."
+                    f" Use: {valid_count} or an int within"
+                    " the range [1, 50000]"
+                )
 
         self.write_resource(f"TRIG:COUNt {count}", **kwargs)
 
@@ -248,10 +267,10 @@ class HP_34401A(VisaResource):
         set_mode method.
 
         """
-        if self.get_mode() != 'VOLT':
+        if self.get_mode() != "VOLT":
             raise IOError("Multimeter is not configured to measure voltage")
         response = self.query_resource("MEAS:VOLT:DC?")
-        return self.factor*float(response)
+        return self.factor * float(response)
 
     def measure_voltage_rms(self):
         """
@@ -265,10 +284,10 @@ class HP_34401A(VisaResource):
         set_mode method.
 
         """
-        if self.get_mode() != 'VOLT:AC':
+        if self.get_mode() != "VOLT:AC":
             raise IOError("Multimeter is not configured to measure AC voltage")
         response = self.query_resource("MEAS:VOLT:AC?")
-        return self.factor*float(response)
+        return self.factor * float(response)
 
     def measure_current(self):
         """
@@ -282,10 +301,10 @@ class HP_34401A(VisaResource):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'CURR':
+        if self.get_mode() != "CURR":
             raise IOError("Multimeter is not configured to measure current")
         response = self.query_resource("MEAS:CURR:DC?")
-        return self.factor*float(response)
+        return self.factor * float(response)
 
     def measure_current_rms(self):
         """
@@ -299,10 +318,10 @@ class HP_34401A(VisaResource):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'CURR:AC':
+        if self.get_mode() != "CURR:AC":
             raise IOError("Multimeter is not configured to measure AC current")
         response = self.query_resource("MEAS:CURR:AC?")
-        return self.factor*float(response)
+        return self.factor * float(response)
 
     def measure_resistance(self):
         """
@@ -316,7 +335,7 @@ class HP_34401A(VisaResource):
         set_mode method.
 
         """
-        if self.get_mode() != 'RES':
+        if self.get_mode() != "RES":
             raise IOError("Multimeter is not configured to measure resistance")
         response = self.query_resource("MEAS:RES?")
         return float(response)
@@ -333,7 +352,7 @@ class HP_34401A(VisaResource):
         set_mode method.
 
         """
-        if self.get_mode() != 'FREQ':
+        if self.get_mode() != "FREQ":
             raise IOError("Multimeter is not configured to measure frequency")
         response = self.query_resource("MEAS:FREQ?")
         return float(response)
@@ -346,7 +365,7 @@ class HP_34401A(VisaResource):
         Use fetch_data (FETCh) to get the data.
         """
 
-        self.write_resource('INITiate', **kwargs)
+        self.write_resource("INITiate", **kwargs)
 
     def fetch_data(self, **kwargs) -> float:
         """
@@ -355,7 +374,7 @@ class HP_34401A(VisaResource):
         Returns:
             [list, float]: data in meter memory resulting from all scans
         """
-        response = self.query_resource('FETC?', **kwargs)
+        response = self.query_resource("FETC?", **kwargs)
         return self.resp_format(response, float)
 
     def abort(self, **kwargs) -> None:
@@ -364,7 +383,7 @@ class HP_34401A(VisaResource):
 
         Send VISA ABORt, stop the scan!!
         """
-        self.write_resource('ABORt', **kwargs)
+        self.write_resource("ABORt", **kwargs)
 
     def trigger(self, wait: bool = True, **kwargs) -> None:
         """
@@ -381,11 +400,13 @@ class HP_34401A(VisaResource):
             None
         """
 
-        if self.trigger_mode == self.valid_trigger['BUS']:
-            self.write_resource('*TRG', **kwargs)
+        if self.trigger_mode == self.valid_trigger["BUS"]:
+            self.write_resource("*TRG", **kwargs)
         else:
-            print(f"Trigger not configured, set as: {self.trigger_mode}"
-                  f" should be {self.valid_trigger['BUS']}")
+            print(
+                f"Trigger not configured, set as: {self.trigger_mode}"
+                f" should be {self.valid_trigger['BUS']}"
+            )
 
         if wait:
             sleep(self.measure_time)  # should work most of the time.
@@ -402,9 +423,15 @@ class HP_34401A(VisaResource):
         self.sample_count = int(self.resp_format(response, float))
         return self.sample_count
 
-    def config(self, mode: str = 'volt', acdc: str = 'dc',
-               signal_range: str = 'auto', resolution=None,
-               nplc=0.02, **kwargs) -> None:
+    def config(
+        self,
+        mode: str = "volt",
+        acdc: str = "dc",
+        signal_range: str = "auto",
+        resolution=None,
+        nplc=0.02,
+        **kwargs,
+    ) -> None:
         """config_chan(#)
 
         Args:
@@ -424,45 +451,44 @@ class HP_34401A(VisaResource):
                 purposes. Defaults to False.
         """
 
-        valid_acdc = {'DC': ':DC',
-                      'AC': ':AC'}
+        valid_acdc = {"DC": ":DC", "AC": ":AC"}
 
         mode = mode.upper()
         if mode not in self.valid_modes:
             raise ValueError("Invalid mode option")
         mode = self.valid_modes[mode]
 
-        usefreq = (mode == self.valid_modes['FREQ'])
-        usecurrent = (mode == self.valid_modes['CURR'])
-        useres = (mode == self.valid_modes['RES'])
+        usefreq = mode == self.valid_modes["FREQ"]
+        usecurrent = mode == self.valid_modes["CURR"]
+        useres = mode == self.valid_modes["RES"]
 
         acdc = acdc.upper()
         if acdc not in valid_acdc:
             raise ValueError("Invalid acdc option")
-        acdc = valid_acdc[acdc] if not usefreq else ''
+        acdc = valid_acdc[acdc] if not usefreq else ""
 
         # if range is not provided, cannot use nplc in CONF command
         signal_range = signal_range.upper()
-        if signal_range == 'AUTO':
+        if signal_range == "AUTO":
             signal_range = False
 
         try:
             if usecurrent and signal_range not in self.valid_cranges:
-                raise ValueError('Invalid Current Range option')
+                raise ValueError("Invalid Current Range option")
             elif useres and signal_range not in self.valid_Rranges:
-                raise ValueError('Invalid Resistance Range option')
+                raise ValueError("Invalid Resistance Range option")
             elif signal_range not in self.valid_ranges:
-                raise ValueError('Invalid Range option')
+                raise ValueError("Invalid Range option")
 
         except ValueError:
-            if kwargs.get('verbose', False):
+            if kwargs.get("verbose", False):
                 print("signal_range not in list, using max")
-            signal_range = 'MAX'  # same as MAX for current
+            signal_range = "MAX"  # same as MAX for current
 
         nplc = str(nplc).upper()
         if not (nplc in self.nplc):
             raise ValueError("Invalid nplc option")
-        nplc = nplc if not usefreq else ''
+        nplc = nplc if not usefreq else ""
 
         cmds = []
         if resolution and signal_range:
@@ -474,17 +500,20 @@ class HP_34401A(VisaResource):
                 cmds.append(f"CONF:{mode}{acdc}")
 
             if (resolution or nplc) and (not usefreq):
-                cmds.append(f"SENS:{mode}{acdc}"
-                            f"{':RES ' if resolution else ':NPLC '}"
-                            f"{resolution if resolution else nplc}")
+                cmds.append(
+                    f"SENS:{mode}{acdc}"
+                    f"{':RES ' if resolution else ':NPLC '}"
+                    f"{resolution if resolution else nplc}"
+                )
 
         for cmd_str in cmds:
-            if kwargs.get('verbose', False):
+            if kwargs.get("verbose", False):
                 print(cmd_str)
             self.write_resource(cmd_str, **kwargs)
 
-    def resp_format(self, response: str,
-                    resp_type: type = int) -> Union[Any, List[Any]]:
+    def resp_format(
+        self, response: str, resp_type: type = int
+    ) -> Union[Any, List[Any]]:
         """
         resp_format(response(str data), type(int/float/etc))
 
@@ -496,8 +525,8 @@ class HP_34401A(VisaResource):
             list[type], or type: return is a list if more than 1 element
                                  otherwise returns the single element as type
         """
-        if '@' in response:
-            start = response.find('@')  # note this returns -1 if not found
+        if "@" in response:
+            start = response.find("@")  # note this returns -1 if not found
             stop = -1
         else:
             start = -1
@@ -505,7 +534,7 @@ class HP_34401A(VisaResource):
         # that works out OK because data needs to be parsed from the first
         # character anyway, so this is not an error, but I don't like
         # that it isn't explicitly trying to find the correct character
-        response = list(map(resp_type, response[start+1:stop].split(',')))
+        response = list(map(resp_type, response[start + 1 : stop].split(",")))
 
         if len(response) == 1:
             return response[0]
@@ -513,8 +542,9 @@ class HP_34401A(VisaResource):
 
     def set_measure_time(self, measure_time: float = None):
         if measure_time is None:
-            self.measure_time = (self.sample_count * self.nplc_default *
-                                 (1 / self.line_frequency) + 0.01)
+            self.measure_time = (
+                self.sample_count * self.nplc_default * (1 / self.line_frequency) + 0.01
+            )
         else:
             self.measure_time = measure_time
         return self.measure_time

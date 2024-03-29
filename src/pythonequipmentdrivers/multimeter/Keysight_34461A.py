@@ -1,6 +1,5 @@
 from .HP_34401A import HP_34401A
 
-
 # TODO: Add in additional measurement functionallity not written in the
 # original HP_34401A Class. Look into adding functionallity for adjusting the
 # triggering settings
