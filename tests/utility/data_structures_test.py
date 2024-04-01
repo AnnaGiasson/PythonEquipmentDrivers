@@ -1,4 +1,5 @@
 import unittest
+
 from pythonequipmentdrivers.utility import AttrDict
 
 
