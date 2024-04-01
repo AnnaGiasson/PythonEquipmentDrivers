@@ -12,10 +12,13 @@ The library of supported devices is categorized into 8 sub-categories that are a
 
 ### Installation
 This library utilizes the NI-VISA (or compatible) hardware drivers, this should be installed prior to using this libray.
-To install this module download or clone this repository and run the contained `setup.py` script in this directory with the arguement "install" in a command prompt window:
-`C:\\{path_to_python}\python.exe setup.py install`
+To install this module download or clone this repository and install using pip with 
+`pip install .` or
+`C:\\{path_to_python}\python.exe -m pip install .` if multiple Python installations exist.
 
-For additional help with installation help you can contact the module author Anna Giasson (agiasson@vicr.com)
+Additionally the package can be installed in development mode with the `-e/--editable` flag e.g `pip install -e .` More details on development mode can be found at https://setuptools.pypa.io/en/latest/userguide/development_mode.html 
+
+For additional help with installation help you can contact the module author Anna Giasson (AnnaGraceGiasson@GMail.com)
 
 ### Examples
 To create a connection to an instrument supported by this library it's respective class needs to be instantiated with the address of the instrument you wish to control.
