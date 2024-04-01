@@ -375,7 +375,10 @@ class HP_34401A(VisaResource):
             [list, float]: data in meter memory resulting from all scans
         """
         response = self.query_resource("FETC?", **kwargs)
-        return self.resp_format(response, float)
+        formatted_response = self.resp_format(response, float)
+        if isinstance(formatted_response, list):
+            return [n * self.factor for n in formatted_response]
+        return formatted_response * self.factor
 
     def abort(self, **kwargs) -> None:
         """
