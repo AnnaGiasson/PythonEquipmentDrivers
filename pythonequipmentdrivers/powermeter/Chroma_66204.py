@@ -1,6 +1,6 @@
 from typing import Iterable, Tuple, Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Chroma_66204(VisaResource):  # 3 phase + neutral / output
@@ -16,7 +16,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         super().__init__(address, **kwargs)
 
         # sets units of energy to joules insterad of watt-hours
-        self.write_resource('ENER:MODE JOULE')
+        self.write_resource("ENER:MODE JOULE")
 
     def format_data(self, query_response: str) -> Union[float, Tuple[float]]:
         """
@@ -36,8 +36,8 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
                 were encoded in the input string
         """
 
-        if query_response.count(',') > 0:  # multiple channels selected
-            return tuple(float(x) for x in query_response.split(','))
+        if query_response.count(",") > 0:  # multiple channels selected
+            return tuple(float(x) for x in query_response.split(","))
 
         return float(query_response)
 
@@ -61,12 +61,12 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:VOLT:RMS? {channel}')
+        response = self.query_resource(f"FETC:VOLT:RMS? {channel}")
         return self.format_data(response)
 
-    def get_voltage_peak(self, channel: int = 0,
-                         use_positive: bool = True
-                         ) -> Union[float, Tuple[float]]:
+    def get_voltage_peak(
+        self, channel: int = 0, use_positive: bool = True
+    ) -> Union[float, Tuple[float]]:
         """
         get_voltage_peak(channel=0, use_positive=True)
 
@@ -91,7 +91,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
 
         response = self.query_resource(
             f'FETC:VOLT:PEAK{"+" if use_positive else "-"}? {channel}'
-            )
+        )
 
         return self.format_data(response)
 
@@ -115,7 +115,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:VOLT:DC? {channel}')
+        response = self.query_resource(f"FETC:VOLT:DC? {channel}")
         return self.format_data(response)
 
     def get_voltage_thd(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -138,7 +138,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:VOLT:THD? {channel}')
+        response = self.query_resource(f"FETC:VOLT:THD? {channel}")
         return self.format_data(response)
 
     def get_current_rms(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -161,13 +161,12 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:CURR:RMS? {channel}')
+        response = self.query_resource(f"FETC:CURR:RMS? {channel}")
         return self.format_data(response)
 
-    def get_current_peak(self, channel: int = 0,
-                         use_positive: bool = True
-                         ) -> Union[float, Tuple[float]]:
-
+    def get_current_peak(
+        self, channel: int = 0, use_positive: bool = True
+    ) -> Union[float, Tuple[float]]:
         """
         get_current_peak(channel=0, use_positive=True)
 
@@ -192,7 +191,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
 
         response = self.query_resource(
             f'FETC:CURR:PEAK{"+" if use_positive else "-"}? {channel}'
-            )
+        )
 
         return self.format_data(response)
 
@@ -216,11 +215,10 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:CURR:DC? {channel}')
+        response = self.query_resource(f"FETC:CURR:DC? {channel}")
         return self.format_data(response)
 
-    def get_current_inrush(self,
-                           channel: int = 0) -> Union[float, Tuple[float]]:
+    def get_current_inrush(self, channel: int = 0) -> Union[float, Tuple[float]]:
         """
         get_current_inrush(channel=0)
 
@@ -240,13 +238,11 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:CURR:INR? {channel}')
+        response = self.query_resource(f"FETC:CURR:INR? {channel}")
 
         return self.format_data(response)
 
-    def get_current_crestfactor(self,
-                                channel: int = 0
-                                ) -> Union[float, Tuple[float]]:
+    def get_current_crestfactor(self, channel: int = 0) -> Union[float, Tuple[float]]:
         """
         get_current_crestfactor(channel=0)
 
@@ -266,7 +262,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:CURR:CRES? {channel}')
+        response = self.query_resource(f"FETC:CURR:CRES? {channel}")
         return self.format_data(response)
 
     def get_current_thd(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -289,7 +285,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:CURR:THD? {channel}')
+        response = self.query_resource(f"FETC:CURR:THD? {channel}")
         return self.format_data(response)
 
     def get_power_real(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -312,11 +308,10 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:REAL? {channel}')
+        response = self.query_resource(f"FETC:POW:REAL? {channel}")
         return self.format_data(response)
 
-    def get_power_reactive(self,
-                           channel: int = 0) -> Union[float, Tuple[float]]:
+    def get_power_reactive(self, channel: int = 0) -> Union[float, Tuple[float]]:
         """
         get_power_reactive(channel=0)
 
@@ -336,11 +331,10 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:REAC? {channel}')
+        response = self.query_resource(f"FETC:POW:REAC? {channel}")
         return self.format_data(response)
 
-    def get_power_apparent(self,
-                           channel: int = 0) -> Union[float, Tuple[float]]:
+    def get_power_apparent(self, channel: int = 0) -> Union[float, Tuple[float]]:
         """
         get_power_apparent(channel=0)
 
@@ -360,7 +354,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:APP? {channel}')
+        response = self.query_resource(f"FETC:POW:APP? {channel}")
         return self.format_data(response)
 
     def get_power_factor(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -383,7 +377,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:PFAC? {channel}')
+        response = self.query_resource(f"FETC:POW:PFAC? {channel}")
         return self.format_data(response)
 
     def get_power_dc(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -406,7 +400,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:DC? {channel}')
+        response = self.query_resource(f"FETC:POW:DC? {channel}")
         return self.format_data(response)
 
     def get_energy(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -429,7 +423,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:POW:ENER? {channel}')
+        response = self.query_resource(f"FETC:POW:ENER? {channel}")
         return self.format_data(response)
 
     def get_frequency(self, channel: int = 0) -> Union[float, Tuple[float]]:
@@ -452,7 +446,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         if not (0 <= channel <= 4):
             raise ValueError('Invalid value of "channel", must be in [0,4]')
 
-        response = self.query_resource(f'FETC:FREQ? {channel}')
+        response = self.query_resource(f"FETC:FREQ? {channel}")
         return self.format_data(response)
 
     def get_efficiency(self) -> float:
@@ -467,11 +461,10 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             float: efficieny
         """
 
-        response = self.query_resource('FETC:EFF?')
+        response = self.query_resource("FETC:EFF?")
         return self.format_data(response)
 
-    def get_current_harmonics(self, channel: int,
-                              mode: str = "value") -> float:
+    def get_current_harmonics(self, channel: int, mode: str = "value") -> float:
         """
         get_current_harmonics(channel, mode="value")
 
@@ -495,8 +488,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
         response = self.query_resource(command_str)
         return self.format_data(response)
 
-    def get_voltage_harmonics(self, channel: int,
-                              mode: str = "value") -> float:
+    def get_voltage_harmonics(self, channel: int, mode: str = "value") -> float:
         """
         get_voltage_harmonics(channel, mode="value")
 
@@ -531,7 +523,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             float: three-phase real power in Watts
         """
 
-        response = self.query_resource('FETC:SIGM:POW:REAL?')
+        response = self.query_resource("FETC:SIGM:POW:REAL?")
         return self.format_data(response)
 
     def get_3phase_power_reactive(self) -> float:
@@ -545,7 +537,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             float: three-phase reactive power in VARs
         """
 
-        response = self.query_resource('FETC:SIGM:POW:REAC?')
+        response = self.query_resource("FETC:SIGM:POW:REAC?")
         return self.format_data(response)
 
     def get_3phase_power_apparent(self) -> float:
@@ -559,7 +551,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             float: three-phase apparent power in VAs
         """
 
-        response = self.query_resource('FETC:SIGM:POW:APP?')
+        response = self.query_resource("FETC:SIGM:POW:APP?")
         return self.format_data(response)
 
     def get_3phase_power_factor(self) -> float:
@@ -573,7 +565,7 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             float: three-phase power_factor
         """
 
-        response = self.query_resource('FETC:SIGM:POW:PFAC?')
+        response = self.query_resource("FETC:SIGM:POW:PFAC?")
         return self.format_data(response)
 
     def set_input_shunt_configuration(self, config: Iterable[bool]) -> None:
@@ -588,11 +580,11 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
                 each channel is configured to use an external shunt.
         """
 
-        command_str = 'CONF:INP:SHUN {},{},{},{}'
+        command_str = "CONF:INP:SHUN {},{},{},{}"
 
         self.write_resource(
             command_str.format(
-               *("ON" if is_external else "OFF" for is_external in config)
+                *("ON" if is_external else "OFF" for is_external in config)
             )
         )
 
@@ -608,11 +600,9 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
                 is configured to use an external shunt.
         """
 
-        response = self.query_resource('CONF:INP:SHUN?')
+        response = self.query_resource("CONF:INP:SHUN?")
 
-        config = tuple(
-            channel_config == "ON" for channel_config in response.split(',')
-        )
+        config = tuple(channel_config == "ON" for channel_config in response.split(","))
 
         return config
 
@@ -627,11 +617,10 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             Tuple[float]: Each channels shunt resistance in Ohms
         """
 
-        response = self.query_resource('CONF:INP:SHUN:RESIS?')
+        response = self.query_resource("CONF:INP:SHUN:RESIS?")
         return self.format_data(response)
 
-    def set_external_shunt_resistances(self,
-                                       resistances: Iterable[float]) -> None:
+    def set_external_shunt_resistances(self, resistances: Iterable[float]) -> None:
         """
         set_external_shunt_resistances()
 
@@ -642,5 +631,5 @@ class Chroma_66204(VisaResource):  # 3 phase + neutral / output
             Iterable[float]: Each channels shunt resistance in Ohms
         """
 
-        command_str = 'CONF:INP:SHUN:RESIS {},{},{},{}'.format(*resistances)
+        command_str = "CONF:INP:SHUN:RESIS {},{},{},{}".format(*resistances)
         self.query_resource(command_str)

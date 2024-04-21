@@ -123,7 +123,7 @@ class VisaResource:
             self._resource = rm.open_resource(self.address, **default_settings)
 
             self.idn = self.query_resource("*IDN?")
-        except (pyvisa.Error) as error:
+        except pyvisa.Error as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
             )
@@ -131,7 +131,7 @@ class VisaResource:
         if clear:
             self.clear()
 
-        self.timeout = int(1000*kwargs.get("timeout", 1.0))  # ms
+        self.timeout = int(1000 * kwargs.get("timeout", 1.0))  # ms
 
     def clear_status(self, **kwargs) -> None:
         """
@@ -203,9 +203,7 @@ class VisaResource:
         """
         try:
             # generic set local method for most GPIB, USB, TCIP
-            self._resource.control_ren(
-                pyvisa.constants.RENLineOperation.address_gtl
-                )
+            self._resource.control_ren(pyvisa.constants.RENLineOperation.address_gtl)
         except (AttributeError, pyvisa.Error):
             # not a device that has control_ren method
             pass
@@ -381,7 +379,7 @@ class GpibInterface:
         try:
             self._resource = rm.open_resource(self.address, **default_settings)
 
-        except (pyvisa.Error) as error:
+        except pyvisa.Error as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
             )

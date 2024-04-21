@@ -1,6 +1,6 @@
 from typing import Iterable, List, Optional, Tuple, Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class PPSC_3150AFX(VisaResource):
@@ -38,7 +38,7 @@ class PPSC_3150AFX(VisaResource):
         """
 
         state = self.query_resource("OUTP:STAT?")
-        return (int(state) == 1)
+        return int(state) == 1
 
     def on(self) -> None:
         """
@@ -111,8 +111,7 @@ class PPSC_3150AFX(VisaResource):
         response = self.query_resource("RANG?")
         return int(response)
 
-    def set_voltage(self, voltage: float,
-                    phase: Optional[int] = None) -> None:
+    def set_voltage(self, voltage: float, phase: Optional[int] = None) -> None:
         """
         set_voltage(voltage, phase=None)
 
@@ -124,12 +123,9 @@ class PPSC_3150AFX(VisaResource):
         set the voltage of one or all phases to specifed value
         """
 
-        self.write_resource(
-            f"SOUR:VOLT{'' if phase is None else phase} {voltage}"
-            )
+        self.write_resource(f"SOUR:VOLT{'' if phase is None else phase} {voltage}")
 
-    def get_voltage(self, phase: Optional[int] = None
-                    ) -> Union[float, List[float]]:
+    def get_voltage(self, phase: Optional[int] = None) -> Union[float, List[float]]:
         """
         get_voltage(phase=None)
 
@@ -140,12 +136,10 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'SOUR:VOLT{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'SOUR:VOLT{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
@@ -172,8 +166,9 @@ class PPSC_3150AFX(VisaResource):
         data = self.query_resource("SOUR:FREQ?")
         return float(data)
 
-    def measure_voltage_rms(self, phase: Optional[int] = None
-                            ) -> Union[float, List[float]]:
+    def measure_voltage_rms(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_voltage_rms(phase=None)
 
@@ -185,17 +180,16 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:VOLT:AC{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:VOLT:AC{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_voltage_line_to_line(self, phase: Optional[int] = None
-                                     ) -> Union[float, List[float]]:
+    def measure_voltage_line_to_line(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_voltage_line_to_line(phase=None)
 
@@ -207,17 +201,16 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:VLL{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:VLL{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_voltage_dc(self, phase: Optional[int] = None
-                           ) -> Union[float, List[float]]:
+    def measure_voltage_dc(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_voltage_dc(phase=None)
 
@@ -229,12 +222,10 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:VOLT:DC{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:VOLT:DC{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
@@ -246,11 +237,12 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self.query_resource('MEAS:FREQ?')
+        response = self.query_resource("MEAS:FREQ?")
         return float(response)
 
-    def measure_current_rms(self, phase: Optional[int] = None
-                            ) -> Union[float, List[float]]:
+    def measure_current_rms(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_current_rms(phase=None)
 
@@ -262,17 +254,16 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:CURR{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:CURR{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_current_dc(self, phase: Optional[int] = None
-                           ) -> Union[float, List[float]]:
+    def measure_current_dc(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_current_dc(phase=None)
 
@@ -284,17 +275,16 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:CURR:DC{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:CURR:DC{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_current_peak(self, phase: Optional[int] = None
-                             ) -> Union[float, List[float]]:
+    def measure_current_peak(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_current_peak(phase=None)
 
@@ -308,15 +298,16 @@ class PPSC_3150AFX(VisaResource):
 
         response = self.query_resource(
             f'MEAS:CURR:PEAK{"" if phase is None else phase}?'
-            )
+        )
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_current_crest(self, phase: Optional[int] = None
-                              ) -> Union[float, List[float]]:
+    def measure_current_crest(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_current_crest(phase=None)
 
@@ -330,15 +321,16 @@ class PPSC_3150AFX(VisaResource):
 
         response = self.query_resource(
             f'MEAS:CURR:CREST{"" if phase is None else phase}?'
-            )
+        )
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
-    def measure_power_real(self, phase: Optional[int] = None
-                           ) -> Union[float, List[float]]:
+    def measure_power_real(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_power_real(phase=None)
 
@@ -350,18 +342,17 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:POW{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:POW{"" if phase is None else phase}?')
 
         if phase is None:
             # convert from kW to W
-            return [1000*float(x) for x in response.split(',')]
+            return [1000 * float(x) for x in response.split(",")]
         else:
-            return 1000*float(response)
+            return 1000 * float(response)
 
-    def measure_power_apparent(self, phase: Optional[int] = None
-                               ) -> Union[float, List[float]]:
+    def measure_power_apparent(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_power_apparent(phase=None)
 
@@ -373,18 +364,17 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:KVA{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:KVA{"" if phase is None else phase}?')
 
         if phase is None:
             # convert from kVA to VA
-            return [1000*float(x) for x in response.split(',')]
+            return [1000 * float(x) for x in response.split(",")]
         else:
-            return 1000*float(response)
+            return 1000 * float(response)
 
-    def measure_power_factor(self, phase: Optional[int] = None
-                             ) -> Union[float, List[float]]:
+    def measure_power_factor(
+        self, phase: Optional[int] = None
+    ) -> Union[float, List[float]]:
         """
         measure_power_factor(phase=None)
 
@@ -396,12 +386,10 @@ class PPSC_3150AFX(VisaResource):
         returns: float / list of floats
         """
 
-        response = self.query_resource(
-            f'MEAS:PF{"" if phase is None else phase}?'
-            )
+        response = self.query_resource(f'MEAS:PF{"" if phase is None else phase}?')
 
         if phase is None:
-            return [float(x) for x in response.split(',')]
+            return [float(x) for x in response.split(",")]
         else:
             return float(response)
 
@@ -414,11 +402,10 @@ class PPSC_3150AFX(VisaResource):
         returns: float
         """
 
-        response = self.query_resource('MEAS:TEMP:AMB?')
+        response = self.query_resource("MEAS:TEMP:AMB?")
         return float(response)
 
-    def store_waveform(self, waveform_number: int, data: Iterable[float]
-                       ) -> None:
+    def store_waveform(self, waveform_number: int, data: Iterable[float]) -> None:
         """
         store_waveform(waveform_number, data)
 
@@ -429,7 +416,7 @@ class PPSC_3150AFX(VisaResource):
               be floats, waveforms should be normalized to the range -1:1
         """
 
-        wvfm_str = ','.join([str(x) for x in data])
+        wvfm_str = ",".join([str(x) for x in data])
         command_str = f"WAVEFORM:DEF {waveform_number},{wvfm_str}"
         self.write_resource(command_str)
 
@@ -440,13 +427,16 @@ class PPSC_3150AFX(VisaResource):
         executes the currently loaded transient sequence
         """
 
-        self.write_resource('PROG:TRAN RUN')
+        self.write_resource("PROG:TRAN RUN")
 
-    def build_sequence(self, sequence_list: List[Tuple[float, float]],
-                       sequence_num: int = 1,
-                       v_steady_state: Optional[float] = None,
-                       f: float = 50, voltage_range: int = 1) -> None:
-
+    def build_sequence(
+        self,
+        sequence_list: List[Tuple[float, float]],
+        sequence_num: int = 1,
+        v_steady_state: Optional[float] = None,
+        f: float = 50,
+        voltage_range: int = 1,
+    ) -> None:
         """
         build_sequence(sequence_list,
         sequence_num=1, v_steady_state=None, f=50, voltage_range=1)
@@ -476,7 +466,7 @@ class PPSC_3150AFX(VisaResource):
         if v_steady_state is None:
             v_steady_state = self.get_voltage(1)
 
-        self.write_resource(f'PROG:NAME {sequence_num}')
+        self.write_resource(f"PROG:NAME {sequence_num}")
 
         sequence_str = f"""
                         FORM,3,COUPL,DIRECT,VOLT:MODE,0,
@@ -512,11 +502,11 @@ class PPSC_3150AFX(VisaResource):
                              TSEG,{t},
                              """
 
-        sequence_str += 'LAST'
+        sequence_str += "LAST"
 
-        sequence_str = sequence_str.replace('\n', '')
-        sequence_str = sequence_str.replace('    ', '')
+        sequence_str = sequence_str.replace("\n", "")
+        sequence_str = sequence_str.replace("    ", "")
 
         command_str = f"PROG:DEF {int(sequence_num)},INTERNAL,{sequence_str}"
         self.write_resource(command_str)
-        self.write_resource(f'PROG:EXEC {int(sequence_num)}')
+        self.write_resource(f"PROG:EXEC {int(sequence_num)}")

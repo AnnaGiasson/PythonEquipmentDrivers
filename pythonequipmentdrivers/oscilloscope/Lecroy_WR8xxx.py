@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
-from pythonequipmentdrivers import VisaResource
+
+from ..core import VisaResource
 
 
 class Lecroy_WR8xxx(VisaResource):
@@ -20,13 +21,13 @@ class Lecroy_WR8xxx(VisaResource):
     http://cdn.teledynelecroy.com/files/manuals/maui-remote-control-and-automation-manual.pdf
     """
 
-    valid_trigger_states = ['AUTO', 'NORM', 'SINGLE', 'STOP']
+    valid_trigger_states = ["AUTO", "NORM", "SINGLE", "STOP"]
 
-    bandwidth_settings = {'20MHZ', '200MHZ', '350MHZ', "FULL"}
+    bandwidth_settings = {"20MHZ", "200MHZ", "350MHZ", "FULL"}
 
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, clear=True, **kwargs)
-        self.set_comm_header('short')
+        self.set_comm_header("short")
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
@@ -54,7 +55,7 @@ class Lecroy_WR8xxx(VisaResource):
                 vertical division on the display.
         """
 
-        self.write_resource(f'C{channel}:VDIV {scale}')
+        self.write_resource(f"C{channel}:VDIV {scale}")
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -69,7 +70,7 @@ class Lecroy_WR8xxx(VisaResource):
             (float): vertical scale
         """
 
-        response = self.query_resource(f'C{channel}:VDIV?')
+        response = self.query_resource(f"C{channel}:VDIV?")
         val = response.split()[1]
         return float(val)
 
@@ -88,8 +89,8 @@ class Lecroy_WR8xxx(VisaResource):
                 amplltude. Defaults to False.
         """
 
-        if kwargs.get('use_divisions', False):
-            off = off*self.get_channel_scale(channel)
+        if kwargs.get("use_divisions", False):
+            off = off * self.get_channel_scale(channel)
 
         self.write_resource(f"C{channel}:OFFSET {off}")
 
@@ -123,15 +124,21 @@ class Lecroy_WR8xxx(VisaResource):
             coupling (str): coupling mode
         """
 
-        coupling_map = {'dc_1meg': 'D1M', "dc": 'D1M',
-                        'dc_50': 'D50',
-                        'ac_1meg': 'A1M', 'ac': 'A1M',
-                        'gnd': 'gnd'}
+        coupling_map = {
+            "dc_1meg": "D1M",
+            "dc": "D1M",
+            "dc_50": "D50",
+            "ac_1meg": "A1M",
+            "ac": "A1M",
+            "gnd": "gnd",
+        }
 
         coupling = coupling.lower()
         if coupling not in coupling_map.keys():
-            raise ValueError(f"Invalid Coupling option: {coupling}. "
-                             f"Suuport options are: {coupling_map.keys()}")
+            raise ValueError(
+                f"Invalid Coupling option: {coupling}. "
+                f"Suuport options are: {coupling_map.keys()}"
+            )
 
         cmd_str = f"C{channel}:COUPLING {coupling_map[coupling]}"
         self.write_resource(cmd_str)
@@ -151,8 +158,7 @@ class Lecroy_WR8xxx(VisaResource):
             str: coupling mode
         """
 
-        coupling_map = {'D1M': 'dc', 'D50': 'dc_50',
-                        'A1M': 'ac', 'gnd': 'gnd'}
+        coupling_map = {"D1M": "dc", "D50": "dc_50", "A1M": "ac", "gnd": "gnd"}
 
         response = self.query_resource(f"C{int(channel)}:COUPLING?")
         return coupling_map[response.split()[-1]]
@@ -164,14 +170,15 @@ class Lecroy_WR8xxx(VisaResource):
         Removes any bandwidth limiting on all channels
         """
 
-        self.write_resource('BWL OFF')
+        self.write_resource("BWL OFF")
 
-    def set_channel_bandwidth_limit(self, channel: int, bandwidth: str
-                                    ) -> None:
+    def set_channel_bandwidth_limit(self, channel: int, bandwidth: str) -> None:
 
         if bandwidth.upper() not in self.bandwidth_settings:
-            raise ValueError('Invalid setting for bandwidth,'
-                             'see self.bandwidth_settings for allowed options')
+            raise ValueError(
+                "Invalid setting for bandwidth,"
+                "see self.bandwidth_settings for allowed options"
+            )
 
         vb_cmd = f'app.Acquisition.C{channel}.BandwidthLimit = "{bandwidth}"'
         self.write_resource(f"""VBS {vb_cmd}""")
@@ -193,17 +200,17 @@ class Lecroy_WR8xxx(VisaResource):
 
         response = self.query_resource(
             f"VBS? 'return=app.Acquisition.C{channel}.BandwidthLimit' "
-            )
+        )
 
-        match = re.findall(r'VBS (Full|\d*[Mk]?Hz)', response)
+        match = re.findall(r"VBS (Full|\d*[Mk]?Hz)", response)
         if not match:
-            raise ValueError(f'Error reading BW limit for channel {channel}')
+            raise ValueError(f"Error reading BW limit for channel {channel}")
 
-        if match[0] == 'Full':
+        if match[0] == "Full":
             return None
 
-        value = match[0].rstrip('Hz')
-        return float(value.replace('M', 'E+3'))
+        value = match[0].rstrip("Hz")
+        return float(value.replace("M", "E+3"))
 
     def set_horizontal_scale(self, scale: float) -> None:
         """
@@ -217,7 +224,7 @@ class Lecroy_WR8xxx(VisaResource):
                 display in seconds.
         """
 
-        self.write_resource(f'TIME_DIV {float(scale)}')
+        self.write_resource(f"TIME_DIV {float(scale)}")
 
     def get_horizontal_scale(self) -> float:
         """
@@ -229,7 +236,7 @@ class Lecroy_WR8xxx(VisaResource):
             float: horizontal scale in seconds per division.
         """
 
-        response = self.query_resource('TIME_DIV?')
+        response = self.query_resource("TIME_DIV?")
         val = response.split()[1]
         return float(val)
 
@@ -247,7 +254,7 @@ class Lecroy_WR8xxx(VisaResource):
             size (int): number of waveform points to use in memory
         """
 
-        self.write_resource(f'MEMORY_SIZE {size}')
+        self.write_resource(f"MEMORY_SIZE {size}")
 
     def get_memory_size(self) -> int:
         """
@@ -259,17 +266,18 @@ class Lecroy_WR8xxx(VisaResource):
             int: number of points
         """
 
-        response = self.query_resource('MEMORY_SIZE?')
+        response = self.query_resource("MEMORY_SIZE?")
 
-        match = re.findall(r'M\w* (\d*E?[+-]?\d*) SAMPLE', response)
+        match = re.findall(r"M\w* (\d*E?[+-]?\d*) SAMPLE", response)
 
         if not match:
-            raise ValueError('Error retriveing value from oscilloscope')
+            raise ValueError("Error retriveing value from oscilloscope")
 
         return int(float(match[0]))
 
-    def set_measure_config(self, channel: int, meas_type: int, meas_idx: int,
-                           source_type: str = 'channel') -> None:
+    def set_measure_config(
+        self, channel: int, meas_type: int, meas_idx: int, source_type: str = "channel"
+    ) -> None:
         """
         set_measure_config(channel: int, meas_type: int, meas_idx: int,
                            source_type: str = 'channel') -> None
@@ -298,10 +306,10 @@ class Lecroy_WR8xxx(VisaResource):
                 to 'channel'.
         """
 
-        source_mapping = {'channel': 'C', 'math': 'F', 'zoom': 'Z'}
+        source_mapping = {"channel": "C", "math": "F", "zoom": "Z"}
         src_code = source_mapping[source_type.lower()]
 
-        self.write_resource(f'PACU {meas_idx},{meas_type},{src_code}{channel}')
+        self.write_resource(f"PACU {meas_idx},{meas_type},{src_code}{channel}")
 
     def get_measure_config(self, meas_idx: int) -> Dict[str, str]:
         """
@@ -319,10 +327,10 @@ class Lecroy_WR8xxx(VisaResource):
                 'type', 'source', 'status'
         """
 
-        response = self.query_resource(f'PACU? {meas_idx}')
+        response = self.query_resource(f"PACU? {meas_idx}")
         info = response.split()[-1]
-        resp_fields = ('index', 'type', 'source', 'status')
-        return {k: v for k, v in zip(resp_fields, info.split(','))}
+        resp_fields = ("index", "type", "source", "status")
+        return {k: v for k, v in zip(resp_fields, info.split(","))}
 
     def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
         """
@@ -350,15 +358,15 @@ class Lecroy_WR8xxx(VisaResource):
             try:
                 data.append(float(response.split()[-1]))
             except ValueError:
-                data.append(float('nan'))
+                data.append(float("nan"))
 
         if len(data) == 1:
             return data[0]
         return tuple(data)
 
-    def get_measure_statistics(self, meas_idx: int,
-                               stat_filter: Optional[str] = None
-                               ) -> Union[Dict[str, float], float]:
+    def get_measure_statistics(
+        self, meas_idx: int, stat_filter: Optional[str] = None
+    ) -> Union[Dict[str, float], float]:
         """
         get_measure_statistics(meas_idx: int, stat_filter: str = ''
                                ) -> Union[Dict[str, float], float]
@@ -379,20 +387,26 @@ class Lecroy_WR8xxx(VisaResource):
                 statistic) for a given measurement
         """
 
-        response = self.query_resource(f'PAST? CUST,,P{meas_idx}')
+        response = self.query_resource(f"PAST? CUST,,P{meas_idx}")
 
         # strip out header info about measurement
-        data = response[response.index(',') + 1:].strip().split(',')
+        data = response[response.index(",") + 1 :].strip().split(",")
         data = data[3:]
 
         keys = map(str.lower, data[::2])
         vals = data[1::2]
 
-        rename_map = {'avg': 'mean', 'high': 'max', 'low': 'min',
-                      'last': 'last', 'sigma': 'stdev', 'sweeps': 'n'}
+        rename_map = {
+            "avg": "mean",
+            "high": "max",
+            "low": "min",
+            "last": "last",
+            "sigma": "stdev",
+            "sweeps": "n",
+        }
         stats = {}
         for k, v in zip(keys, vals):
-            if v != 'UNDEF':
+            if v != "UNDEF":
                 value = float(v.split()[0])  # remove units
             else:
                 value = None
@@ -404,17 +418,19 @@ class Lecroy_WR8xxx(VisaResource):
 
         if stat_filter in stats.keys():
             return stats[stat_filter.lower()]
-        raise ValueError(f'Invalid option stat_filter = {stat_filter}, '
-                         f'valid options are: {tuple(stats.keys())}')
+        raise ValueError(
+            f"Invalid option stat_filter = {stat_filter}, "
+            f"valid options are: {tuple(stats.keys())}"
+        )
 
     def enable_measure_statistics(self, histogram: bool = False) -> None:
         if histogram:
-            self.write_resource('PARM CUST,BOTH')
+            self.write_resource("PARM CUST,BOTH")
         else:
-            self.write_resource('PARM CUST,STAT')
+            self.write_resource("PARM CUST,STAT")
 
     def disable_measure_statistics(self) -> None:
-        self.write_resource('PARM CUST,OFF')
+        self.write_resource("PARM CUST,OFF")
 
     def reset_measure_statistics(self) -> None:
         """
@@ -426,7 +442,7 @@ class Lecroy_WR8xxx(VisaResource):
         self.write_resource("VBS 'app.ClearSweeps' ")
 
     def clear_all_measure(self) -> None:
-        self.write_resource('PACL')
+        self.write_resource("PACL")
 
     def trigger_run(self) -> None:
         """
@@ -456,7 +472,7 @@ class Lecroy_WR8xxx(VisaResource):
         sets the state of the oscilloscopes acquision mode to stop
         acquiring new data. equivalent to set_trigger_acquire_state(0).
         """
-        self.write_resource('STOP')
+        self.write_resource("STOP")
 
     def trigger_force(self) -> None:
         """
@@ -489,7 +505,7 @@ class Lecroy_WR8xxx(VisaResource):
             str: trigger mode.
         """
 
-        response = self.query_resource('TRMD?')
+        response = self.query_resource("TRMD?")
         return response.split()[-1].lower()
 
     def set_trigger_source(self, channel: int) -> None:
@@ -502,14 +518,14 @@ class Lecroy_WR8xxx(VisaResource):
             channel (int): channel number to configure
         """
 
-        response = self.query_resource('TRSE?')  # get current trigger config
+        response = self.query_resource("TRSE?")  # get current trigger config
 
         # extract indecies that bound the current trigger source
-        i_start = response.index('SR,') + 3
-        i_end = response.index(',', i_start)
+        i_start = response.index("SR,") + 3
+        i_end = response.index(",", i_start)
 
         # replace source with new source, send to device
-        write_cmd = f'{response[:i_start]}C{channel}{response[i_end:]}'
+        write_cmd = f"{response[:i_start]}C{channel}{response[i_end:]}"
         self.write_resource(write_cmd)
 
     def set_trigger_external(self) -> None:
@@ -519,14 +535,14 @@ class Lecroy_WR8xxx(VisaResource):
         Sets the trigger source to the external trigger input
         """
 
-        response = self.query_resource('TRSE?')  # get current trigger config
+        response = self.query_resource("TRSE?")  # get current trigger config
 
         # extract indecies that bound the current trigger source
-        i_start = response.index('SR,') + 3
-        i_end = response.index(',', i_start)
+        i_start = response.index("SR,") + 3
+        i_end = response.index(",", i_start)
 
         # replace source with new source, send to device
-        write_cmd = f'{response[:i_start]}EXT{response[i_end:]}'
+        write_cmd = f"{response[:i_start]}EXT{response[i_end:]}"
         self.write_resource(write_cmd)
 
     def get_trigger_source(self) -> Union[int, str]:
@@ -541,14 +557,14 @@ class Lecroy_WR8xxx(VisaResource):
                 one of the source inputs is used as the trigger.
         """
 
-        response = self.query_resource('TRSE?')  # get current trigger config
+        response = self.query_resource("TRSE?")  # get current trigger config
 
         # extract indecies that bound the current trigger source
-        i_start = response.index('SR,') + 3
-        i_end = response.index(',', i_start)
+        i_start = response.index("SR,") + 3
+        i_end = response.index(",", i_start)
 
         if "C" in response[i_start:i_end]:
-            channel = response[i_start:i_end].lstrip('C')
+            channel = response[i_start:i_end].lstrip("C")
             return int(channel)
         else:
             return response[i_start:i_end]
@@ -584,7 +600,7 @@ class Lecroy_WR8xxx(VisaResource):
         triggering additional acquision events.
         """
 
-        response = self.query_resource('TRMD?')
+        response = self.query_resource("TRMD?")
         response = response.strip().split()[-1]  # strip newline and CMD name
         return response
 
@@ -604,10 +620,10 @@ class Lecroy_WR8xxx(VisaResource):
                 currently being used for triggering.
         """
 
-        source = kwargs.get('source', self.get_trigger_source())
+        source = kwargs.get("source", self.get_trigger_source())
         if isinstance(source, int):
-            source = f'C{source}'
-        self.write_resource(f'{source}:TRLV {float(level)}\n')
+            source = f"C{source}"
+        self.write_resource(f"{source}:TRLV {float(level)}\n")
 
     def get_trigger_level(self, **kwargs) -> float:
         """
@@ -626,12 +642,12 @@ class Lecroy_WR8xxx(VisaResource):
                 the signal being triggered on
         """
 
-        source = kwargs.get('source', self.get_trigger_source())
+        source = kwargs.get("source", self.get_trigger_source())
         if isinstance(source, int):
-            source = f'C{source}'
+            source = f"C{source}"
 
-        read_cmd = f'{source}:TRLV'
-        response = self.query_resource(f'{read_cmd}?')
+        read_cmd = f"{source}:TRLV"
+        response = self.query_resource(f"{read_cmd}?")
 
         return float(response.lstrip(read_cmd).split()[0])
 
@@ -660,19 +676,20 @@ class Lecroy_WR8xxx(VisaResource):
                 currently being used for triggering.
         """
 
-        valid_options = {'POS': 'POS', 'RISE': 'POS',
-                         'NEG': 'NEG', 'FALL': 'NEG'}
+        valid_options = {"POS": "POS", "RISE": "POS", "NEG": "NEG", "FALL": "NEG"}
 
-        source = kwargs.get('source', self.get_trigger_source())
+        source = kwargs.get("source", self.get_trigger_source())
         if isinstance(source, int):
-            source = f'C{source}'
+            source = f"C{source}"
 
         slope = str(slope).upper()
         if slope not in valid_options.keys():
-            raise ValueError('Invalid option for Arg "slope".'
-                             f' Valid option are {valid_options.keys()}')
+            raise ValueError(
+                'Invalid option for Arg "slope".'
+                f" Valid option are {valid_options.keys()}"
+            )
 
-        self.write_resource(f'{source}:TRSL {valid_options[slope]}')
+        self.write_resource(f"{source}:TRSL {valid_options[slope]}")
 
     def get_trigger_slope(self, **kwargs) -> str:
         """
@@ -690,11 +707,11 @@ class Lecroy_WR8xxx(VisaResource):
             str: trigger edge polarity
         """
 
-        source = kwargs.get('source', self.get_trigger_source())
+        source = kwargs.get("source", self.get_trigger_source())
         if isinstance(source, int):
-            source = f'C{source}'
+            source = f"C{source}"
 
-        response = self.query_resource(f'{source}:TRSL?')
+        response = self.query_resource(f"{source}:TRSL?")
         return response.split()[-1].lower()
 
     def set_trigger_position(self, offset: float, **kwargs) -> None:
@@ -715,12 +732,12 @@ class Lecroy_WR8xxx(VisaResource):
                 Defaults to False.
         """
 
-        if kwargs.get('use_divisions', False):
+        if kwargs.get("use_divisions", False):
             scale = self.get_horizontal_scale()
         else:
             scale = 1
 
-        self.write_resource(f'TRDL {offset*scale}')
+        self.write_resource(f"TRDL {offset*scale}")
 
     def get_trigger_position(self) -> float:
         """
@@ -734,7 +751,7 @@ class Lecroy_WR8xxx(VisaResource):
                 in seconds
         """
 
-        response = self.query_resource('TRDL?')
+        response = self.query_resource("TRDL?")
         return float(response.split()[1].lower())
 
     def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
@@ -764,17 +781,17 @@ class Lecroy_WR8xxx(VisaResource):
                 'fullscreen'. Defaults to dsowindow.
         """
         # valid image settings
-        valid_formats = ('BMP', 'JPEG', 'PNG', 'TIFF')
-        valid_orientations = ('PORTRAIT', 'LANDSCAPE')
-        valid_bg_colors = ('BLACK', 'WHITE')
-        valid_screen_areas = ('DSOWINDOW', 'GRIDAREAONLY', 'FULLSCREEN')
+        valid_formats = ("BMP", "JPEG", "PNG", "TIFF")
+        valid_orientations = ("PORTRAIT", "LANDSCAPE")
+        valid_bg_colors = ("BLACK", "WHITE")
+        valid_screen_areas = ("DSOWINDOW", "GRIDAREAONLY", "FULLSCREEN")
 
         # handle kwargs
-        xfer_ext = str(kwargs.get('image_format', 'PNG')).upper()
-        image_orient = kwargs.get('image_orientation', 'LANDSCAPE').upper()
-        bg_color = kwargs.get('bg_color', 'BLACK').upper()
-        screen_area = kwargs.get('screen_area', 'DSOWINDOW').upper()
-        port = 'NET'  # no support for others atm
+        xfer_ext = str(kwargs.get("image_format", "PNG")).upper()
+        image_orient = kwargs.get("image_orientation", "LANDSCAPE").upper()
+        bg_color = kwargs.get("bg_color", "BLACK").upper()
+        screen_area = kwargs.get("screen_area", "DSOWINDOW").upper()
+        port = "NET"  # no support for others atm
 
         if xfer_ext not in valid_formats:
             raise ValueError('Invalid option for kwarg "image_format"')
@@ -786,37 +803,37 @@ class Lecroy_WR8xxx(VisaResource):
             raise ValueError('Invalid option for kwarg "screen_area"')
 
         # add file extension to final filepath
-        write_ext = xfer_ext.lower() if xfer_ext != 'JPEG' else 'jpg'
+        write_ext = xfer_ext.lower() if xfer_ext != "JPEG" else "jpg"
         if isinstance(image_title, Path):
-            f_name = f'{image_title.name}.{write_ext}'
+            f_name = f"{image_title.name}.{write_ext}"
             file_path = image_title.parent.joinpath(f_name)
         elif isinstance(image_title, str):
             file_path = f"{image_title}.{write_ext}"
         else:
-            raise ValueError('image_title must be a str or path-like object')
+            raise ValueError("image_title must be a str or path-like object")
 
         # initiate transfer
-        template = (r'HARDCOPY_SETUP DEV, {}, FORMAT, {}, '
-                    r'BCKG, {}, AREA, {}, PORT, {}')
-        write_cmd = template.format(xfer_ext, image_orient, bg_color,
-                                    screen_area, port)
+        template = (
+            r"HARDCOPY_SETUP DEV, {}, FORMAT, {}, " r"BCKG, {}, AREA, {}, PORT, {}"
+        )
+        write_cmd = template.format(xfer_ext, image_orient, bg_color, screen_area, port)
         self.write_resource(write_cmd)
-        self.write_resource('SCREEN_DUMP')
+        self.write_resource("SCREEN_DUMP")
 
         # read back raw image data
         screen_data = self.read_resource_raw()
 
         # save to file
-        with open(file_path, 'wb+') as file:
+        with open(file_path, "wb+") as file:
             file.write(screen_data)
 
     def get_waveform_description(self, channel: int) -> Dict[str, Any]:
         response = self.query_resource(f'C{channel}:INSP? "WAVEDESC"')
         description = {}
         for item in response.splitlines()[2:-1]:
-            idx = item.index(':')
+            idx = item.index(":")
             key = item[:idx].strip().lower()
-            value = item[idx+1:].strip().lower()
+            value = item[idx + 1 :].strip().lower()
             try:
                 value = float(value)
                 if value.is_integer():
@@ -826,8 +843,9 @@ class Lecroy_WR8xxx(VisaResource):
             description[key] = value
         return description
 
-    def get_channel_data(self, *channels: int,
-                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
+    def get_channel_data(
+        self, *channels: int, **kwargs
+    ) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, return_time=True, dtype=np.float32)
 
@@ -857,35 +875,35 @@ class Lecroy_WR8xxx(VisaResource):
         """
 
         # formatting info
-        sparsing = int(kwargs.get('sparsing', 1))
-        dtype = kwargs.get('dtype', np.float32)
+        sparsing = int(kwargs.get("sparsing", 1))
+        dtype = kwargs.get("dtype", np.float32)
 
         # set up scope for data transfer
         #   format: (sparsing, num_points, first_point, seg_num)
-        self.write_resource(f'WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0')
+        self.write_resource(f"WAVEFORM_SETUP SP,{sparsing},NP,0,FP,0,SN,0")
         #   for now only sparsing is supported (defaults to no sparsing)
 
         waves = []
         for channel in channels:
             # get waveform metadata
             desc = self.get_waveform_description(channel)
-            y_offset = desc['vertical_offset']
-            y_scale = desc['vertical_gain']
+            y_offset = desc["vertical_offset"]
+            y_scale = desc["vertical_gain"]
 
             # get raw data, strip header
-            self.write_resource(f'C{channel}:WF? DAT1')
+            self.write_resource(f"C{channel}:WF? DAT1")
             raw_data = self.read_resource_raw()[22:-1]
 
             data = np.frombuffer(raw_data, np.byte, count=len(raw_data))
 
             # decode into measured value using waveform metadata
-            wave = data*y_scale - y_offset
+            wave = data * y_scale - y_offset
             waves.append(wave.astype(dtype))
 
-        if kwargs.get('return_time', True):
-            t_div, t_off = desc['horiz_interval'], desc['horiz_offset']
+        if kwargs.get("return_time", True):
+            t_div, t_off = desc["horiz_interval"], desc["horiz_offset"]
             # all waveforms assumed to have same duration (just use last)
-            t = np.arange(len(wave), dtype=dtype)*t_div*sparsing + t_off
+            t = np.arange(len(wave), dtype=dtype) * t_div * sparsing + t_off
 
             return (t, *waves)
         else:
@@ -924,7 +942,7 @@ class Lecroy_WR8xxx(VisaResource):
 
         response = self.query_resource(q_str)
 
-        return ' '.join(response.split()[1:])
+        return " ".join(response.split()[1:])
 
     def set_channel_alias(self, channel: int, alias: str) -> None:
         """
@@ -941,8 +959,7 @@ class Lecroy_WR8xxx(VisaResource):
         q_str = f"""vbs 'app.acquisition.C{channel}.Alias = "{alias}" '"""
         self.write_resource(q_str)
 
-    def set_channel_label_position(self, channel: int,
-                                   position: float = 0) -> None:
+    def set_channel_label_position(self, channel: int, position: float = 0) -> None:
         """set_channel_label_position(channel, position)
 
         Args:
@@ -951,8 +968,10 @@ class Lecroy_WR8xxx(VisaResource):
             place the label. Units are in seconds. Defaults to 0.
         """
 
-        q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
-                 f""""{position}" '""")
+        q_str = (
+            f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """
+            + f""""{position}" '"""
+        )
         self.write_resource(q_str)
 
     def set_channel_label_view(self, channel: int, view: bool = True) -> None:
@@ -968,8 +987,10 @@ class Lecroy_WR8xxx(VisaResource):
             Defaults to True 'ON'
         """
 
-        q_str = (f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """ +
-                 f""""{'ON' if view else 'OFF'}" '""")
+        q_str = (
+            f"""vbs 'app.acquisition.C{channel}.LabelsPosition = """
+            + f""""{'ON' if view else 'OFF'}" '"""
+        )
         self.write_resource(q_str)
 
     def set_channel_findscale(self, channel: int) -> None:
@@ -983,7 +1004,7 @@ class Lecroy_WR8xxx(VisaResource):
             channel (int): channel number to update scale of.
         """
 
-        q_str = (f"""vbs 'app.acquisition.C{channel}.FindScale'""")
+        q_str = f"""vbs 'app.acquisition.C{channel}.FindScale'"""
         self.write_resource(q_str)
 
     def get_channel_alias(self, channel: int) -> str:
@@ -1021,10 +1042,10 @@ class Lecroy_WR8xxx(VisaResource):
 
     def get_persistence_state(self) -> bool:
 
-        response = self.query_resource('PERSIST?')
+        response = self.query_resource("PERSIST?")
         response = response[1]
 
-        return (response == 'ON')
+        return response == "ON"
 
     def set_persistence_time(self, duration: Union[float, str]) -> None:
         """
@@ -1038,16 +1059,17 @@ class Lecroy_WR8xxx(VisaResource):
                 oscilloscope capture display in seconds. Valid values are
                 positive numbers or "inf" to set the maximum exposure time
         """
-        valid_durs = (0.5, 1, 2, 5, 1, 20, 'infinite')
+        valid_durs = (0.5, 1, 2, 5, 1, 20, "infinite")
 
         if isinstance(duration, str):
             duration = duration.lower()
 
         if duration in valid_durs:
-            self.write_resource(f'PESU {duration},ALL')
+            self.write_resource(f"PESU {duration},ALL")
         else:
-            raise ValueError('Invalid duration, valid times (s): ' +
-                             ', '.join(map(str, valid_durs)))
+            raise ValueError(
+                "Invalid duration, valid times (s): " + ", ".join(map(str, valid_durs))
+            )
 
     def get_persistence_time(self) -> Union[float, str]:
         """
@@ -1059,12 +1081,12 @@ class Lecroy_WR8xxx(VisaResource):
             (Union[float, str]): persistence time
         """
 
-        response = self.query_resource('PESU?')
-        dur = response[1].split(',')[0]
+        response = self.query_resource("PESU?")
+        dur = response[1].split(",")[0]
 
         if response.isnumeric():
             return float(dur)
-        return 'infinite'
+        return "infinite"
 
     def set_comm_header(self, header: str) -> None:
         """
@@ -1093,10 +1115,10 @@ class Lecroy_WR8xxx(VisaResource):
 
         header = str(header).upper()
 
-        if header not in {'OFF', 'SHORT', 'LONG'}:
+        if header not in {"OFF", "SHORT", "LONG"}:
             raise ValueError('Invalid option for arg "header"')
 
-        self.write_resource(f'CHDR {header}')
+        self.write_resource(f"CHDR {header}")
 
     def get_comm_header(self) -> str:
         """
@@ -1117,8 +1139,8 @@ class Lecroy_WR8xxx(VisaResource):
                 'short', and 'off'
         """
 
-        response = self.query_resource('CHDR?')
-        if ' ' in response:
+        response = self.query_resource("CHDR?")
+        if " " in response:
             header = response[-1].strip()
         else:
             header = response

@@ -14,5 +14,5 @@ class BKPrecision_9132B(Keithley_2231A):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

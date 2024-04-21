@@ -1,4 +1,4 @@
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Elgar_5250A(VisaResource):
@@ -30,8 +30,8 @@ class Elgar_5250A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.query_resource('OUTP:STAT?')
-        return ('1' in response)
+        response = self.query_resource("OUTP:STAT?")
+        return "1" in response
 
     def on(self) -> None:
         """

@@ -2,8 +2,8 @@ from typing import Union
 
 import pyvisa
 from pyvisa.constants import BufferOperation
-from pythonequipmentdrivers import VisaResource
-from pythonequipmentdrivers.core import rm
+
+from ..core import VisaResource, rm
 
 
 class Fluke45SerialError(Exception):

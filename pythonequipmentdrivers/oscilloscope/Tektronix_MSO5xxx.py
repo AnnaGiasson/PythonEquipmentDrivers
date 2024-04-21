@@ -1,8 +1,10 @@
-from pythonequipmentdrivers import VisaResource
 import struct
-import numpy as np
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Tuple, Union
+
+import numpy as np
+
+from ..core import VisaResource
 
 
 class Tektronix_MSO5xxx(VisaResource):
@@ -19,11 +21,11 @@ class Tektronix_MSO5xxx(VisaResource):
         super().__init__(address, **kwargs)
 
         # get image formatting
-        self._resource.write('EXP:FORM PNG')  # image is a .png file
-        self._resource.write('HARDC:PORT FILE')  # image is stored as a file
-        self._resource.write('HARDC:PALE COLOR')  # color image (alt INKS)
-        self._resource.write('HARDC:LAY LAN')  # landscape image
-        self._resource.write('HARDC:VIEW FULLNO')  # no menu, full-screen wvfm
+        self._resource.write("EXP:FORM PNG")  # image is a .png file
+        self._resource.write("HARDC:PORT FILE")  # image is stored as a file
+        self._resource.write("HARDC:PALE COLOR")  # color image (alt INKS)
+        self._resource.write("HARDC:LAY LAN")  # landscape image
+        self._resource.write("HARDC:VIEW FULLNO")  # no menu, full-screen wvfm
 
     def select_channel(self, channel: int, state: bool) -> None:
         """
@@ -44,8 +46,9 @@ class Tektronix_MSO5xxx(VisaResource):
         cmd_str = f"SEL:CH{int(channel)} {'ON' if state else 'OFF'}"
         self._resource.write(cmd_str)
 
-    def get_channel_data(self, *channels: int,
-                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
+    def get_channel_data(
+        self, *channels: int, **kwargs
+    ) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
                          return_time=True, dtype=np.float32)
@@ -83,48 +86,47 @@ class Tektronix_MSO5xxx(VisaResource):
 
         # get record window metadata
         N = self.get_record_length()
-        x_offset = int(self.get_trigger_position()/100*N)
+        x_offset = int(self.get_trigger_position() / 100 * N)
 
         # formatting info
-        dtype = kwargs.get('dtype', np.float32)
-        start_idx = np.clip(kwargs.get('start_percent', 0), 0, 100)/100*N
-        stop_idx = np.clip(kwargs.get('stop_percent', 100), 0, 100)/100*N
+        dtype = kwargs.get("dtype", np.float32)
+        start_idx = np.clip(kwargs.get("start_percent", 0), 0, 100) / 100 * N
+        stop_idx = np.clip(kwargs.get("stop_percent", 100), 0, 100) / 100 * N
 
         waves = []
         for channel in channels:
 
             # configure data transfer
-            self._resource.write(f'DATA:START {start_idx}')  # data range
-            self._resource.write(f'DATA:STOP {stop_idx}')
-            self._resource.write(f'DATA:SOU CH{channel}')  # data source
-            self._resource.write('DATA:ENC SRP')  # encoding, int little-end
+            self._resource.write(f"DATA:START {start_idx}")  # data range
+            self._resource.write(f"DATA:STOP {stop_idx}")
+            self._resource.write(f"DATA:SOU CH{channel}")  # data source
+            self._resource.write("DATA:ENC SRP")  # encoding, int little-end
 
             # get waveform metadata
-            dt = float(self._resource.query('WFMPRE:XINCR?'))  # sampling time
-            y_offset = float(self._resource.query('WFMPRE:YOFF?'))
-            y_scale = float(self._resource.query('WFMPRE:YMULT?'))
+            dt = float(self._resource.query("WFMPRE:XINCR?"))  # sampling time
+            y_offset = float(self._resource.query("WFMPRE:YOFF?"))
+            y_scale = float(self._resource.query("WFMPRE:YMULT?"))
 
-            adc_offset = float(self._resource.query('WFMPRE:YZERO?'))
+            adc_offset = float(self._resource.query("WFMPRE:YZERO?"))
 
             # get raw data, strip header
-            self._resource.write('CURVE?')
+            self._resource.write("CURVE?")
             raw_data = self._resource.read_raw()
 
             header_len = 2 + int(raw_data[1])
             raw_data = raw_data[header_len:-1]
 
-            data = np.array(struct.unpack(f'{len(raw_data)}B', raw_data),
-                            dtype=dtype)
+            data = np.array(struct.unpack(f"{len(raw_data)}B", raw_data), dtype=dtype)
 
             # decode into measured value using waveform metadata
-            wave = (data - y_offset)*y_scale + adc_offset
+            wave = (data - y_offset) * y_scale + adc_offset
             waves.append(wave)
 
-        if kwargs.get('return_time', True):
+        if kwargs.get("return_time", True):
             # generate time vector / account for trigger position
             # all waveforms assumed to have same duration (just use last)
-            t = np.arange(0, dt*len(wave), dt, dtype=dtype)
-            t -= (x_offset - min([start_idx, stop_idx]))*dt
+            t = np.arange(0, dt * len(wave), dt, dtype=dtype)
+            t -= (x_offset - min([start_idx, stop_idx])) * dt
 
             return (t, *waves)
         else:
@@ -159,8 +161,8 @@ class Tektronix_MSO5xxx(VisaResource):
             (str): specified channel label
         """
 
-        response = self._resource.query(f'CH{channel}:LAB:NAM?')
-        return response.strip().replace('"', '')
+        response = self._resource.query(f"CH{channel}:LAB:NAM?")
+        return response.strip().replace('"', "")
 
     def set_channel_label_position(self, channel: int, pos: tuple) -> None:
         """
@@ -181,8 +183,8 @@ class Tektronix_MSO5xxx(VisaResource):
 
         x_coord, y_coord = pos
 
-        self._resource.write(f'CH{int(channel)}:LAB:XPOS {float(x_coord)}')
-        self._resource.write(f'CH{int(channel)}:LAB:YPOS {float(y_coord)}')
+        self._resource.write(f"CH{int(channel)}:LAB:XPOS {float(x_coord)}")
+        self._resource.write(f"CH{int(channel)}:LAB:YPOS {float(y_coord)}")
 
     def get_channel_label_position(self, channel: int) -> Tuple[float, float]:
         """
@@ -199,8 +201,8 @@ class Tektronix_MSO5xxx(VisaResource):
                 with respect to the waveform as a number of divisions.
         """
 
-        x_coord = float(self._resource.query(f'CH{int(channel)}:LAB:XPOS?'))
-        y_coord = float(self._resource.query(f'CH{int(channel)}:LAB:YPOS?'))
+        x_coord = float(self._resource.query(f"CH{int(channel)}:LAB:XPOS?"))
+        y_coord = float(self._resource.query(f"CH{int(channel)}:LAB:YPOS?"))
 
         return (x_coord, y_coord)
 
@@ -219,7 +221,7 @@ class Tektronix_MSO5xxx(VisaResource):
             bandwidth (float): desired bandwidth setting for "channel" in Hz
         """
 
-        if isinstance(bandwidth, str) and (bandwidth.upper() == 'FULL'):
+        if isinstance(bandwidth, str) and (bandwidth.upper() == "FULL"):
             self._resource.write(f"CH{int(channel)}:BAN FULL")
         else:
             self._resource.write(f"CH{int(channel)}:BAN {float(bandwidth)}")
@@ -252,7 +254,7 @@ class Tektronix_MSO5xxx(VisaResource):
                 vertical division on the display.
         """
 
-        self._resource.write(f'CH{int(channel)}:SCA {float(scale)}')
+        self._resource.write(f"CH{int(channel)}:SCA {float(scale)}")
 
     def get_channel_scale(self, channel):
         """
@@ -267,7 +269,7 @@ class Tektronix_MSO5xxx(VisaResource):
             (float): vertical scale
         """
 
-        response = self._resource.query(f'CH{int(channel)}:SCA?')
+        response = self._resource.query(f"CH{int(channel)}:SCA?")
         return float(response)
 
     def set_channel_offset(self, channel: int, off: float) -> None:
@@ -353,8 +355,10 @@ class Tektronix_MSO5xxx(VisaResource):
 
         coupling = str(coupling).upper()
         if coupling not in valid_modes:
-            raise ValueError(f"Invalid Coupling option: {coupling}. "
-                             f"Suuport options are: {valid_modes}")
+            raise ValueError(
+                f"Invalid Coupling option: {coupling}. "
+                f"Suuport options are: {valid_modes}"
+            )
 
         self._resource.write(f"CH{int(channel)}:COUP {coupling}")
 
@@ -453,7 +457,7 @@ class Tektronix_MSO5xxx(VisaResource):
             channel (int): channel number to configure
         """
 
-        self._resource.write(f'TRIGger:A:EDGE:SOUrce CH{int(channel)}')
+        self._resource.write(f"TRIGger:A:EDGE:SOUrce CH{int(channel)}")
 
     def get_trigger_source(self) -> int:
         """
@@ -465,8 +469,8 @@ class Tektronix_MSO5xxx(VisaResource):
             int: channel number used for the trigger source
         """
 
-        response = self._resource.query('TRIGger:A:EDGE:SOUrce?')
-        return int(response.replace('CH', ''))
+        response = self._resource.query("TRIGger:A:EDGE:SOUrce?")
+        return int(response.replace("CH", ""))
 
     def set_trigger_position(self, offset: float) -> None:
         """
@@ -481,7 +485,7 @@ class Tektronix_MSO5xxx(VisaResource):
         """
 
         if not (0 <= float(offset) <= 100):
-            raise ValueError('offset out of the valid range [0-100]')
+            raise ValueError("offset out of the valid range [0-100]")
 
         self._resource.write(f"HOR:POS {float(offset)}")
 
@@ -510,14 +514,15 @@ class Tektronix_MSO5xxx(VisaResource):
             slope (str): trigger edge polarity.
         """
 
-        valid_options = ('RISE', 'FALL', 'EITHER')
+        valid_options = ("RISE", "FALL", "EITHER")
 
         slope = str(slope).upper()
         if slope not in valid_options:
-            raise ValueError('Invalid option for Arg "slope".'
-                             f' Valid option are {valid_options}')
+            raise ValueError(
+                'Invalid option for Arg "slope".' f" Valid option are {valid_options}"
+            )
 
-        self._resource.write(f'TRIGger:A:EDGE:SLOpe {slope}')
+        self._resource.write(f"TRIGger:A:EDGE:SLOpe {slope}")
 
     def get_trigger_slope(self) -> str:
         """
@@ -530,8 +535,8 @@ class Tektronix_MSO5xxx(VisaResource):
             str: trigger edge polarity.
         """
 
-        response = self._resource.query('TRIGger:A:EDGE:SLOpe?')
-        return response.rstrip('\n').lower()
+        response = self._resource.query("TRIGger:A:EDGE:SLOpe?")
+        return response.rstrip("\n").lower()
 
     def set_trigger_mode(self, mode: str) -> None:
         """
@@ -607,8 +612,8 @@ class Tektronix_MSO5xxx(VisaResource):
         """
 
         method = method.upper()
-        if method in ['HISTOGRAM', 'MEAN', 'MINMAX']:
-            self._resource.write(f'MEASU:METH {method}')
+        if method in ["HISTOGRAM", "MEAN", "MINMAX"]:
+            self._resource.write(f"MEASU:METH {method}")
         else:
             raise ValueError("Invalid Method")
         return None
@@ -624,8 +629,8 @@ class Tektronix_MSO5xxx(VisaResource):
         Gets the method used to calculate the 0% and 100% reference levels.
         """
 
-        resp = self._resource.query('MEASU:METH?')
-        return resp.strip('\n')
+        resp = self._resource.query("MEASU:METH?")
+        return resp.strip("\n")
 
     def set_measure_reference_method(self, method):
         """
@@ -638,8 +643,8 @@ class Tektronix_MSO5xxx(VisaResource):
         """
 
         method = method.upper()
-        if method in ['ABSOLUTE', 'PERCENT']:
-            self._resource.write(f'MEASU:REFL:METH {method}')
+        if method in ["ABSOLUTE", "PERCENT"]:
+            self._resource.write(f"MEASU:REFL:METH {method}")
         else:
             raise ValueError("Invalid Method")
         return None
@@ -655,8 +660,8 @@ class Tektronix_MSO5xxx(VisaResource):
         Gets the reference level units used for measurement calculations.
         """
 
-        resp = self._resource.query('MEASU:REFL:METH?')
-        return resp.strip('\n')
+        resp = self._resource.query("MEASU:REFL:METH?")
+        return resp.strip("\n")
 
     def set_measure_ref_level(self, method, level, threshold):
         """
@@ -677,12 +682,12 @@ class Tektronix_MSO5xxx(VisaResource):
 
         method = method.upper()
         level = level.upper()
-        if method not in ['ABSOLUTE', 'PERCENT']:
+        if method not in ["ABSOLUTE", "PERCENT"]:
             ValueError("Invalid Method")
-        if level not in ['HIGH', 'MID', 'LOW']:
+        if level not in ["HIGH", "MID", "LOW"]:
             ValueError("Invalid level")
 
-        self._resource.write(f'MEASU:REFL:{method}:{level} {threshold}')
+        self._resource.write(f"MEASU:REFL:{method}:{level} {threshold}")
 
         return None
 
@@ -706,14 +711,14 @@ class Tektronix_MSO5xxx(VisaResource):
 
         method = method.upper()
         level = level.upper()
-        if method not in ['ABSOLUTE', 'PERCENT']:
+        if method not in ["ABSOLUTE", "PERCENT"]:
             ValueError("Invalid Method")
-        if level not in ['HIGH', 'MID', 'LOW']:
+        if level not in ["HIGH", "MID", "LOW"]:
             ValueError("Invalid level")
 
-        resp = self._resource.query(f'MEASU:REFL:{method}:{level}?')
+        resp = self._resource.query(f"MEASU:REFL:{method}:{level}?")
 
-        return float(resp.strip('\n'))
+        return float(resp.strip("\n"))
 
     def set_measure_config(self, channel, meas_type, meas_idx):
         """
@@ -739,54 +744,95 @@ class Tektronix_MSO5xxx(VisaResource):
         Sets up a measurement on the desired channel.
         """
 
-        measurement_types = ('AMPLITUDE', 'AREA', 'BURST', 'CAREA',
-                             'CMEAN', 'CRMS', 'DELAY', 'DISTDUTY',
-                             'EXTINCTDB', 'EXTINCTPCT', 'EXTINCTRATIO',
-                             'EYEHEIGHT', 'EYEWIDTH', 'FALL', 'FREQUENCY',
-                             'HIGH', 'HITS', 'LOW', 'MAXIMUM', 'MEAN',
-                             'MEDIAN', 'MINIMUM', 'NCROSS', 'NDUTY',
-                             'NOVERSHOOT', 'NWIDTH', 'PBASE', 'PCROSS',
-                             'PCTCROSS', 'PDUTY', 'PEAKHITS', 'PERIOD',
-                             'PHASE', 'PK2PK', 'PKPKJITTER', 'PKPKNOISE',
-                             'POVERSHOOT', 'PTOP', 'PWIDTH', 'QFACTOR',
-                             'RISE', 'RMS', 'RMSJITTER', 'RMSNOISE',
-                             'SIGMA1', 'SIGMA2', 'SIGMA3', 'SIXSIGMAJIT',
-                             'SNRATIO', 'STDDEV', 'UNDEFINED', 'WAVEFORMS')
+        measurement_types = (
+            "AMPLITUDE",
+            "AREA",
+            "BURST",
+            "CAREA",
+            "CMEAN",
+            "CRMS",
+            "DELAY",
+            "DISTDUTY",
+            "EXTINCTDB",
+            "EXTINCTPCT",
+            "EXTINCTRATIO",
+            "EYEHEIGHT",
+            "EYEWIDTH",
+            "FALL",
+            "FREQUENCY",
+            "HIGH",
+            "HITS",
+            "LOW",
+            "MAXIMUM",
+            "MEAN",
+            "MEDIAN",
+            "MINIMUM",
+            "NCROSS",
+            "NDUTY",
+            "NOVERSHOOT",
+            "NWIDTH",
+            "PBASE",
+            "PCROSS",
+            "PCTCROSS",
+            "PDUTY",
+            "PEAKHITS",
+            "PERIOD",
+            "PHASE",
+            "PK2PK",
+            "PKPKJITTER",
+            "PKPKNOISE",
+            "POVERSHOOT",
+            "PTOP",
+            "PWIDTH",
+            "QFACTOR",
+            "RISE",
+            "RMS",
+            "RMSJITTER",
+            "RMSNOISE",
+            "SIGMA1",
+            "SIGMA2",
+            "SIGMA3",
+            "SIXSIGMAJIT",
+            "SNRATIO",
+            "STDDEV",
+            "UNDEFINED",
+            "WAVEFORMS",
+        )
 
         meas_type = meas_type.upper()
         if meas_type not in measurement_types:
             raise ValueError("Measurement Type not supported")
 
         self.clear_measure(meas_idx)
-        self._resource.write(f'MEASU:MEAS{meas_idx}:SOU CH{channel}')
-        self._resource.write(f'MEASU:MEAS{meas_idx}:TYP {meas_type}')
-        self._resource.write(f'MEASU:MEAS{meas_idx}:STATE ON')
+        self._resource.write(f"MEASU:MEAS{meas_idx}:SOU CH{channel}")
+        self._resource.write(f"MEASU:MEAS{meas_idx}:TYP {meas_type}")
+        self._resource.write(f"MEASU:MEAS{meas_idx}:STATE ON")
         return None
 
     def get_measure_config(self, meas_idx):
         """
-            get_measure_config(meas_idx)
+        get_measure_config(meas_idx)
 
-            meas_idx: (int) measurement number to assign to the
-                        measurement described by the above parameters.
-                        Can be 1-8.
+        meas_idx: (int) measurement number to assign to the
+                    measurement described by the above parameters.
+                    Can be 1-8.
 
-            returns:
-            channel: (int) channel to provide the source of the measurement
-                        Should be 1-4.
-            meas_type: (str) the type of measurement to perform.
+        returns:
+        channel: (int) channel to provide the source of the measurement
+                    Should be 1-4.
+        meas_type: (str) the type of measurement to perform.
 
-            returns the setup information of measurement # meas_idx.
+        returns the setup information of measurement # meas_idx.
         """
 
-        meas_type = self._resource.query(f'MEASU:MEAS{meas_idx}:TYP?')
-        meas_type = meas_type.strip('\n')
+        meas_type = self._resource.query(f"MEASU:MEAS{meas_idx}:TYP?")
+        meas_type = meas_type.strip("\n")
 
-        if meas_type == 'UNDEFINED':
+        if meas_type == "UNDEFINED":
             channel = None
         else:
-            channel = self._resource.query(f'MEASU:MEAS{meas_idx}:SOU?')
-            channel = int(channel.strip('\n').lstrip('CH3'))
+            channel = self._resource.query(f"MEASU:MEAS{meas_idx}:SOU?")
+            channel = int(channel.strip("\n").lstrip("CH3"))
 
         return meas_type, channel
 
@@ -800,8 +846,8 @@ class Tektronix_MSO5xxx(VisaResource):
         Clears measurement settings from the oscilloscopes memory and
         removes the measurement from the screeen
         """
-        self._resource.write(f'MEASU:MEAS{meas_idx}:STATE OFF')
-        self._resource.write(f'MEASU:MEAS{meas_idx}:TYP UNDEFINED')
+        self._resource.write(f"MEASU:MEAS{meas_idx}:STATE OFF")
+        self._resource.write(f"MEASU:MEAS{meas_idx}:TYP UNDEFINED")
         return None
 
     def get_measure_data(self, *meas_idx: int) -> Union[float, tuple]:
@@ -830,7 +876,7 @@ class Tektronix_MSO5xxx(VisaResource):
             try:
                 data.append(float(response))
             except ValueError:
-                data.append(float('nan'))
+                data.append(float("nan"))
 
         if len(data) == 1:
             return data[0]
@@ -853,20 +899,20 @@ class Tektronix_MSO5xxx(VisaResource):
 
         stats = {}
 
-        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MEAN?')
-        stats['mean'] = float(resp)
+        resp = self._resource.query(f"MEASU:MEAS{meas_idx}:MEAN?")
+        stats["mean"] = float(resp)
 
-        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MINI?')
-        stats['min'] = float(resp)
+        resp = self._resource.query(f"MEASU:MEAS{meas_idx}:MINI?")
+        stats["min"] = float(resp)
 
-        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:MAX?')
-        stats['max'] = float(resp)
+        resp = self._resource.query(f"MEASU:MEAS{meas_idx}:MAX?")
+        stats["max"] = float(resp)
 
-        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:COUNT?')
-        stats['count'] = float(resp)
+        resp = self._resource.query(f"MEASU:MEAS{meas_idx}:COUNT?")
+        stats["count"] = float(resp)
 
-        resp = self._resource.query(f'MEASU:MEAS{meas_idx}:STD?')
-        stats['std'] = float(resp)
+        resp = self._resource.query(f"MEASU:MEAS{meas_idx}:STD?")
+        stats["std"] = float(resp)
 
         return stats
 
@@ -876,7 +922,7 @@ class Tektronix_MSO5xxx(VisaResource):
 
         resets the accumlated measurements used to calculate statistics
         """
-        self._resource.write('MEASU:STATI:COUN RESET')
+        self._resource.write("MEASU:STATI:COUN RESET")
         return None
 
     def enable_measure_statistics(self):
@@ -886,7 +932,7 @@ class Tektronix_MSO5xxx(VisaResource):
         enables the calculation of statistics on a measurement
         """
 
-        self._resource.write('MEASU:STATI:MODE ALL')
+        self._resource.write("MEASU:STATI:MODE ALL")
         return None
 
     def disable_measure_statistics(self):
@@ -896,7 +942,7 @@ class Tektronix_MSO5xxx(VisaResource):
         disables the calculation of statistics on a measurement
         """
 
-        self._resource.write('MEASU:STATI:MODE OFF')
+        self._resource.write("MEASU:STATI:MODE OFF")
         return None
 
     def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
@@ -922,31 +968,31 @@ class Tektronix_MSO5xxx(VisaResource):
 
         # add file extension
         if isinstance(image_title, Path):
-            file_path = image_title.parent.joinpath(image_title.name + '.png')
+            file_path = image_title.parent.joinpath(image_title.name + ".png")
         elif isinstance(image_title, str):
             file_path = f"{image_title}.png"
         else:
-            raise ValueError('image_title must be a str or path-like object')
+            raise ValueError("image_title must be a str or path-like object")
 
-        if kwargs.get('save_to_device', False):
+        if kwargs.get("save_to_device", False):
             # save to location on scope
             self._resource.write(f'HARDCopy:FILEName "{file_path}"')
-            self._resource.write('HARDCopy STARt')
+            self._resource.write("HARDCopy STARt")
         else:
 
             # save to temp location on scope
-            buffer_path = r'C:\TekScope\Screen Captures\temp.png'
+            buffer_path = r"C:\TekScope\Screen Captures\temp.png"
 
             self._resource.write(f'HARDCopy:FILEName "{buffer_path}"')
-            self._resource.write('HARDCopy STARt')
-            self._resource.write('*OPC?')  # done yet?
+            self._resource.write("HARDCopy STARt")
+            self._resource.write("*OPC?")  # done yet?
 
             # transfer file to computer
             self._resource.write(f'FILESystem:READFile "{buffer_path}"')
             raw_data = self._resource.read_raw()
 
             # save image
-            with open(file_path, 'wb') as file:
+            with open(file_path, "wb") as file:
                 file.write(raw_data)
 
     def set_record_length(self, length: int) -> None:
@@ -989,7 +1035,7 @@ class Tektronix_MSO5xxx(VisaResource):
                 display in seconds.
         """
 
-        self._resource.write(f'HOR:SCA {float(scale)}')
+        self._resource.write(f"HOR:SCA {float(scale)}")
 
     def get_horizontal_scale(self) -> float:
         """
@@ -1001,7 +1047,7 @@ class Tektronix_MSO5xxx(VisaResource):
             float: horizontal scale in seconds per division.
         """
 
-        response = self._resource.query('HOR:SCA?')
+        response = self._resource.query("HOR:SCA?")
         return float(response)
 
     def set_horizontal_roll_mode(self, mode):
@@ -1018,11 +1064,11 @@ class Tektronix_MSO5xxx(VisaResource):
         if type(mode) == int:
             if mode in [0, 1]:
                 options = ["OFF", "ON"]
-                self._resource.write(f'HOR:ROLL {options[mode]}')
+                self._resource.write(f"HOR:ROLL {options[mode]}")
         elif type(mode) == str:
             mode = mode.upper()
             if mode in ["OFF", "ON", "AUTO"]:
-                self._resource.write(f'HOR:ROLL {mode}')
+                self._resource.write(f"HOR:ROLL {mode}")
         else:
             raise ValueError(f"invalid value {mode} for arg 'mode'")
 
@@ -1039,7 +1085,7 @@ class Tektronix_MSO5xxx(VisaResource):
         valid return values are 'on', 'off', or 'auto'
         """
 
-        resp = self._resource.query('HOR:ROLL?')
+        resp = self._resource.query("HOR:ROLL?")
         resp = resp.strip()
 
         return resp
@@ -1054,7 +1100,7 @@ class Tektronix_MSO5xxx(VisaResource):
         display. Sets cursors on if state = 1 and off if state = 0
         """
 
-        self._resource.write(f'CURS:STATE {state}')
+        self._resource.write(f"CURS:STATE {state}")
         return None
 
     def get_cursor_state(self):
@@ -1068,7 +1114,7 @@ class Tektronix_MSO5xxx(VisaResource):
         display. Cursors are on if state = 1 and off if state = 0
         """
 
-        resp = self._resource.query('CURS:STATE?')
+        resp = self._resource.query("CURS:STATE?")
         state = int(resp)
         return state
 
@@ -1082,7 +1128,7 @@ class Tektronix_MSO5xxx(VisaResource):
         'channel'
         """
 
-        self._resource.write(f'CURS:SOU CH{channel}')
+        self._resource.write(f"CURS:SOU CH{channel}")
         return None
 
     def get_cursor_source(self):
@@ -1095,7 +1141,7 @@ class Tektronix_MSO5xxx(VisaResource):
         returns the source used for the cursors data
         """
 
-        resp = self._resource.query('CURS:SOU?')
+        resp = self._resource.query("CURS:SOU?")
         source = resp.strip()
         return source
 
@@ -1118,8 +1164,8 @@ class Tektronix_MSO5xxx(VisaResource):
         """
 
         function = function.upper()
-        if function in ['OFF', 'HBA', 'VBA', 'SCREEN', 'WAVE']:
-            self._resource.write(f'CURS:FUNC {function}')
+        if function in ["OFF", "HBA", "VBA", "SCREEN", "WAVE"]:
+            self._resource.write(f"CURS:FUNC {function}")
         else:
             raise ValueError(f"invalid value {function} for arg 'function'")
 
@@ -1144,7 +1190,7 @@ class Tektronix_MSO5xxx(VisaResource):
                   assigned to.
         """
 
-        resp = self._resource.query('CURS:FUNC?')
+        resp = self._resource.query("CURS:FUNC?")
         function = resp.strip()
         return function
 
@@ -1160,7 +1206,7 @@ class Tektronix_MSO5xxx(VisaResource):
         trigger.
         """
 
-        self._resource.write(f'CURS:SCREEN:XPOSITION{cursor_num} {position}')
+        self._resource.write(f"CURS:SCREEN:XPOSITION{cursor_num} {position}")
         return None
 
     def get_cursor_x_position(self, cursor_num):
@@ -1176,7 +1222,7 @@ class Tektronix_MSO5xxx(VisaResource):
         Position is the capture time relative to the trigger.
         """
 
-        resp = self._resource.query(f'CURS:SCREEN:XPOSITION{cursor_num}?')
+        resp = self._resource.query(f"CURS:SCREEN:XPOSITION{cursor_num}?")
         position = float(resp)
         return position
 
@@ -1192,7 +1238,7 @@ class Tektronix_MSO5xxx(VisaResource):
         the observed waveform
         """
 
-        self._resource.write(f'CURS:SCREEN:YPOSITION{cursor_num} {position}')
+        self._resource.write(f"CURS:SCREEN:YPOSITION{cursor_num} {position}")
         return None
 
     def get_cursor_y_position(self, cursor_num):
@@ -1206,7 +1252,7 @@ class Tektronix_MSO5xxx(VisaResource):
         The units of position depend on the units of the observed waveform.
         """
 
-        resp = self._resource.query(f'CURS:SCREEN:YPOSITION{cursor_num}?')
+        resp = self._resource.query(f"CURS:SCREEN:YPOSITION{cursor_num}?")
         position = float(resp)
         return position
 
@@ -1222,10 +1268,10 @@ class Tektronix_MSO5xxx(VisaResource):
         after being successfully single-triggered.
         """
 
-        resp = self._resource.query('ACQ:NUMAC?')
+        resp = self._resource.query("ACQ:NUMAC?")
         acq_num = int(resp)
         return acq_num
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

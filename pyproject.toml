@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pythonequipmentdrivers"
+version = "2.3.0"
+authors = [
+  { name="Anna Giasson", email="AnnaGraceGiasson@GMail.com" },
+]
+description = "A library of software drivers to interface with various pieces of test instrumentation"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+]
+dependencies = [
+    "pyvisa",
+    "numpy",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/AnnaGiasson/PythonEquipmentDrivers"
+
+[tool.setuptools]
+packages = ["pythonequipmentdrivers"]
+

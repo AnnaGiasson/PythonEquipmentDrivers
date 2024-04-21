@@ -1,8 +1,9 @@
 from collections import deque
 from enum import Enum
-from typing import Iterable, List, Tuple, Union
-from pythonequipmentdrivers import VisaResource
 from time import sleep
+from typing import Iterable, List, Tuple, Union
+
+from ..core import VisaResource
 
 
 class ChannelModes(Enum):
@@ -10,14 +11,14 @@ class ChannelModes(Enum):
     Valid measurement modes for a DAQ channel
     """
 
-    VOLT = 'VOLT'
-    CURR = 'CURR'
-    FREQ = 'FREQ'
-    OHMS = 'RES'
-    RES = 'RES'
-    DIODE = 'DIOD'
-    CONT = 'CONT'
-    PERIOD = 'PER'
+    VOLT = "VOLT"
+    CURR = "CURR"
+    FREQ = "FREQ"
+    OHMS = "RES"
+    RES = "RES"
+    DIODE = "DIOD"
+    CONT = "CONT"
+    PERIOD = "PER"
 
 
 class NPLC_Options(Enum):
@@ -25,29 +26,29 @@ class NPLC_Options(Enum):
     Number of Power Line Cycle to use per measurement
     """
 
-    N0p02 = '0.02'
-    N0p2 = '0.2'
-    N1 = '1'
-    N2 = '2'
-    N10 = '10'
-    N20 = '20'
-    N100 = '100'
-    N200 = '200'
-    MIN = 'MIN'
-    MAX = 'MAX'
+    N0p02 = "0.02"
+    N0p2 = "0.2"
+    N1 = "1"
+    N2 = "2"
+    N10 = "10"
+    N20 = "20"
+    N100 = "100"
+    N200 = "200"
+    MIN = "MIN"
+    MAX = "MAX"
 
 
 class TriggerOptions(Enum):
-    BUS = 'BUS'
-    IMMEDIATE = 'IMMediate'
-    IMM = 'IMMediate'
-    EXTERNAL = 'EXTernal'
-    EXT = 'EXT'
-    ALARM1 = 'ALARm1'
-    ALARM2 = 'ALARm2'
-    ALARM3 = 'ALARm3'
-    ALARM4 = 'ALARm4'
-    TIMER = 'TIMer'
+    BUS = "BUS"
+    IMMEDIATE = "IMMediate"
+    IMM = "IMMediate"
+    EXTERNAL = "EXTernal"
+    EXT = "EXT"
+    ALARM1 = "ALARm1"
+    ALARM2 = "ALARm2"
+    ALARM3 = "ALARm3"
+    ALARM4 = "ALARm4"
+    TIMER = "TIMer"
 
 
 class Agilent_34972A(VisaResource):
@@ -71,28 +72,44 @@ class Agilent_34972A(VisaResource):
     nplc_options = NPLC_Options
     trigger_options = TriggerOptions
 
-    valid_volt_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                         '0.1', '1', '10', '100', '300'}
+    valid_volt_ranges = {"AUTO", "MIN", "MAX", "DEF", "0.1", "1", "10", "100", "300"}
 
-    valid_curr_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                         '0.01', '0.1', '1'}
+    valid_curr_ranges = {"AUTO", "MIN", "MAX", "DEF", "0.01", "0.1", "1"}
 
-    valid_res_ranges = {'AUTO', 'MIN', 'MAX', 'DEF',
-                        '100', '1E3', '10E3', '100E3', '1E6', '10E6', '100E6'}
+    valid_res_ranges = {
+        "AUTO",
+        "MIN",
+        "MAX",
+        "DEF",
+        "100",
+        "1E3",
+        "10E3",
+        "100E3",
+        "1E6",
+        "10E6",
+        "100E6",
+    }
 
-    valid_resolutions = {'MIN': 0.0001,  # lookup based on nplc
-                         'MAX': 0.00000022,  # this * range = resolution
-                         '0.02': 0.0001,
-                         '0.2': 0.00001,
-                         '1': 0.000003,
-                         '2': 0.0000022,
-                         '10': 0.000001,
-                         '20': 0.0000008,
-                         '100': 0.0000003,
-                         '200': 0.00000022}
+    valid_resolutions = {
+        "MIN": 0.0001,  # lookup based on nplc
+        "MAX": 0.00000022,  # this * range = resolution
+        "0.02": 0.0001,
+        "0.2": 0.00001,
+        "1": 0.000003,
+        "2": 0.0000022,
+        "10": 0.000001,
+        "20": 0.0000008,
+        "100": 0.0000003,
+        "200": 0.00000022,
+    }
 
-    def __init__(self, address: str, ch_change_time: float = 0.05,
-                 line_frequency: float = 60.0, reset: bool = False) -> None:
+    def __init__(
+        self,
+        address: str,
+        ch_change_time: float = 0.05,
+        line_frequency: float = 60.0,
+        reset: bool = False,
+    ) -> None:
 
         super().__init__(address)
         if reset:
@@ -119,8 +136,8 @@ class Agilent_34972A(VisaResource):
                 split by delimiters with header/footer characters removed.
         """
 
-        if '@' in response:
-            start = response.find('@')  # note this returns -1 if not found
+        if "@" in response:
+            start = response.find("@")  # note this returns -1 if not found
             stop = -1
         else:
             start = -1
@@ -129,7 +146,7 @@ class Agilent_34972A(VisaResource):
         # character anyway, so this is not an error, but I don't like
         # that it isn't explicitly trying to find the correct character
 
-        return response[(start + 1): stop].split(',')
+        return response[(start + 1) : stop].split(",")
 
     def set_mode(self, chan: int, mode: ChannelModes) -> None:
         """
@@ -156,11 +173,9 @@ class Agilent_34972A(VisaResource):
         returns: ChannelModes Enum for the current channel config
         """
 
-        response = self.query_resource(
-            f"FUNC? (@{self._format_channel_str(chan)})"
-        )
+        response = self.query_resource(f"FUNC? (@{self._format_channel_str(chan)})")
 
-        return self.channel_modes[response.replace('"', '')]
+        return self.channel_modes[response.replace('"', "")]
 
     def get_error_queue(self, **kwargs) -> List[Tuple[int, str]]:
         """
@@ -179,21 +194,21 @@ class Agilent_34972A(VisaResource):
         error_code = None  # None so loop executes at least once
 
         while error_code != 0:  # 0 means no error
-            response = self.query_resource('SYSTem:ERRor?', **kwargs)
+            response = self.query_resource("SYSTem:ERRor?", **kwargs)
 
             error_info = self._split_response(response)
 
             error_code = int(error_info[0])
-            error_message = error_info[1].replace("'", '').replace('"', '')
+            error_message = error_info[1].replace("'", "").replace('"', "")
 
             if error_code != 0:
                 error_queue.append((error_code, error_message))
 
         return error_queue
 
-    def set_trigger_source(self,
-                           trigger: TriggerOptions = TriggerOptions.IMMEDIATE
-                           ) -> None:
+    def set_trigger_source(
+        self, trigger: TriggerOptions = TriggerOptions.IMMEDIATE
+    ) -> None:
         """
         set_trigger(trigger)
 
@@ -254,11 +269,10 @@ class Agilent_34972A(VisaResource):
                                    errors (-211). Defaults to True.
         """
         if self.trigger_mode == TriggerOptions.BUS:
-            self.write_resource('*TRG', **kwargs)
+            self.write_resource("*TRG", **kwargs)
         else:
             raise ValueError(
-                f"Trigger not configured, set as: {self.trigger_mode}"
-                " should be BUS"
+                f"Trigger not configured, set as: {self.trigger_mode}" " should be BUS"
             )
 
         if wait:
@@ -291,8 +305,7 @@ class Agilent_34972A(VisaResource):
 
         return ",".join(map(str, chan))
 
-    def set_scan_list(self, chan: Iterable[int],
-                      relay_time: bool = False) -> None:
+    def set_scan_list(self, chan: Iterable[int], relay_time: bool = False) -> None:
         """
         set_scan_list(chan)
 
@@ -308,7 +321,7 @@ class Agilent_34972A(VisaResource):
         chan_str = self._format_channel_str(chan)
         self.scan_list = list(chan)
 
-        self.write_resource(f'ROUT:SCAN (@{chan_str})')
+        self.write_resource(f"ROUT:SCAN (@{chan_str})")
 
         if relay_time:
             self.relay_delay(n=len(self.scan_list))
@@ -328,7 +341,7 @@ class Agilent_34972A(VisaResource):
         """
 
         chan_str = self._format_channel_str(chan)
-        response = self.query_resource(f'MEASure? (@{chan_str})')
+        response = self.query_resource(f"MEASure? (@{chan_str})")
 
         try:
             data = list(map(float, self._split_response(response)))
@@ -338,7 +351,7 @@ class Agilent_34972A(VisaResource):
                 err,
                 f"channel {chan_str} unable! Return 0.0"
                 f"{self.query_resource('SYSTem:ERRor?')}",
-                *kwargs.items()
+                *kwargs.items(),
             )
 
         return data
@@ -360,11 +373,9 @@ class Agilent_34972A(VisaResource):
         """
 
         if chan is not None:
-            response = self.query_resource(
-                f'READ? (@{self._format_channel_str(chan)})'
-            )
+            response = self.query_resource(f"READ? (@{self._format_channel_str(chan)})")
         else:
-            response = self.query_resource('READ?')
+            response = self.query_resource("READ?")
 
         return list(map(float, self._split_response(response)))
 
@@ -375,7 +386,7 @@ class Agilent_34972A(VisaResource):
         Initialize the meter, used with BUS trigger typically
         Use fetch_data to query the data.
         """
-        self.write_resource('INITiate', **kwargs)
+        self.write_resource("INITiate", **kwargs)
 
     def fetch_data(self, **kwargs) -> float:
         """
@@ -387,15 +398,20 @@ class Agilent_34972A(VisaResource):
             List[float]: data in meter memory resulting from all scans
         """
 
-        response = self.query_resource('FETC?', **kwargs)
+        response = self.query_resource("FETC?", **kwargs)
         data = self._split_response(response)
 
         return list(map(float, data))
 
-    def config_channel(self,
-                       chan: int, mode=ChannelModes.VOLT, is_dc: bool = True,
-                       signal_range: str = 'auto', resolution=None,
-                       nplc: NPLC_Options = NPLC_Options.N1) -> None:
+    def config_channel(
+        self,
+        chan: int,
+        mode=ChannelModes.VOLT,
+        is_dc: bool = True,
+        signal_range: str = "auto",
+        resolution=None,
+        nplc: NPLC_Options = NPLC_Options.N1,
+    ) -> None:
         """
         config_channel(chan, mode=ChannelModes.VOLT, is_dc=True,
                        signal_range='auto', resolution=None,
@@ -421,24 +437,28 @@ class Agilent_34972A(VisaResource):
         # Set channel measurement range. if range is not provided, cannot use
         # nplc in CONF command
         signal_range = signal_range.upper()
-        auto_range = (signal_range == 'AUTO')
+        auto_range = signal_range == "AUTO"
 
-        if (mode == self.channel_modes.CURR) and (signal_range not in self.valid_curr_ranges):
-            raise ValueError('Invalid Range option')
-        elif (mode == self.channel_modes.RES) and (signal_range not in self.valid_res_ranges):
-            raise ValueError('Invalid Range option')
+        if (mode == self.channel_modes.CURR) and (
+            signal_range not in self.valid_curr_ranges
+        ):
+            raise ValueError("Invalid Range option")
+        elif (mode == self.channel_modes.RES) and (
+            signal_range not in self.valid_res_ranges
+        ):
+            raise ValueError("Invalid Range option")
         elif signal_range not in self.valid_volt_ranges:
-            raise ValueError('Invalid Range option')
+            raise ValueError("Invalid Range option")
 
         # set up number of power line cycles per measurement
 
-        use_freq = (mode == self.channel_modes.FREQ)
-        nplc_str = nplc.value if not use_freq else ''
+        use_freq = mode == self.channel_modes.FREQ
+        nplc_str = nplc.value if not use_freq else ""
 
         if not use_freq:
-            acdc = ':DC' if is_dc else ':AC'
+            acdc = ":DC" if is_dc else ":AC"
         else:
-            acdc = ''
+            acdc = ""
 
         # build command strings
         cmd_queue = deque([])  # command queue
@@ -449,10 +469,7 @@ class Agilent_34972A(VisaResource):
         else:
             cmd_queue.append(
                 "CONF:{}{} {}(@{})".format(
-                    mode.value,
-                    acdc,
-                    f'{signal_range},' if not auto_range else '',
-                    chan
+                    mode.value, acdc, f"{signal_range}," if not auto_range else "", chan
                 )
             )
 
@@ -461,9 +478,9 @@ class Agilent_34972A(VisaResource):
                     "SENS:{}{}:{} {},(@{})".format(
                         mode.value,
                         acdc,
-                        'RES' if resolution else 'NPLC',
+                        "RES" if resolution else "NPLC",
                         resolution if resolution else nplc_str,
-                        chan
+                        chan,
                     )
                 )
 
@@ -471,11 +488,15 @@ class Agilent_34972A(VisaResource):
         while cmd_queue:
             self.write_resource(cmd_queue.popleft())
 
-    def config_channels(self, channels: Iterable[int],
-                        mode: ChannelModes = ChannelModes.VOLT,
-                        is_dc: bool = True, signal_range='auto',
-                        resolution=None, nplc: NPLC_Options = NPLC_Options.N1
-                        ) -> None:
+    def config_channels(
+        self,
+        channels: Iterable[int],
+        mode: ChannelModes = ChannelModes.VOLT,
+        is_dc: bool = True,
+        signal_range="auto",
+        resolution=None,
+        nplc: NPLC_Options = NPLC_Options.N1,
+    ) -> None:
         """
         config_channels(channels: Iterable[int], mode=ChannelModes.VOLT,
                         is_dc: bool = True, signal_range='auto',
@@ -506,7 +527,7 @@ class Agilent_34972A(VisaResource):
                 is_dc=is_dc,
                 signal_range=signal_range,
                 resolution=resolution,
-                nplc=nplc
+                nplc=nplc,
             )
 
     def close_chan(self, chan: int) -> None:
@@ -567,18 +588,18 @@ class Agilent_34972A(VisaResource):
             float: chan data
         """
         if chan is not None:
-            self.write_resource(f'ROUT:MON (@{chan})', **kwargs)
+            self.write_resource(f"ROUT:MON (@{chan})", **kwargs)
             self.relay_delay()
 
         try:
-            response = self.query_resource('ROUT:MON:DATA?', **kwargs)
+            response = self.query_resource("ROUT:MON:DATA?", **kwargs)
 
         except IOError as err:  # usually when channel not configured
             raise IOError(
                 err,
                 f"channel {chan} not configured",
                 f"{self.query_resource('SYSTem:ERRor?')}",
-                *kwargs.items()
+                *kwargs.items(),
             )
 
         return list(map(float, self._split_response(response)))
@@ -592,7 +613,7 @@ class Agilent_34972A(VisaResource):
             None
         """
 
-        self.write_resource('ABORt', **kwargs)
+        self.write_resource("ABORt", **kwargs)
 
     def set_source(self, chan, voltage: float = None, **kwargs):
         """set_source(chan, voltage)
@@ -629,9 +650,10 @@ class Agilent_34972A(VisaResource):
 
     def set_measure_time(self, measure_time: float = None):
         if measure_time is None:
-            self.measure_time = (len(self.scan_list) * self.nplc_default *
-                                 (1 / self.line_frequency) +
-                                 self.ch_change_time)
+            self.measure_time = (
+                len(self.scan_list) * self.nplc_default * (1 / self.line_frequency)
+                + self.ch_change_time
+            )
         else:
             self.measure_time = measure_time
 

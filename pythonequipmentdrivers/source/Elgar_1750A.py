@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Any, Dict
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Elgar_1750A(VisaResource):
@@ -26,7 +26,7 @@ class Elgar_1750A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
         """
 
-        self.write_resource(f'OUTP:STAT {1 if state else 0}')
+        self.write_resource(f"OUTP:STAT {1 if state else 0}")
 
     def get_state(self) -> bool:
         """
@@ -38,8 +38,8 @@ class Elgar_1750A(VisaResource):
             bool: Supply state (True == enabled, False == disabled)
         """
 
-        response = self.query_resource('OUTP:STAT?')
-        return ('1' in response)
+        response = self.query_resource("OUTP:STAT?")
+        return "1" in response
 
     def on(self) -> None:
         """
@@ -112,8 +112,7 @@ class Elgar_1750A(VisaResource):
     def get_voltage_range(self) -> None:
         return float(self.query_resource("SOUR:VOLT:RANG?"))
 
-    def generate_sequence(self, *conditions: Dict[str, Any],
-                          run: bool = False) -> None:
+    def generate_sequence(self, *conditions: Dict[str, Any], run: bool = False) -> None:
         """
         conditions should be a list of dictionaries containing the conditions
         of each segment
@@ -122,37 +121,35 @@ class Elgar_1750A(VisaResource):
         # ----- Create Segment 0 -----
         # Clear sequence scratchpad. Take advantage of defaults and only
         # set changed params
-        self.write_resource('Edit:seq:clear')
+        self.write_resource("Edit:seq:clear")
 
         for index, segment in enumerate(conditions):
-            if not('dur' in segment.keys() or 'cycl' in segment.keys()):
-                raise ValueError(
-                    'Segment missing required key: "dur" or "cycl"'
-                    )
+            if not ("dur" in segment.keys() or "cycl" in segment.keys()):
+                raise ValueError('Segment missing required key: "dur" or "cycl"')
 
-            self.write_resource(f'Edit:seq:seg {index}')
+            self.write_resource(f"Edit:seq:seg {index}")
             for key in segment.keys():
                 command_str = f'Edit:seq:{key} {f"{segment[key]:3.1f}"}'
                 self.write_resource(command_str)
 
-            if not(index + 1 == len(conditions)):
+            if not (index + 1 == len(conditions)):
                 # Create segment 1. Segment pointer is automatically
                 # incremented to seg 1.
-                self.write_resource('Edit:seq:insert {}'.format(index + 1))
+                self.write_resource("Edit:seq:insert {}".format(index + 1))
                 sleep(0.1)
 
         # ----- setup sequence execution parameters -----
         # execute sequence once and stop
-        self.write_resource('Sour:seq:mode:run single')
+        self.write_resource("Sour:seq:mode:run single")
         # set output voltage to 0 when seq stops
-        self.write_resource('Sour:seq:mode:stop ZERO')
+        self.write_resource("Sour:seq:mode:stop ZERO")
         # load seq scratchpad
         self.write_resource('Sour:seq:load "SCRATCH"')
 
         if run:
             self.on()
             sleep(1)
-            self.write_resource('Source:seq run')  # execute sequence
+            self.write_resource("Source:seq run")  # execute sequence
 
     def auto_range(self, voltage: float) -> None:
         if voltage > 156:

@@ -1,8 +1,7 @@
+import importlib
 from dataclasses import dataclass
 from enum import Enum
 from typing import Tuple, Union
-import importlib
-
 
 API_LINK = "OmicronLab.VectorNetworkAnalysis.AutomationInterface"
 

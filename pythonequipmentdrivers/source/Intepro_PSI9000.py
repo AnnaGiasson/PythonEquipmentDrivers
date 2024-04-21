@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Intepro_PSI9000(VisaResource):
@@ -25,7 +25,7 @@ class Intepro_PSI9000(VisaResource):
     def get_lock(self) -> True:
 
         response = self.query_resource("SYST:LOCK:OWN?")
-        return (response == 'REMOTE')
+        return response == "REMOTE"
 
     def set_state(self, state: bool) -> None:
         """
@@ -50,7 +50,7 @@ class Intepro_PSI9000(VisaResource):
         """
 
         response = self.query_resource("OUTP?")
-        return (response == "ON")
+        return response == "ON"
 
     def on(self) -> None:
         """
@@ -110,11 +110,11 @@ class Intepro_PSI9000(VisaResource):
 
     def measure_array(self) -> Tuple[float, float, float]:
         response = self.query_resource("MEAS:ARR?")
-        v, i, p = response.split(',')
+        v, i, p = response.split(",")
 
-        v = float(v.strip(' V'))
-        i = float(i.strip(' A'))
-        p = float(p.strip(' W'))
+        v = float(v.strip(" V"))
+        i = float(i.strip(" A"))
+        p = float(p.strip(" W"))
 
         return v, i, p
 

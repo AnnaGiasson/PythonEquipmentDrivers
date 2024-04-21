@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from .Agilent_6030A import Agilent_6030A
 from .BKPrecision_9132B import BKPrecision_9132B
 from .CaliforniaInstruments_CSW5550 import CaliforniaInstruments_CSW5550
@@ -21,30 +22,37 @@ class VoltageSource(Protocol):
 
     def set_voltage(self, voltage: float) -> None:
         """sets output level of the voltage source"""
+
     def get_voltage(self) -> float:
         """returns the output level of the voltage source"""
+
     def set_state(self, state: bool) -> None:
         """sets the state of the source's output"""
+
     def get_state(self) -> bool:
         """returns the state of the source's output"""
+
     def on(self) -> None:
         """sets the state of the source's output to active"""
+
     def off(self) -> None:
         """sets the state of the source's output to inactive"""
+
     def toggle(self) -> None:
         """reverses the state of the source's output"""
 
 
-__all__ = ('BKPrecision_9132B',
-           'CaliforniaInstruments_CSW5550',
-           'Chroma_62000P',
-           'Keithley_2231A',
-           'Elgar_1750A',
-           'Elgar_5250A',
-           'Intepro_PSI9000',
-           'PPSC_3150AFX',
-           'HP_6632A',
-           'Agilent_6030A',
-           'Sorensen_SGA',
-           'VoltageSource',
-           )
+__all__ = (
+    "BKPrecision_9132B",
+    "CaliforniaInstruments_CSW5550",
+    "Chroma_62000P",
+    "Keithley_2231A",
+    "Elgar_1750A",
+    "Elgar_5250A",
+    "Intepro_PSI9000",
+    "PPSC_3150AFX",
+    "HP_6632A",
+    "Agilent_6030A",
+    "Sorensen_SGA",
+    "VoltageSource",
+)

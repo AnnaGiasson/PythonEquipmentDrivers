@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Tuple, Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class MeasurementTypes(Enum):
@@ -41,7 +41,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
 
-        self.set_numeric_data_format('ascii')
+        self.set_numeric_data_format("ascii")
         self.set_numeric_data_pattern(1)
         self.set_numeric_list_data_pattern(1)
         self.set_harmonic_order(0, 50)
@@ -57,11 +57,11 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         """
 
         if option.lower() == "ascii":
-            self.write_resource('NUM:FORM ASC')
+            self.write_resource("NUM:FORM ASC")
         elif option.lower() == "float":
-            self.write_resource('NUM:FORM FLO')
+            self.write_resource("NUM:FORM FLO")
         else:
-            raise ValueError('Unknown Option for Arguement option')
+            raise ValueError("Unknown Option for Arguement option")
 
     def get_numeric_data_format(self) -> str:
         """
@@ -72,51 +72,50 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         return: str
         """
 
-        response = self.query_resource('NUM:FORM?')
+        response = self.query_resource("NUM:FORM?")
 
-        data_format = response.split(' ')[-1]
-        data_format = data_format.rstrip('\n')
+        data_format = response.split(" ")[-1]
+        data_format = data_format.rstrip("\n")
 
         if data_format == "ASC":
             return "ascii"
         elif data_format == "FLO":
             return "float"
         else:
-            return 'error'
+            return "error"
 
     def set_numeric_data_pattern(self, pattern_number: int) -> None:
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.write_resource(f'NUM:NORM:PRES {pattern_number}')
+        self.write_resource(f"NUM:NORM:PRES {pattern_number}")
 
     def set_numeric_list_data_pattern(self, pattern_number: int) -> None:
         """
         valid presents are 1-4 (see datasheet page 5-91) constructer sets to 1
         """
-        self.write_resource(f'NUM:LIST:PRES {pattern_number}')
+        self.write_resource(f"NUM:LIST:PRES {pattern_number}")
 
-    def set_harmonic_pll_source(self, channel: int,
-                                source_type: HarmonicTypes) -> None:
+    def set_harmonic_pll_source(self, channel: int, source_type: HarmonicTypes) -> None:
 
         if source_type == HarmonicTypes.voltage:
-            source_id = 'U'
+            source_id = "U"
         elif source_type == HarmonicTypes.current:
-            source_id = 'I'
+            source_id = "I"
         else:
             raise ValueError(f'Invalid Source type "{source_type}"')
 
         command_str = f"HARM:PLLS {source_id}{channel}"
         self.write_resource(command_str)
 
-    def get_channel_data(self, channel: Union[int, str],
-                         measurment: MeasurementTypes
-                         ) -> float:
+    def get_channel_data(
+        self, channel: Union[int, str], measurment: MeasurementTypes
+    ) -> float:
 
-        if channel == 'sigma':
+        if channel == "sigma":
             channel = 4
 
-        index = self._CHANNEL_DATA_SEPARATION_INDEX*(channel - 1)
+        index = self._CHANNEL_DATA_SEPARATION_INDEX * (channel - 1)
         index += measurment.value
         response = self.query_resource(f"NUM:VAL? {index}")
 
@@ -124,20 +123,20 @@ class Yokogawa_760203(VisaResource):  # 3 phase
 
     def get_harmonic_pll_source(self) -> str:
         response = self.query_resource("HARM:PLLS?")
-        return response.split(' ')[-1].rstrip('\n')
+        return response.split(" ")[-1].rstrip("\n")
 
     def set_harmonic_order(self, order_min: int, order_max: int) -> None:
         self.write_resource(f"HARM:ORD {order_min},{order_max}")
 
     def get_harmonic_order(self) -> List[int]:
         response = self.query_resource("HARM:ORD?")
-        response = response.split(' ')[-1].rstrip('\n')
+        response = response.split(" ")[-1].rstrip("\n")
 
-        return [int(x) for x in response.split(',')]
+        return [int(x) for x in response.split(",")]
 
-    def get_harmonic_data(self, channel: int, harmonic_type: HarmonicTypes,
-                          return_total=False
-                          ) -> Union[List[float], Tuple[List[float], float]]:
+    def get_harmonic_data(
+        self, channel: int, harmonic_type: HarmonicTypes, return_total=False
+    ) -> Union[List[float], Tuple[List[float], float]]:
         """
         get_harmonic_data(channel, harmonic_type, return_total=False)
 
@@ -152,11 +151,11 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         self.set_harmonic_pll_source(channel, harmonic_type)
 
         # get data
-        index = self._LIST_DATA_SEPARATION_INDEX*(channel - 1)
+        index = self._LIST_DATA_SEPARATION_INDEX * (channel - 1)
         index += harmonic_type.value
         response = self.query_resource(f"NUM:LIST:VAL? {index}")
 
-        harmonics = [float(x) for x in response.split(',')]
+        harmonics = [float(x) for x in response.split(",")]
         if return_total:
             return harmonics[1:], harmonics[0]
         else:
@@ -177,7 +176,7 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         is sent.
         """
 
-        self.write_resource(f'CURR:RANG:ALL {current}')
+        self.write_resource(f"CURR:RANG:ALL {current}")
 
     def get_current_range(self) -> Tuple[float]:
         """
@@ -189,8 +188,8 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         get the current range of all phases to use for current measurements.
         each range returns the current level for the top of the range.
         """
-        response = self.query_resource('CURR:RANG?')
-        return tuple(float(chan.split()[-1]) for chan in response.split(';'))
+        response = self.query_resource("CURR:RANG?")
+        return tuple(float(chan.split()[-1]) for chan in response.split(";"))
 
     def get_voltage_rms(self, channel: int) -> float:
         """
@@ -228,13 +227,16 @@ class Yokogawa_760203(VisaResource):  # 3 phase
         return self.get_channel_data(channel, MeasurementTypes.fi)
 
     def get_voltage_harmonics(self, channel: int, return_total: bool = False):
-        return self.get_harmonic_data(channel, HarmonicTypes.voltage,
-                                      return_total=return_total)
+        return self.get_harmonic_data(
+            channel, HarmonicTypes.voltage, return_total=return_total
+        )
 
     def get_current_harmonics(self, channel: int, return_total: bool = False):
-        return self.get_harmonic_data(channel, HarmonicTypes.current,
-                                      return_total=return_total)
+        return self.get_harmonic_data(
+            channel, HarmonicTypes.current, return_total=return_total
+        )
 
     def get_power_harmonics(self, channel: int, return_total: bool = False):
-        return self.get_harmonic_data(channel, HarmonicTypes.power,
-                                      return_total=return_total)
+        return self.get_harmonic_data(
+            channel, HarmonicTypes.power, return_total=return_total
+        )

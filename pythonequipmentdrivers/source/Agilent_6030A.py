@@ -14,5 +14,5 @@ class Agilent_6030A(HP_6632A):
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

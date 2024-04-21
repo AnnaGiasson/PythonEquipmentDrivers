@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Yokogawa_760401(VisaResource):  # single phase
@@ -21,9 +21,7 @@ class Yokogawa_760401(VisaResource):  # single phase
             if int(arg.split(" ")[0].replace("ITEM", "")) == item_number:
                 return arg.split(" ")[1].split(",")[0]
 
-        raise IndexError(
-            'Could not find a measurement type at the given item_number'
-            )
+        raise IndexError("Could not find a measurement type at the given item_number")
 
     def get_measurement(self, item_number: int) -> Union[float, List[float]]:
 

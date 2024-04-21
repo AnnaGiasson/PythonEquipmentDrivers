@@ -1,9 +1,11 @@
-from pythonequipmentdrivers import VisaResource
 import struct
-import numpy as np
-from time import sleep
 from pathlib import Path
-from typing import Union, Tuple
+from time import sleep
+from typing import Tuple, Union
+
+import numpy as np
+
+from ..core import VisaResource
 
 
 class Tektronix_DPO4xxx(VisaResource):
@@ -36,8 +38,9 @@ class Tektronix_DPO4xxx(VisaResource):
 
         self.write_resource(f"SEL:CH{channel} {'ON' if state else 'OFF'}")
 
-    def get_channel_data(self, *channels: int,
-                         **kwargs) -> Union[Tuple[np.ndarray], np.ndarray]:
+    def get_channel_data(
+        self, *channels: int, **kwargs
+    ) -> Union[Tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
                          return_time=True, dtype=np.float32)
@@ -75,48 +78,47 @@ class Tektronix_DPO4xxx(VisaResource):
 
         # get record window metadata
         N = self.get_record_length()  # number of samples
-        x_offset = int(self.get_trigger_position()/100*N)
+        x_offset = int(self.get_trigger_position() / 100 * N)
 
         # formatting info
-        dtype = kwargs.get('dtype', np.float32)
-        start_idx = np.clip(kwargs.get('start_percent', 0), 0, 100)/100*N
-        stop_idx = np.clip(kwargs.get('stop_percent', 100), 0, 100)/100*N
+        dtype = kwargs.get("dtype", np.float32)
+        start_idx = np.clip(kwargs.get("start_percent", 0), 0, 100) / 100 * N
+        stop_idx = np.clip(kwargs.get("stop_percent", 100), 0, 100) / 100 * N
 
         waves = []
         for channel in channels:
             # set up scope for data transfer
-            self._resource.write(f'DATA:SOU CH{int(channel)}')  # Set source
-            self._resource.write('DATA:WIDTH 1')  # ?? used in example
-            self._resource.write('DATA:ENC RPB')  # Set data encoding type
-            self._resource.write(f'DATA:START {int(start_idx)}')
-            self._resource.write(f'DATA:STOP {int(stop_idx)}')
+            self._resource.write(f"DATA:SOU CH{int(channel)}")  # Set source
+            self._resource.write("DATA:WIDTH 1")  # ?? used in example
+            self._resource.write("DATA:ENC RPB")  # Set data encoding type
+            self._resource.write(f"DATA:START {int(start_idx)}")
+            self._resource.write(f"DATA:STOP {int(stop_idx)}")
 
             # get waveform metadata
-            dt = float(self._resource.query('WFMPRE:XINCR?'))  # sampling time
-            y_offset = float(self._resource.query('WFMPRE:YOFF?'))
-            y_scale = float(self._resource.query('WFMPRE:YMULT?'))
+            dt = float(self._resource.query("WFMPRE:XINCR?"))  # sampling time
+            y_offset = float(self._resource.query("WFMPRE:YOFF?"))
+            y_scale = float(self._resource.query("WFMPRE:YMULT?"))
 
-            adc_offset = float(self._resource.query('WFMPRE:YZERO?'))
+            adc_offset = float(self._resource.query("WFMPRE:YZERO?"))
 
             # get raw data, strip header
-            self._resource.write('CURVE?')
+            self._resource.write("CURVE?")
             raw_data = self._resource.read_raw()
 
             header_len = 2 + int(raw_data[1])
             raw_data = raw_data[header_len:-1]
 
-            data = np.array(struct.unpack(f'{len(raw_data)}B', raw_data),
-                            dtype=dtype)
+            data = np.array(struct.unpack(f"{len(raw_data)}B", raw_data), dtype=dtype)
 
             # decode into measured value using waveform metadata
-            wave = (data - y_offset)*y_scale + adc_offset
+            wave = (data - y_offset) * y_scale + adc_offset
             waves.append(wave)
 
-        if kwargs.get('return_time', True):
+        if kwargs.get("return_time", True):
             # generate time vector / account for trigger position
             # all waveforms assumed to have same duration (just use last)
-            t = np.arange(0, dt*len(wave), dt, dtype=dtype)
-            t -= (x_offset - min([start_idx, stop_idx]))*dt
+            t = np.arange(0, dt * len(wave), dt, dtype=dtype)
+            t -= (x_offset - min([start_idx, stop_idx])) * dt
 
             return (t, *waves)
         else:
@@ -151,7 +153,7 @@ class Tektronix_DPO4xxx(VisaResource):
             (str): specified channel label
         """
 
-        response = self.query_resource(f'CH{channel}:LAB?')
+        response = self.query_resource(f"CH{channel}:LAB?")
         return response
 
     def set_channel_bandwidth(self, channel: int, bandwidth: float) -> None:
@@ -199,7 +201,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        self.write_resource(f'CH{channel}:SCA {scale}')
+        self.write_resource(f"CH{channel}:SCA {scale}")
 
     def get_channel_scale(self, channel: int) -> float:
         """
@@ -215,7 +217,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 vertical division on the display.
         """
 
-        response = self.query_resource(f'CH{channel}:SCA?')
+        response = self.query_resource(f"CH{channel}:SCA?")
         return float(response)
 
     def set_channel_offset(self, channel: int, off: float) -> None:
@@ -325,7 +327,7 @@ class Tektronix_DPO4xxx(VisaResource):
         """
 
         if not (0.0 <= offset <= 100.0):
-            raise ValueError('offset out of the valid range [0-100]')
+            raise ValueError("offset out of the valid range [0-100]")
 
         self.write_resource(f"HOR:POS {offset}")
 
@@ -432,7 +434,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 disabled.
         """
 
-        on_keywords = {'on', 'true', '1'}
+        on_keywords = {"on", "true", "1"}
 
         response = self.query_resource("ZOO:MODE?")
 
@@ -522,7 +524,7 @@ class Tektronix_DPO4xxx(VisaResource):
             try:
                 data.append(float(response))
             except ValueError:
-                data.append(float('nan'))
+                data.append(float("nan"))
 
         if len(data) == 1:
             return data[0]
@@ -550,22 +552,22 @@ class Tektronix_DPO4xxx(VisaResource):
 
         # add file extension
         if isinstance(image_title, Path):
-            file_path = image_title.parent.joinpath(image_title.name + '.png')
+            file_path = image_title.parent.joinpath(image_title.name + ".png")
         elif isinstance(image_title, str):
             file_path = f"{image_title}.png"
         else:
-            raise ValueError('image_title must be a str or path-like object')
+            raise ValueError("image_title must be a str or path-like object")
 
         # initiate transfer
         self._resource.write("SAVE:IMAG:FILEF PNG")  # set filetype
         self._resource.write("HARDCOPY START")  # start converting to image
-        self._resource.write('*OPC?')  # done yet?
-        sleep(kwargs.get('buffering_delay', 0))
+        self._resource.write("*OPC?")  # done yet?
+        sleep(kwargs.get("buffering_delay", 0))
 
         raw_data = self._resource.read_raw()
 
         # save image
-        with open(file_path, 'wb') as file:
+        with open(file_path, "wb") as file:
             file.write(raw_data)
 
     def set_record_length(self, length: int) -> None:
@@ -609,14 +611,14 @@ class Tektronix_DPO4xxx(VisaResource):
                 positive numbers or "inf" to set the maximum exposure time
         """
 
-        if isinstance(duration, str) and (duration.lower() == 'inf'):
-            val = 'INFI'
+        if isinstance(duration, str) and (duration.lower() == "inf"):
+            val = "INFI"
         elif isinstance(duration, (float, int)):
             val = float(duration) if duration > 0 else -1
         else:
-            raise ValueError('invalid persistence option')
+            raise ValueError("invalid persistence option")
 
-        self._resource.write(f'DIS:PERS {val}')
+        self._resource.write(f"DIS:PERS {val}")
 
     def get_persistence_time(self) -> float:
         """
@@ -628,7 +630,7 @@ class Tektronix_DPO4xxx(VisaResource):
             (float): persistence time
         """
 
-        response = self._resource.query('DIS:PERS?')
+        response = self._resource.query("DIS:PERS?")
         return max([float(response), 0.0])
 
     def set_cursor_vertical_level(self, cursor: int, level: float) -> None:
@@ -657,7 +659,7 @@ class Tektronix_DPO4xxx(VisaResource):
                 display in seconds.
         """
 
-        self._resource.write(f'HOR:SCA {float(scale)}')
+        self._resource.write(f"HOR:SCA {float(scale)}")
 
     def get_horizontal_scale(self) -> float:
         """
@@ -669,5 +671,5 @@ class Tektronix_DPO4xxx(VisaResource):
             float: horizontal scale in seconds per division.
         """
 
-        response = self._resource.query('HOR:SCA?')
+        response = self._resource.query("HOR:SCA?")
         return float(response)

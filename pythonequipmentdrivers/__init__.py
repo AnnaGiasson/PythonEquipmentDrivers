@@ -1,40 +1,26 @@
-from .core import (VisaResource, GpibInterface,
-                   find_visa_resources, identify_visa_resources)
+from . import (daq, errors, functiongenerator, multimeter, networkanalyzer,
+               oscilloscope, powermeter, sink, source, temperaturecontroller,
+               utility)
+from .core import (GpibInterface, VisaResource, find_visa_resources,
+                   identify_visa_resources)
+from .resource_collections import ResourceCollection, connect_resources
 
-from .resource_collections import connect_resources, ResourceCollection
-
-from . import utility
-from . import errors
-
-from . import source
-from . import sink
-from . import multimeter
-from . import daq
-
-from . import powermeter
-from . import oscilloscope
-from . import networkanalyzer
-
-from . import functiongenerator
-from . import temperaturecontroller
-
-
-__all__ = ['VisaResource', 'GpibInterface', 'find_visa_resources',
-           'identify_visa_resources',
-
-           'connect_resources', 'ResourceCollection',
-
-           'utility', 'errors',
-
-           'source',
-           'sink',
-           'multimeter',
-           'daq',
-
-           'powermeter',
-           'oscilloscope',
-           'networkanalyzer',
-
-           'functiongenerator',
-           'temperaturecontroller'
-           ]
+__all__ = [
+    "VisaResource",
+    "GpibInterface",
+    "find_visa_resources",
+    "identify_visa_resources",
+    "connect_resources",
+    "ResourceCollection",
+    "utility",
+    "errors",
+    "source",
+    "sink",
+    "multimeter",
+    "daq",
+    "powermeter",
+    "oscilloscope",
+    "networkanalyzer",
+    "functiongenerator",
+    "temperaturecontroller",
+]

@@ -2,8 +2,7 @@ import json
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Tuple, Union, Iterator
-
+from typing import Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 
@@ -26,15 +25,17 @@ def read_configuration(config_info: Union[str, Path, dict]) -> dict:
     """
 
     if not isinstance(config_info, (str, Path, dict)):
-        raise ValueError('Unsupported type for arguement "config_info"'
-                         ' should a str/Path object to a JSON file or a'
-                         ' dictionary')
+        raise ValueError(
+            'Unsupported type for arguement "config_info"'
+            " should a str/Path object to a JSON file or a"
+            " dictionary"
+        )
 
     if isinstance(config_info, dict):
         return config_info
 
     # read equipment info from file
-    with open(config_info, 'rb') as file:
+    with open(config_info, "rb") as file:
         configuration = json.load(file)
     return configuration
 
@@ -52,9 +53,7 @@ class ResourceCollection(SimpleNamespace):
     dmms: "DmmCollection"
 
     def __repr__(self) -> str:
-        return (
-            super().__repr__().replace("namespace", self.__class__.__name__)
-        )
+        return super().__repr__().replace("namespace", self.__class__.__name__)
 
     def __iter__(self) -> Iterator:
         # allows intuitive iteration over the collection objects
@@ -91,8 +90,9 @@ class DmmCollection(ResourceCollection):
     for multimeters and support some common methods.
     """
 
-    def fetch_data(self, mapper: Dict[str, str] = None,
-                   only_mapped: bool = False) -> Dict[str, float]:
+    def fetch_data(
+        self, mapper: Dict[str, str] = None, only_mapped: bool = False
+    ) -> Dict[str, float]:
         """
         fetch_data([mapper])
 
@@ -122,8 +122,9 @@ class DmmCollection(ResourceCollection):
             try:
                 measurements[new_name] = resource.fetch_data()
             except AttributeError as exc:
-                raise AttributeError('All multimeter instances must have a '
-                                     '"fetch_data" method') from exc
+                raise AttributeError(
+                    "All multimeter instances must have a " '"fetch_data" method'
+                ) from exc
 
         return measurements
 
@@ -151,11 +152,11 @@ class DmmCollection(ResourceCollection):
             except (VisaIOError, AttributeError):
                 pass
 
+
 # Update expected/assumed format of json file
 
 
-def connect_resources(config: Union[str, Path, dict],
-                      **kwargs) -> ResourceCollection:
+def connect_resources(config: Union[str, Path, dict], **kwargs) -> ResourceCollection:
     """
     connect_resources(config, **kwargs)
 
@@ -266,7 +267,7 @@ def connect_resources(config: Union[str, Path, dict],
     # read/process configuration information
     collection_config = read_configuration(config)
 
-    object_mask = set(kwargs.get('object_mask', {}))
+    object_mask = set(kwargs.get("object_mask", {}))
     if object_mask:
 
         # remove resources that are not needed
@@ -285,44 +286,44 @@ def connect_resources(config: Union[str, Path, dict],
 
         try:
             # get object to instantate from it's source module
-            module_name = meta_info.pop('definition')
+            module_name = meta_info.pop("definition")
             Module = import_module(module_name)
-            Resource = getattr(Module, meta_info.pop('object'))
+            Resource = getattr(Module, meta_info.pop("object"))
 
             # special keyword for resource initialization, not passed as kwarg
-            init_sequence = meta_info.pop('init', [])
+            init_sequence = meta_info.pop("init", [])
 
             # create instance of Resource called 'name', any remaining items in
             # meta_info will be passed as kwargs
             resource = Resource(**meta_info)
             setattr(resources, name, resource)
 
-            if 'multimeter' in module_name:
-                dmms[name.replace('DMM', '')] = resource
+            if "multimeter" in module_name:
+                dmms[name.replace("DMM", "")] = resource
 
-            if kwargs.get('verbose', True):
-                print(f'[CONNECTED] {name}')
+            if kwargs.get("verbose", True):
+                print(f"[CONNECTED] {name}")
 
-            if kwargs.get('init', False) and (init_sequence):
+            if kwargs.get("init", False) and (init_sequence):
                 # get the instance in question
                 resource_instance = getattr(resources, name)
 
                 initiaize_device(resource_instance, init_sequence)
-                if kwargs.get('verbose', True):
-                    print('\tInitialzed')
+                if kwargs.get("verbose", True):
+                    print("\tInitialzed")
 
         except (VisaIOError, ConnectionError) as error:
 
-            if kwargs.get('verbose', True):
-                print(f'[FAILED CONNECTION] {name}')
+            if kwargs.get("verbose", True):
+                print(f"[FAILED CONNECTION] {name}")
 
             if object_mask:  # failed resource connection is required
                 raise ResourceConnectionError(error)
 
         except (ModuleNotFoundError, AttributeError) as error:
 
-            if kwargs.get('verbose', True):
-                print(f'[UNSUPPORTED DEVICE] {name}\t{error}')
+            if kwargs.get("verbose", True):
+                print(f"[UNSUPPORTED DEVICE] {name}\t{error}")
 
             if object_mask:  # unknown resource is required equipment
                 raise UnsupportedResourceError(error)
@@ -350,11 +351,10 @@ def get_callable_methods(instance) -> Tuple:
 
     # get methods that are callable (will not include sub-classes)
     methods = instance.__dir__()
-    cmds = filter(lambda method: (callable(getattr(instance, method))),
-                  methods)
+    cmds = filter(lambda method: (callable(getattr(instance, method))), methods)
 
     # filter out ignore dunders
-    cmds = filter(lambda func_name: ('__' not in func_name), cmds)
+    cmds = filter(lambda func_name: ("__" not in func_name), cmds)
     return tuple(cmds)
 
 
@@ -379,7 +379,7 @@ def initiaize_device(instance, sequence) -> None:
     """
 
     valid_cmds = get_callable_methods(instance)
-    error_msg_template = '\tError with initialization command {}:\t{}'
+    error_msg_template = "\tError with initialization command {}:\t{}"
 
     for method_name, method_kwargs in sequence:
         if method_name in valid_cmds:

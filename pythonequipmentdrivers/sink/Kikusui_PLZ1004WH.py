@@ -1,6 +1,6 @@
 from typing import Union
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
@@ -12,6 +12,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     Programmers Manual:
     https://manual.kikusui.co.jp/P/PLZ4W/i_f_manual/english/00-intro.html
     """
+
     # need to update:
     #     logic
     #     documenation
@@ -39,7 +40,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         """
 
         response = self.query_resource("OUTP?")
-        return (int(response) == 1)
+        return int(response) == 1
 
     def on(self) -> None:
         """
@@ -215,7 +216,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         """
 
         response = self.query_resource("CURR:SLEW?")
-        slew_rate = float(response)*1e6  # return is in A/us
+        slew_rate = float(response) * 1e6  # return is in A/us
         return slew_rate
 
     def set_current(self, current: float) -> None:
@@ -347,7 +348,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured Voltage in Volts DC
         """
 
-        response = self.query_resource('MEAS:VOLT?')
+        response = self.query_resource("MEAS:VOLT?")
         return float(response)
 
     def measure_current(self) -> float:
@@ -360,7 +361,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured Current in Amps DC.
         """
 
-        response = self.query_resource('MEAS:CURR?')
+        response = self.query_resource("MEAS:CURR?")
         return float(response)
 
     def measure_power(self) -> float:
@@ -373,5 +374,5 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             float: Measured power in Watts.
         """
 
-        response = self.query_resource('MEAS:POW?')
+        response = self.query_resource("MEAS:POW?")
         return float(response)

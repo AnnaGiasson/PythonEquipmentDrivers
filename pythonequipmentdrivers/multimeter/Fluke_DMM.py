@@ -1,6 +1,6 @@
 from typing import Set
 
-from pythonequipmentdrivers import VisaResource
+from ..core import VisaResource
 
 
 class Fluke_DMM(VisaResource):
@@ -20,10 +20,16 @@ class Fluke_DMM(VisaResource):
 
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
-        self.factor: float = kwargs.get('factor', 1.0)
+        self.factor: float = kwargs.get("factor", 1.0)
         self.valid_modes: Set[str] = {
-            'AAC', 'ADC', 'VAC', 'VDC', 'OHMS', 'FREQ', 'CONT'
-            }
+            "AAC",
+            "ADC",
+            "VAC",
+            "VDC",
+            "OHMS",
+            "FREQ",
+            "CONT",
+        }
 
     def _measure_signal(self) -> float:
         """
@@ -36,7 +42,7 @@ class Fluke_DMM(VisaResource):
         """
 
         response = self.query_resource("VAL1?")
-        return self.factor*float(response)
+        return self.factor * float(response)
 
     def set_range(self, n: int, auto_range: bool = False) -> None:
         """
@@ -89,7 +95,7 @@ class Fluke_DMM(VisaResource):
         """
 
         rate = rate.upper()
-        if rate in {'S', 'M', 'F'}:
+        if rate in {"S", "M", "F"}:
             self.write_resource(f"RATE {rate}")
         else:
             raise ValueError("Invalid rate option, should be 'S', 'M', or 'F'")
@@ -122,8 +128,9 @@ class Fluke_DMM(VisaResource):
         if mode in self.valid_modes:
             self.write_resource.write(f"FUNC1 {mode}")
         else:
-            raise ValueError("Invalid mode option, valid options are: "
-                             + ', '.join(self.valid_modes))
+            raise ValueError(
+                "Invalid mode option, valid options are: " + ", ".join(self.valid_modes)
+            )
 
     def get_mode(self) -> str:
         """
@@ -150,7 +157,7 @@ class Fluke_DMM(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'VDC':
+        if self.get_mode() != "VDC":
             raise IOError("Multimeter is not configured to measure voltage")
         return self._measure_signal()
 
@@ -166,7 +173,7 @@ class Fluke_DMM(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'VAC':
+        if self.get_mode() != "VAC":
             raise IOError("Multimeter is not configured to measure AC voltage")
         return self._measure_signal()
 
@@ -182,7 +189,7 @@ class Fluke_DMM(VisaResource):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'ADC':
+        if self.get_mode() != "ADC":
             raise IOError("Multimeter is not configured to measure current")
         return self._measure_signal()
 
@@ -198,7 +205,7 @@ class Fluke_DMM(VisaResource):
         mode with the set_mode method.
 
         """
-        if self.get_mode() != 'AAC':
+        if self.get_mode() != "AAC":
             raise IOError("Multimeter is not configured to measure AC current")
         return self._measure_signal()
 
@@ -214,7 +221,7 @@ class Fluke_DMM(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'OHMS':
+        if self.get_mode() != "OHMS":
             raise IOError("Multimeter is not configured to measure resistance")
         return self._measure_signal()
 
@@ -230,6 +237,6 @@ class Fluke_DMM(VisaResource):
         set_mode method.
         """
 
-        if self.get_mode() != 'FREQ':
+        if self.get_mode() != "FREQ":
             raise IOError("Multimeter is not configured to measure frequency")
         return self._measure_signal()
