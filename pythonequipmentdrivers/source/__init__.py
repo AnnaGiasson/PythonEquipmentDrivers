@@ -1,16 +1,16 @@
 from typing import Protocol
 
-from .Agilent_6030A import Agilent_6030A
-from .BKPrecision_9132B import BKPrecision_9132B
-from .CaliforniaInstruments_CSW5550 import CaliforniaInstruments_CSW5550
-from .Chroma_62000P import Chroma_62000P
-from .Elgar_1750A import Elgar_1750A
-from .Elgar_5250A import Elgar_5250A
-from .HP_6632A import HP_6632A
-from .Intepro_PSI9000 import Intepro_PSI9000
-from .Keithley_2231A import Keithley_2231A
-from .PPSC_3150AFX import PPSC_3150AFX
-from .Sorensen_SGA import Sorensen_SGA
+from .agilent_6030a import Agilent_6030A
+from .bkprecision_9132b import BKPrecision_9132B
+from .californiainstruments_csw5550 import CaliforniaInstruments_CSW5550
+from .chroma_62000p import Chroma_62000P
+from .elgar_1750a import Elgar_1750A
+from .elgar_5250a import Elgar_5250A
+from .hp_6632a import HP_6632A
+from .intepro_psi9000 import Intepro_PSI9000
+from .keithley_2231a import Keithley_2231A
+from .ppsc_3150afx import PPSC_3150AFX
+from .sorensen_sga import Sorensen_SGA
 
 
 class VoltageSource(Protocol):
