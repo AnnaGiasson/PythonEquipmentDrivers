@@ -1,4 +1,4 @@
-from .Keithley_2231A import Keithley_2231A
+from .keithley_2231a import Keithley_2231A
 
 
 # acts as an alias of Keithley_2231A

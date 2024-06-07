@@ -1,4 +1,4 @@
-from .HP_6632A import HP_6632A
+from .hp_6632a import HP_6632A
 
 
 # acts as an alias of HP_6632A
