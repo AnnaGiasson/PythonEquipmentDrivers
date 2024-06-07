@@ -471,7 +471,7 @@ class HP_34401A(VisaResource):
         acdc = valid_acdc[acdc] if not usefreq else ""
 
         # if range is not provided, cannot use nplc in CONF command
-        signal_range = signal_range.upper()
+        signal_range = str(signal_range).upper()
         if signal_range == "AUTO":
             signal_range = False
 
@@ -553,4 +553,7 @@ class HP_34401A(VisaResource):
         return self.measure_time
 
     def set_local(self, **kwargs) -> None:
-        self.write_resource("SYSTem:LOCal", **kwargs)
+        if "GPIB" not in self.address:
+            self.write_resource("SYSTem:LOCal", **kwargs)
+        else:
+            super().set_local()
