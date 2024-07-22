@@ -3,7 +3,7 @@ from typing import Union
 import pyvisa
 from pyvisa.constants import BufferOperation
 
-from ...core import VisaResource, rm
+from pythonequipmentdrivers.core import VisaResource, rm
 
 
 class Fluke45SerialError(Exception):

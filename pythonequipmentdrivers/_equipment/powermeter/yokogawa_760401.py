@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Yokogawa_760401(VisaResource):  # single phase

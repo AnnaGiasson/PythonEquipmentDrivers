@@ -1,4 +1,5 @@
-from .keithley_2231a import Keithley_2231A
+from pythonequipmentdrivers._equipment.source.keithley_2231a import \
+    Keithley_2231A
 
 
 # acts as an alias of Keithley_2231A

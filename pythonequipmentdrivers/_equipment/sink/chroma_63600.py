@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Set, Tuple, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 # Look into programming "sequences" and "programs" to the device. See basic
 # description in the users manual ~pg 118 (4-32)

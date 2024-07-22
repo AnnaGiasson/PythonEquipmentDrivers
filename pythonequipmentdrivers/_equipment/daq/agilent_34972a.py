@@ -3,7 +3,7 @@ from enum import Enum
 from time import sleep
 from typing import Iterable, List, Tuple, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class ChannelModes(Enum):

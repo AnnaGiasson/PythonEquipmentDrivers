@@ -1,4 +1,4 @@
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class CaliforniaInstruments_CSW5550(VisaResource):

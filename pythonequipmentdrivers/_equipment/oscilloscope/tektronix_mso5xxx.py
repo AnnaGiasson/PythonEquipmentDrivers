@@ -4,7 +4,7 @@ from typing import Tuple, Union
 
 import numpy as np
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Tektronix_MSO5xxx(VisaResource):

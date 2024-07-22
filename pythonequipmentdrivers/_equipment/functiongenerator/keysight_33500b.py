@@ -1,6 +1,6 @@
 from typing import Generator, Iterable, List, Tuple, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Keysight_33500B(VisaResource):

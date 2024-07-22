@@ -1,16 +1,22 @@
 from typing import Protocol
 
-from .agilent_6030a import Agilent_6030A
-from .bkprecision_9132b import BKPrecision_9132B
-from .californiainstruments_csw5550 import CaliforniaInstruments_CSW5550
-from .chroma_62000p import Chroma_62000P
-from .elgar_1750a import Elgar_1750A
-from .elgar_5250a import Elgar_5250A
-from .hp_6632a import HP_6632A
-from .intepro_psi9000 import Intepro_PSI9000
-from .keithley_2231a import Keithley_2231A
-from .ppsc_3150afx import PPSC_3150AFX
-from .sorensen_sga import Sorensen_SGA
+from pythonequipmentdrivers._equipment.source.agilent_6030a import \
+    Agilent_6030A
+from pythonequipmentdrivers._equipment.source.bkprecision_9132b import \
+    BKPrecision_9132B
+from pythonequipmentdrivers._equipment.source.californiainstruments_csw5550 import \
+    CaliforniaInstruments_CSW5550
+from pythonequipmentdrivers._equipment.source.chroma_62000p import \
+    Chroma_62000P
+from pythonequipmentdrivers._equipment.source.elgar_1750a import Elgar_1750A
+from pythonequipmentdrivers._equipment.source.elgar_5250a import Elgar_5250A
+from pythonequipmentdrivers._equipment.source.hp_6632a import HP_6632A
+from pythonequipmentdrivers._equipment.source.intepro_psi9000 import \
+    Intepro_PSI9000
+from pythonequipmentdrivers._equipment.source.keithley_2231a import \
+    Keithley_2231A
+from pythonequipmentdrivers._equipment.source.ppsc_3150afx import PPSC_3150AFX
+from pythonequipmentdrivers._equipment.source.sorensen_sga import Sorensen_SGA
 
 
 class VoltageSource(Protocol):

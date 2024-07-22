@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Any, Dict
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Elgar_1750A(VisaResource):

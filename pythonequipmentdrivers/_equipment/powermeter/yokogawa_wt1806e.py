@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
-from .yokogawa_760203 import MeasurementTypes, Yokogawa_760203
+from pythonequipmentdrivers._equipment.powermeter.yokogawa_760203 import (
+    MeasurementTypes, Yokogawa_760203)
 
 
 class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel

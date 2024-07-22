@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Any, List, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class HP_34401A(VisaResource):

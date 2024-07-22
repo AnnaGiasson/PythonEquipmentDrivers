@@ -1,4 +1,4 @@
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Elgar_5250A(VisaResource):

@@ -1,4 +1,4 @@
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Keithley_2231A(VisaResource):

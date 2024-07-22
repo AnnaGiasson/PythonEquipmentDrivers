@@ -1,1 +1,1 @@
-from ._equipment.networkanalyzer import Bode100
+from pythonequipmentdrivers._equipment.networkanalyzer import Bode100

@@ -1,1 +1,2 @@
-from ._equipment.temperaturecontroller import Koolance_EXC900
+from pythonequipmentdrivers._equipment.temperaturecontroller import \
+    Koolance_EXC900

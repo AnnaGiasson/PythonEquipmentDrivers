@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from ...core import VisaResource
+from pythonequipmentdrivers.core import VisaResource
 
 
 class Sorensen_SGA(VisaResource):

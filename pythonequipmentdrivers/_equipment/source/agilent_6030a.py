@@ -1,4 +1,4 @@
-from .hp_6632a import HP_6632A
+from pythonequipmentdrivers._equipment.source.hp_6632a import HP_6632A
 
 
 # acts as an alias of HP_6632A
