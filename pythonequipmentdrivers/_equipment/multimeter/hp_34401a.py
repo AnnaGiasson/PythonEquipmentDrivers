@@ -153,7 +153,12 @@ class HP_34401A(VisaResource):
         response = self.query_resource("SYSTem:ERRor?", **kwargs)
         return self.resp_format(response, str)
 
-    def set_trigger(self, trigger: str, **kwargs) -> None:
+    def set_trigger(
+        self,
+        trigger: str,
+        delay: Union[str, float] = None,
+        count: Union[str, int] = None,
+    ) -> None:
         """
         set_trigger(trigger)
 
@@ -169,43 +174,40 @@ class HP_34401A(VisaResource):
             valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'.
         """
 
+        if delay is not None:
+            self.set_trigger_delay(delay)
+
+        if count is not None:
+            self.set_trigger_count(count)
+
+        self.set_trigger_source(trigger)
+
+    def set_trigger_delay(self, delay: Union[str, float], **kwargs) -> None:
+        """
+        set_trigger_delay(delay)
+
+        Args:
+            delay (Union[str, float]): delay in seconds or "MIN" or "MAX"
+        """
+
         valid_delay = {"MIN", "MINIMUM", "MAX", "MAXIMUM"}
-        valid_count = {"MIN", "MINIMUM", "MAX", "MAXIMUM", "INF", "INFINITE"}
+        delay = delay.upper() if isinstance(delay, str) else delay
 
-        if kwargs.get("delay", False):
+        if not ((delay in valid_delay) or isinstance(delay, (int, float))):
+            raise ValueError(
+                f"Invalid trigger delay. Use: {valid_delay} or a numeric value"
+            )
 
-            if isinstance(kwargs["delay"], str):
-                delay = kwargs["delay"].upper()
-            else:
-                delay = kwargs["delay"]
+        self.write_resource(f"TRIG:DELay {delay}", **kwargs)
 
-            if not ((delay in valid_delay) or isinstance(delay, (int, float))):
-                raise ValueError(f"Invalid trigger delay. Use: {valid_delay}")
+    def get_trigger_delay(self) -> str:
+        """
+        get_trigger_delay()
 
-            self.write_resource(f"TRIG:DELay {delay}")
-
-        if kwargs.get("count", False):
-
-            if isinstance(kwargs["count"], str):
-                count = kwargs["count"].upper()
-            else:
-                count = kwargs["count"]
-
-            if not ((count in valid_count) or isinstance(count, int)):
-                # note: if count is not an int the 2nd condition wont execute
-                if not (isinstance(count, int) and (1 <= count <= 50000)):
-                    raise ValueError(
-                        "Invalid trigger count."
-                        f" Use: {valid_count} or an int within"
-                        " the range [1, 50000]"
-                    )
-
-            self.write_resource(f"TRIG:COUNt {count}")
-
-        trigger = trigger.upper()
-        if trigger not in self.valid_trigger:
-            raise ValueError("Invalid trigger option")
-        self.write_resource(f"TRIG:{self.valid_trigger[trigger]}")
+        Returns:
+            str: The current trigger delay as a string
+        """
+        return self.resp_format(self.query_resource("TRIG:DEL?"), str)
 
     def set_trigger_source(self, trigger: str = "IMMEDIATE", **kwargs) -> None:
         """
@@ -225,6 +227,12 @@ class HP_34401A(VisaResource):
         self.write_resource(f"TRIG:SOUR {self.trigger_mode}", **kwargs)
 
     def get_trigger_source(self, **kwargs) -> str:
+        """
+        get_trigger_source()
+
+        Returns:
+            str: the current trigger source
+        """
 
         response = self.query_resource("TRIG:SOUR?", **kwargs)
         fmt_resp = self.resp_format(response, str)
