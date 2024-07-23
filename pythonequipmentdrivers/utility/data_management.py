@@ -1,10 +1,10 @@
+import csv
 import json
 from dataclasses import dataclass, field
 from itertools import zip_longest
 from pathlib import Path
 from time import asctime, strftime
 from typing import Any, Dict, Iterable, List, Optional
-import csv
 
 __all__ = ("log_to_csv", "dump_data", "dump_array_data", "create_test_log", "Logger")
 

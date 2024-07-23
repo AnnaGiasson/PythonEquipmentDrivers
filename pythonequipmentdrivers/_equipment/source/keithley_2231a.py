@@ -1,3 +1,5 @@
+import pyvisa
+
 from pythonequipmentdrivers.core import VisaResource
 
 
@@ -22,7 +24,10 @@ class Keithley_2231A(VisaResource):
         self.set_access_remote("remote")
 
     def __del__(self) -> None:
-        self.set_access_remote("local")
+        try:
+            self.set_access_remote("local")
+        except pyvisa.Error:
+            pass
         super().__del__()
 
     def set_access_remote(self, mode: str) -> None:

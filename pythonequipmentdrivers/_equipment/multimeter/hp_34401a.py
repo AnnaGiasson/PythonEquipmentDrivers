@@ -1,6 +1,8 @@
 from time import sleep
 from typing import Any, List, Union
 
+import pyvisa
+
 from pythonequipmentdrivers.core import VisaResource
 
 
@@ -102,7 +104,10 @@ class HP_34401A(VisaResource):
         self.trigger_mode = self.get_trigger_source()
 
     def __del__(self) -> None:
-        self.set_local()
+        try:
+            self.set_local()
+        except pyvisa.Error:
+            pass
         super().__del__()
 
     def set_mode(self, mode: str) -> None:
