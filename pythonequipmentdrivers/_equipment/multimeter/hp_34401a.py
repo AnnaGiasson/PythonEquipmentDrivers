@@ -268,6 +268,11 @@ class HP_34401A(VisaResource):
         response = self.query_resource("TRIG:COUN?", **kwargs)
         return int(self.resp_format(response, float))
 
+    def _measure_with_current_range(self, measurement_str: str):
+
+        current_range = self.query_resource(f"SENS:{measurement_str}:RANG?")
+        return self.query_resource(f"MEAS:{measurement_str}? {current_range}")
+
     def measure_voltage(self):
         """
         measure_voltage()
@@ -282,7 +287,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "VOLT":
             raise IOError("Multimeter is not configured to measure voltage")
-        response = self.query_resource("MEAS:VOLT:DC?")
+        response = self._measure_with_current_range("VOLT:DC")
         return self.factor * float(response)
 
     def measure_voltage_rms(self):
@@ -299,7 +304,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "VOLT:AC":
             raise IOError("Multimeter is not configured to measure AC voltage")
-        response = self.query_resource("MEAS:VOLT:AC?")
+        response = self._measure_with_current_range("VOLT:AC")
         return self.factor * float(response)
 
     def measure_current(self):
@@ -316,7 +321,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "CURR":
             raise IOError("Multimeter is not configured to measure current")
-        response = self.query_resource("MEAS:CURR:DC?")
+        response = self._measure_with_current_range("CURR:DC")
         return self.factor * float(response)
 
     def measure_current_rms(self):
@@ -333,7 +338,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "CURR:AC":
             raise IOError("Multimeter is not configured to measure AC current")
-        response = self.query_resource("MEAS:CURR:AC?")
+        response = self._measure_with_current_range("CURR:AC")
         return self.factor * float(response)
 
     def measure_resistance(self):
@@ -350,7 +355,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "RES":
             raise IOError("Multimeter is not configured to measure resistance")
-        response = self.query_resource("MEAS:RES?")
+        response = self._measure_with_current_range("RES")
         return float(response)
 
     def measure_frequency(self):
@@ -367,7 +372,7 @@ class HP_34401A(VisaResource):
         """
         if self.get_mode() != "FREQ":
             raise IOError("Multimeter is not configured to measure frequency")
-        response = self.query_resource("MEAS:FREQ?")
+        response = self._measure_with_current_range("FREQ")
         return float(response)
 
     def init(self, **kwargs) -> None:
