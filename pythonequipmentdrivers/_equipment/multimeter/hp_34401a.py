@@ -268,12 +268,25 @@ class HP_34401A(VisaResource):
         response = self.query_resource("TRIG:COUN?", **kwargs)
         return int(self.resp_format(response, float))
 
-    def _measure_with_current_range(self, measurement_str: str):
+    def _measure_with_current_range(self, measurement_str: str) -> str:
+        """
+        Perform a measurement using the provided measurement str. Maintain the current
+        range or auto mode if set
+
+        Args:
+            measurement_str (str): Base command for measurement e.g. "VOLT:DC"
+
+        Returns:
+            str: measurement returned as string
+        """
 
         current_range = self.query_resource(f"SENS:{measurement_str}:RANG?")
-        return self.query_resource(f"MEAS:{measurement_str}? {current_range}")
+        autorange = int(self.query_resource(f"SENS:{measurement_str}:RANG:AUTO?")) == 1
+        return self.query_resource(
+            f"MEAS:{measurement_str}?{' '+current_range if not autorange else ''}"
+        )
 
-    def measure_voltage(self):
+    def measure_voltage(self) -> float:
         """
         measure_voltage()
 
@@ -290,7 +303,7 @@ class HP_34401A(VisaResource):
         response = self._measure_with_current_range("VOLT:DC")
         return self.factor * float(response)
 
-    def measure_voltage_rms(self):
+    def measure_voltage_rms(self) -> float:
         """
         measure_voltage_rms()
 
@@ -307,7 +320,7 @@ class HP_34401A(VisaResource):
         response = self._measure_with_current_range("VOLT:AC")
         return self.factor * float(response)
 
-    def measure_current(self):
+    def measure_current(self) -> float:
         """
         measure_current()
 
@@ -324,7 +337,7 @@ class HP_34401A(VisaResource):
         response = self._measure_with_current_range("CURR:DC")
         return self.factor * float(response)
 
-    def measure_current_rms(self):
+    def measure_current_rms(self) -> float:
         """
         measure_current_rms()
 
@@ -341,7 +354,7 @@ class HP_34401A(VisaResource):
         response = self._measure_with_current_range("CURR:AC")
         return self.factor * float(response)
 
-    def measure_resistance(self):
+    def measure_resistance(self) -> float:
         """
         measure_resistance()
 
@@ -358,7 +371,7 @@ class HP_34401A(VisaResource):
         response = self._measure_with_current_range("RES")
         return float(response)
 
-    def measure_frequency(self):
+    def measure_frequency(self) -> float:
         """
         measure_frequency()
 
