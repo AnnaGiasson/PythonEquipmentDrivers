@@ -294,7 +294,8 @@ class Tektronix_DPO4xxx(VisaResource):
         whether or not it is acquiring new data.
         """
 
-        self.write_resource("FPANEL:PRESS RUnstop")
+        self.write_resource("ACQUIRE:STOPAFTER RUNSTop")
+        self.write_resource("ACQUIRE:STATE ON")
 
     def trigger_force(self) -> None:
         """
@@ -312,7 +313,8 @@ class Tektronix_DPO4xxx(VisaResource):
         arms the oscilloscope to capture a single trigger event.
         """
 
-        self.write_resource("FPANEL:PRESS SING")
+        self.write_resource("ACQUIRE:STOPAFTER SEQUENCE")
+        self.write_resource("ACQUIRE:STATE ON")
 
     def set_trigger_position(self, offset: float) -> None:
         """
@@ -530,7 +532,9 @@ class Tektronix_DPO4xxx(VisaResource):
             return data[0]
         return tuple(data)
 
-    def get_image(self, image_title: Union[str, Path], **kwargs) -> None:
+    def get_image(
+        self, image_title: Union[str, Path], timeout_seconds: float = 2.0
+    ) -> None:
         """
         get_image(image_title, **kwargs)
 
@@ -558,17 +562,21 @@ class Tektronix_DPO4xxx(VisaResource):
         else:
             raise ValueError("image_title must be a str or path-like object")
 
+        prev_timeout = self._resource.timeout
+
+        self._resource.timeout = timeout_seconds * 1000
+
         # initiate transfer
         self._resource.write("SAVE:IMAG:FILEF PNG")  # set filetype
         self._resource.write("HARDCOPY START")  # start converting to image
-        self._resource.write("*OPC?")  # done yet?
-        sleep(kwargs.get("buffering_delay", 0))
 
         raw_data = self._resource.read_raw()
 
         # save image
         with open(file_path, "wb") as file:
             file.write(raw_data)
+
+        self._resource.timeout = prev_timeout
 
     def set_record_length(self, length: int) -> None:
         """
