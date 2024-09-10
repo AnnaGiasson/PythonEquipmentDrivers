@@ -71,6 +71,9 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     #     logic
     #     documenation
 
+    SequenceStep = SequenceStep
+    PulseSeqConfig = PulseSeqConfig
+
     def set_state(self, state: bool) -> None:
         """
         set_state(state)
@@ -445,6 +448,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         sequence_len = len(steps)
 
+        # validate the inputs
         if sequence_len > MAX_SEQ_LENGTH:
             raise ValueError(f"sequence length is {sequence_len} > {MAX_SEQ_LENGTH=}")
         if not current_range.upper() in VALID_RANGES:
