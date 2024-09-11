@@ -8,7 +8,7 @@ from ..core import VisaResource
 @dataclass
 class SequenceStep:
     current: float
-    trigger: bool
+    trigger: bool = False
 
 
 @dataclass
@@ -436,11 +436,29 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
     def configure_sequence(
         self,
-        steps: list[SequenceStep],
+        steps: list["Kikusui_PLZ1004WH.SequenceStep"],
         current_range: str = "HIGH",
         step_size: float = 1e-3,
         initialize: bool = True,
     ):
+        """
+        Configure the load fast sequence consisting of a series of steps. Each step
+        includes a current value and whether or not a trigger pulse should be emitted.
+
+        Args:
+            steps (list[Kikusui_PLZ1004WH.SequenceStep]): A list of SequenceSteps
+            describing the sequence to be executed. Each step has a load setting and
+            the option to emit a trigger pulse. A maximum of 1024 steps can be used but
+            note that transmitting a large number of steps takes significant time.
+            current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
+            to manual for the maximum current that each range is capable of. Typically
+            LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+            step_size (float, optional): Size (duration) of each step. Valid range is
+            100us to 100ms. Defaults to 1ms.
+            initialize (bool, optional): Send the initialization commands to set up the
+            load in addition to sending the sequence steps. Setting to false can save
+            some time if no settings need to be changed. Defaults to True.
+        """
         MIN_STEP_SIZE = 100e-6
         MAX_STEP_SIZE = 100e-3
         VALID_RANGES = {"LOW", "MEDIUM", "MED", "HIGH"}
