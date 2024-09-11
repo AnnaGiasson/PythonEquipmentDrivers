@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch, call
+import functools
 
 import pythonequipmentdrivers as ped
 
@@ -12,34 +13,47 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
             ped.core.VisaResource, "__init__", lambda address, *args, **kwargs: None
         ):
             self.inst = ped.sink.Kikusui_PLZ1004WH("12345")
-            self.inst.write_resource = MagicMock()
-            self.inst.query_resource = MagicMock()
+            self.inst.write_resource = MagicMock(spec=self.inst.write_resource)
+            self.inst.query_resource = MagicMock(spec=self.inst.query_resource)
         return super().setUp()
 
     def test_set_state(self):
         self.inst.set_state(True)
         self.inst.write_resource.assert_called_with("OUTP 1")
 
+    @staticmethod
+    def _query_configure_sequence_effect(steps: list, cmd: str):
+        idx = int(cmd.split()[-1])
+        return steps[idx - 1].current
+
     def test_configure_sequence(self):
-        def query_resource_side_effect(cmd: str):
-            idx = int(cmd.split()[-1])
-            return steps[idx - 1].current
 
         steps = [self.inst.SequenceStep(n, False) for n in range(10)]
         steps[4].trigger = True
-        self.inst.query_resource.side_effect = query_resource_side_effect
+        self.inst.query_resource.side_effect = functools.partial(
+            self._query_configure_sequence_effect, steps
+        )
         self.inst.configure_sequence(
             steps, current_range="HIGH", step_size=0.001, initialize=False
         )
-        expected_calls = [
+        expected_write_calls = [
             call("prog:fsp:edit:wave 1,0,1,2,3,4,5,6,7"),
             call("prog:fsp:edit 5,4,1"),
             call("prog:fsp:edit:wave 9,8,9,0,0,0,0,0,0"),
         ]
-        self.inst.write_resource.assert_has_calls(expected_calls)
+        expected_query_calls = [
+            call("prog:fsp:edit? 5"),
+        ]
+
+        self.inst.write_resource.assert_has_calls(expected_write_calls)
+        self.inst.query_resource.assert_has_calls(expected_query_calls)
 
     def test_configure_sequence_init(self):
-        steps = []
+        steps = [self.inst.SequenceStep(n, False) for n in range(10)]
+        steps[4].trigger = True
+        self.inst.query_resource.side_effect = functools.partial(
+            self._query_configure_sequence_effect, steps
+        )
         self.inst.configure_sequence(
             steps, current_range="HIGH", step_size=0.001, initialize=True
         )
@@ -49,6 +63,14 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
             call("prog:loop 1"),
             call(f"prog:fsp:time {0.001}"),
             call("prog:cran HIGH"),
-            call("prog:fsp:end 0"),
+            call("prog:fsp:end 10"),
+            call("prog:fsp:edit:wave 1,0,1,2,3,4,5,6,7"),
+            call("prog:fsp:edit 5,4,1"),
+            call("prog:fsp:edit:wave 9,8,9,0,0,0,0,0,0"),
         ]
+        expected_query_calls = [
+            call("prog:fsp:edit? 5"),
+        ]
+
         self.inst.write_resource.assert_has_calls(expected_calls)
+        self.inst.query_resource.assert_has_calls(expected_query_calls)
