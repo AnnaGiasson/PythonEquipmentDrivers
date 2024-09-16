@@ -447,17 +447,18 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         Args:
             steps (list[Kikusui_PLZ1004WH.SequenceStep]): A list of SequenceSteps
-            describing the sequence to be executed. Each step has a load setting and
-            the option to emit a trigger pulse. A maximum of 1024 steps can be used but
-            note that transmitting a large number of steps takes significant time.
+                describing the sequence to be executed. Each step has a load setting and
+                the option to emit a trigger pulse. A maximum of 1024 steps can be used
+                but note that transmitting a large number of steps takes significant
+                time.
             current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
-            to manual for the maximum current that each range is capable of. Typically
-            LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+                to manual for the maximum current that each range is capable of.
+                Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
             step_size (float, optional): Size (duration) of each step. Valid range is
-            100us to 100ms. Defaults to 1ms.
+                100us to 100ms. Defaults to 1ms.
             initialize (bool, optional): Send the initialization commands to set up the
-            load in addition to sending the sequence steps. Setting to false can save
-            some time if no settings need to be changed. Defaults to True.
+                load in addition to sending the sequence steps. Setting to false can
+                save some time if no settings need to be changed. Defaults to True.
         """
         MIN_STEP_SIZE = 100e-6
         MAX_STEP_SIZE = 100e-3
@@ -513,3 +514,58 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
                 curr = self.query_resource(f"prog:fsp:edit? {step_idx}")
                 # write the step with a trigger
                 self.write_resource(f"prog:fsp:edit {step_idx},{curr},1")
+
+    def configure_pulse_seqeunce(
+        self,
+        pulse_current: float,
+        pulse_width: float,
+        trig_delay: float,
+        step_size: float = 1e-3,
+        initial_idle_time: float = 10e-3,
+        idle_current: float = 0.0,
+        current_range: str = "HIGH",
+    ):
+        """
+        Configure the load to produce a single pulse sequence consisting of an initial
+        low current period for the load to "warm up" followed by a high current period
+        at the specified current and a ending low current period fixed at 1ms. A trigger
+        pulse is emmited during the pulse with the defined delay.
+
+        Args:
+            pulse_current (float): Current to set during the pulse
+            pulse_width (float): width of the pulse in seconds
+            trig_delay (float): delay from the beginning of the pulse to when the
+                trigger pulse is emmited in seconds
+            step_size (float, optional): Size of the steps which the sequence will be
+                broken up into. A smaller step results in more resolution of the
+                    timings. Defaults to 1e-3.
+            initial_idle_time (float, optional): Time to set the load to the initial
+                value before starting the pulse. This is needed since the load cannot
+                immediately produce a high load at the beginning of a sequence. 10ms was
+                found to be effective. Defaults to 10e-3.
+            idle_current (float, optional): Current to set during idle times. 0A
+                typically works fine for this purpose. Defaults to 0.0.
+            current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
+                to manual for the maximum current that each range is capable of.
+                Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+        """
+        END_IDLE_TIME = 1e-3
+        seq_len = initial_idle_time + pulse_width + END_IDLE_TIME
+        if trig_delay + initial_idle_time > seq_len:
+            ValueError(f"{trig_delay=} not valid for {seq_len=}")
+        seq_num_steps = round(seq_len / step_size)
+        steps = list(
+            itertools.chain(
+                itertools.repeat(
+                    SequenceStep(idle_current), round(initial_idle_time / step_size)
+                ),
+                itertools.repeat(
+                    SequenceStep(pulse_current), round(pulse_width / step_size)
+                ),
+                itertools.repeat(
+                    SequenceStep(idle_current), round(END_IDLE_TIME / step_size)
+                ),
+            )
+        )
+        steps[round((initial_idle_time + trig_delay) / step_size + 1)].trigger = True
+        self.configure_sequence(steps, current_range, step_size)
