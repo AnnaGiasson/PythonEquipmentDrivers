@@ -75,6 +75,8 @@ class Tektronix_DPO4xxx(VisaResource):
     Family of Oscilloscopes
     """
 
+    MeasurementTypes = MeasurementTypes
+
     # TODO:
     #   add additional functionality for setting / getting scope measurements
 
