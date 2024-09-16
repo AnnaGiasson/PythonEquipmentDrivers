@@ -6,7 +6,8 @@ from typing import Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 
-from .errors import ResourceConnectionError, UnsupportedResourceError
+from pythonequipmentdrivers.errors import (ResourceConnectionError,
+                                           UnsupportedResourceError)
 
 __all__ = ["ResourceCollection", "connect_resources", "initiaize_device"]
 
