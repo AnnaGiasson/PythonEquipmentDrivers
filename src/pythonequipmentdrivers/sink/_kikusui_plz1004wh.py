@@ -512,7 +512,6 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         seq_len = initial_idle_time + pulse_width + END_IDLE_TIME
         if trig_delay + initial_idle_time > seq_len:
             ValueError(f"{trig_delay=} not valid for {seq_len=}")
-        seq_num_steps = round(seq_len / step_size)
         steps = list(
             itertools.chain(
                 itertools.repeat(
@@ -526,5 +525,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
                 ),
             )
         )
-        steps[round((initial_idle_time + trig_delay) / step_size + 1)].trigger = True
+        # +1 since trigger occurs at the beginning of a step
+        trigger_idx = round((initial_idle_time + trig_delay) / step_size + 1)
+        steps[trigger_idx].trigger = True
         self.configure_sequence(steps, current_range, step_size)
