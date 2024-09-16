@@ -11,52 +11,6 @@ class SequenceStep:
     trigger: bool = False
 
 
-@dataclass
-class PulseSeqConfig:
-    """
-    A class that holds the configuration for a load pulse sequence
-    Args:
-        pulse_current (float): current setting for the pulse in amps
-        pulse_width (float): width of the pulse in seconds, will be rounded to a
-            multiple of time_base
-        trig_delay (float): delay seconds from the beginning of the pulse to when a
-            trigger pulse shoud be emitted
-        time_base (float): time duration in seconds of a single step in the sequence
-        initial_idle_time (float): time to remain at idle_current before the pulse.
-            Provides time for the load to turn on and stabilize in order to provide a
-            consistent pulse profile.
-        idle_current (float): current setting to go to before and after the pulse, amps
-
-    """
-
-    pulse_current: float
-    pulse_width: float
-    trig_delay: float
-    time_base: float = 1e-3
-    initial_idle_time: float = 10e-3
-    idle_current: float = 0.0
-
-    def __post_init__(self):
-        END_IDLE_TIME = 1e-3
-        MAX_NUM_STEPS = 1024
-        MIN_TIME_BASE = 100e-6
-        MAX_TIME_BASE = 100e-3
-
-        if self.time_base > MAX_TIME_BASE or self.time_base < MIN_TIME_BASE:
-            raise ValueError(
-                f"time_base is outside of valid range ({MIN_TIME_BASE} - {MAX_TIME_BASE})"
-            )
-
-        total_sequence_length = (
-            self.initial_idle_time + self.pulse_width + END_IDLE_TIME
-        )
-        if total_sequence_length / self.time_base > MAX_NUM_STEPS:
-            min_time_base = total_sequence_length / MAX_NUM_STEPS
-            raise ValueError(
-                f"sequence requires too many steps, increase time base > {min_time_base}s"
-            )
-
-
 class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     """
     Kikusui_PLZ1004WH(address)
@@ -72,7 +26,6 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     #     documenation
 
     SequenceStep = SequenceStep
-    PulseSeqConfig = PulseSeqConfig
 
     def set_state(self, state: bool) -> None:
         """
@@ -440,7 +393,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         current_range: str = "HIGH",
         step_size: float = 1e-3,
         initialize: bool = True,
-    ):
+    ) -> None:
         """
         Configure the load fast sequence consisting of a series of steps. Each step
         includes a current value and whether or not a trigger pulse should be emitted.
@@ -515,6 +468,12 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
                 # write the step with a trigger
                 self.write_resource(f"prog:fsp:edit {step_idx},{curr},1")
 
+    def run_sequence(self) -> None:
+        """
+        Run the current sequence.
+        """
+        self.write_resource("prog:stat run")
+
     def configure_pulse_seqeunce(
         self,
         pulse_current: float,
@@ -524,7 +483,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         initial_idle_time: float = 10e-3,
         idle_current: float = 0.0,
         current_range: str = "HIGH",
-    ):
+    ) -> None:
         """
         Configure the load to produce a single pulse sequence consisting of an initial
         low current period for the load to "warm up" followed by a high current period
