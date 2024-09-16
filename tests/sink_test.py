@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch, call
 import functools
+import itertools
+
 
 import pythonequipmentdrivers as ped
 
@@ -74,3 +76,26 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
 
         self.inst.write_resource.assert_has_calls(expected_calls)
         self.inst.query_resource.assert_has_calls(expected_query_calls)
+
+    @patch.object(ped.sink.Kikusui_PLZ1004WH, "configure_sequence")
+    def test_configure_pulse_sequence(self, configure_seq_mock: MagicMock):
+        self.inst.configure_pulse_seqeunce(
+            pulse_current=10,
+            pulse_width=10e-3,
+            trig_delay=2e-3,
+            step_size=1e-3,
+            initial_idle_time=0.01,
+            idle_current=0,
+            current_range="HIGH",
+        )
+
+        steps = list(
+            itertools.chain(
+                itertools.repeat(self.inst.SequenceStep(0), 10),
+                itertools.repeat(self.inst.SequenceStep(10), 10),
+                itertools.repeat(self.inst.SequenceStep(0), 1),
+            )
+        )
+        steps[13].trigger = True
+
+        configure_seq_mock.assert_called_once_with(steps, "HIGH", 1e-3)
