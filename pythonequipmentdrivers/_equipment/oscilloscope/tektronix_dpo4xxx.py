@@ -62,7 +62,7 @@ class MeasurementTypes(Enum):
     SIGMA3_HISTOGRAM = Measurement("SIGMA3")
     STDEV_HISTOGRAM = Measurement("STDdev")
     TOTAL_OVERSHOOT = Measurement("TOVershoot")
-    WAVEFORMS_HISTORGRAM = Measurement("WAVEFORMS}")
+    WAVEFORMS_HISTORGRAM = Measurement("WAVEFORMS")
 
 
 class Tektronix_DPO4xxx(VisaResource):
@@ -780,3 +780,28 @@ class Tektronix_DPO4xxx(VisaResource):
 
         response = self._resource.query("HOR:SCA?")
         return float(response)
+
+    def set_annotation(self, text: str, x_pos: int = None, y_pos: int = None):
+        """
+        set_annotation(text, x_pos, y_pos)
+
+        Place an annotation (message) on the screen at the position specified
+
+        Args:
+            text (str): text to place on screen
+            x_pos (int, optional): x postion from top left corner. Defaults to previous.
+            y_pos (int, optional): y position from top left corner. Defaults to previous.
+        """
+        message = f'MESSAGE:SHOW "{text}";'
+        if not (x_pos is None or y_pos is None):
+            message += f"BOX {x_pos}, {y_pos};"
+        message += "STATE: 1"
+        self.write_resource(message)
+
+    def clear_annotation(self):
+        """
+        clear_annotation()
+
+        Clear the current annotation
+        """
+        self.write_resource("MESSAGE:CLEAR; STATE 0")
