@@ -1,3 +1,4 @@
+import csv
 import json
 from dataclasses import dataclass, field
 from itertools import zip_longest
@@ -101,7 +102,9 @@ def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
         file_path (str, or path-like object): path of the log file to use, does
             not need to include the file extension or previously exist.
         data (Iterable[Iterable[Any]]): an iterable of iterables of data to be
-            stored. Each element should be able to be cast to string.
+            stored. Each element should be able to be cast to string. If the
+            inner iterable is a dict then the keys will be used as the column
+            names.
 
     Returns:
         NoneType
@@ -109,14 +112,20 @@ def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
 
     file_path = Path(file_path)
 
+    dict_based_data = isinstance(data[0], dict)
+
     # add/correct file extension
     file_path_ext = file_path.parent / f"{file_path.stem}.csv"
     file_path_ext.touch()  # create file
 
-    with open(file_path_ext, "w") as f:
-
-        for item in data:
-            print(*item, sep=",", file=f)
+    with open(file_path_ext, "w", newline="" if dict_based_data else None) as f:
+        if dict_based_data:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)
+        else:
+            for item in data:
+                print(*item, sep=",", file=f)
 
 
 def dump_array_data(

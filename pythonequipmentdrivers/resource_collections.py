@@ -296,6 +296,10 @@ def connect_resources(config: Union[str, Path, dict], **kwargs) -> ResourceColle
 
             # create instance of Resource called 'name', any remaining items in
             # meta_info will be passed as kwargs
+            if "kwargs" in meta_info:
+                # old format with specific kwargs key
+                # flatten it out
+                meta_info.update(meta_info.pop("kwargs", {}))
             resource = Resource(**meta_info)
             setattr(resources, name, resource)
 

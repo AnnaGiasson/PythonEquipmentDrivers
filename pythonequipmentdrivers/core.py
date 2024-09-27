@@ -122,14 +122,14 @@ class VisaResource:
         try:
             self._resource = rm.open_resource(self.address, **default_settings)
 
+            if clear:
+                self.clear()
+
             self.idn = self.query_resource("*IDN?")
         except pyvisa.Error as error:
             raise ResourceConnectionError(
                 f"Could not connect to resource at: {address}", error
             )
-
-        if clear:
-            self.clear()
 
         self.timeout = int(1000 * kwargs.get("timeout", 1.0))  # ms
 
