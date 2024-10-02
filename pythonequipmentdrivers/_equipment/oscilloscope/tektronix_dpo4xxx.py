@@ -586,7 +586,7 @@ class Tektronix_DPO4xxx(VisaResource):
             else:
                 # normal measurement that is displayed on the screen
                 query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
-            response = self._resource.query(query_cmd)
+            response = self.query_resource(query_cmd)
 
             try:
                 data.append(float(response))
