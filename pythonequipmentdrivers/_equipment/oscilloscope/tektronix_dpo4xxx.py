@@ -803,7 +803,7 @@ class Tektronix_DPO4xxx(VisaResource):
         message = f'MESSAGE:SHOW "{text}";'
         if not (x_pos is None or y_pos is None):
             message += f"BOX {x_pos}, {y_pos};"
-        message += "STATE: 1"
+        message += "STATE 1"
         self.write_resource(message)
 
     def clear_annotation(self):

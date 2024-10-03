@@ -97,3 +97,20 @@ class Test_Tektronix_DPO4xxx(unittest.TestCase):
                 measurement_number=0,
                 channel1=1,
             )
+
+    def test_set_clear_annotation(self):
+        # test no postion provided
+        self.inst.set_annotation("hello")
+        self.inst.write_resource.assert_called_with('MESSAGE:SHOW "hello";STATE 1')
+        self.inst.write_resource.reset_mock()
+
+        # test with postion
+        self.inst.set_annotation("hello", 100, 50)
+        self.inst.write_resource.assert_called_with(
+            'MESSAGE:SHOW "hello";BOX 100, 50;STATE 1'
+        )
+        self.inst.write_resource.reset_mock()
+
+        # test clear
+        self.inst.clear_annotation()
+        self.inst.write_resource.assert_called_with("MESSAGE:CLEAR; STATE 0")
