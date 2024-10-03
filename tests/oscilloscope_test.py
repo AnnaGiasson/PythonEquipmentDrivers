@@ -1,9 +1,9 @@
-import unittest
-from unittest.mock import MagicMock, patch, call
 import functools
 import itertools
-import pyvisa.testsuite.test_highlevel
+import unittest
+from unittest.mock import MagicMock, call, patch
 
+import pyvisa.testsuite.test_highlevel
 
 import pythonequipmentdrivers as ped
 

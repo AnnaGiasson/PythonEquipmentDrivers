@@ -1,9 +1,9 @@
 import struct
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from time import sleep
 from typing import Tuple, Union
-from enum import Enum
-from dataclasses import dataclass
 
 import numpy as np
 
