@@ -639,6 +639,9 @@ class Tektronix_DPO4xxx(VisaResource):
         if measurement.dual_waveform:
             self.write_resource(f"MEASU:{measurement_str}:SOU2 CH{channel2}")
 
+        # enable the measurement
+        self.write_resource(f"MEASU:{measurement_str}:STATE ON")
+
     def get_image(
         self, image_title: Union[str, Path], timeout_seconds: float = 2.0
     ) -> None:
