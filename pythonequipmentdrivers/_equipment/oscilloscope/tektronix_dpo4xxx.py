@@ -1,4 +1,6 @@
 import struct
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from time import sleep
 from typing import Tuple, Union
@@ -6,6 +8,61 @@ from typing import Tuple, Union
 import numpy as np
 
 from pythonequipmentdrivers.core import VisaResource
+
+
+@dataclass
+class Measurement:
+    """
+    Class to contain details of a measurement
+    """
+
+    command: str
+    dual_waveform: bool = False
+
+
+class MeasurementTypes(Enum):
+    """
+    An enum of all available measurement types for the Tektronix DP4xxx
+    """
+
+    AMPLITUDE = Measurement("AMPlitude")
+    AREA = Measurement("AREa")
+    BURST = Measurement("BURst")
+    CYCLE_AREA = Measurement("CARea")
+    CYCLE_MEAN = Measurement("CMEan")
+    CYCLE_RMS = Measurement("CRMs")
+    DELAY = Measurement("DELay", True)
+    FALL = Measurement("FALL")
+    FREQUENCY = Measurement("FREQuency")
+    HIGH = Measurement("HIGH")
+    HISTOGRAM_HITS = Measurement("HITS")
+    LOW = Measurement("LOW")
+    MAXIMUM = Measurement("MAXimum")
+    MEAN = Measurement("MEAN")
+    MEDIAN = Measurement("MEDian")
+    MINIMUM = Measurement("MINImum")
+    NEGATIVE_DUTY_CYCLE = Measurement("NDUty")
+    NEGATIVE_EDGE_COUNT = Measurement("NEDGECount")
+    NEGATIVE_OVERSHOOT = Measurement("NOVershoot")
+    NEGATIVE_PULSE_COUNT = Measurement("NPULSECount")
+    NEGATIVE_WIDTH = Measurement("NWIdth")
+    PEAK_HISTOGRAM_HITS = Measurement("PEAKHits")
+    POSITIVE_DUTY_CYCLE = Measurement("PDUty")
+    POSITIVE_EDGE_COUNT = Measurement("PEDGECount")
+    PERIOD = Measurement("PERIod")
+    PHASE = Measurement("PHAse", True)
+    PEAK_2_PEAK = Measurement("PK2Pk")
+    POSITIVE_OVERSHOOT = Measurement("POVershoot")
+    POSITIVE_PULSE_COUNT = Measurement("PPULSECount")
+    POSTIVE_WIDTH = Measurement("PWIdth")
+    RISE = Measurement("RISe")
+    RMS = Measurement("RMS")
+    SIGMA1_HISTOGRAM = Measurement("SIGMA1")
+    SIGMA2_HISTOGRAM = Measurement("SIGMA2")
+    SIGMA3_HISTOGRAM = Measurement("SIGMA3")
+    STDEV_HISTOGRAM = Measurement("STDdev")
+    TOTAL_OVERSHOOT = Measurement("TOVershoot")
+    WAVEFORMS_HISTORGRAM = Measurement("WAVEFORMS")
 
 
 class Tektronix_DPO4xxx(VisaResource):
@@ -17,6 +74,8 @@ class Tektronix_DPO4xxx(VisaResource):
     object for accessing basic functionallity of the Tektronix_DPO4xxx
     Family of Oscilloscopes
     """
+
+    MeasurementTypes = MeasurementTypes
 
     # TODO:
     #   add additional functionality for setting / getting scope measurements
@@ -510,7 +569,8 @@ class Tektronix_DPO4xxx(VisaResource):
         Args:
             meas_idx (int): measurement index(s) for the measurement(s) to
                 query. Can be a signal index or an arbitrary sequence of
-                indices.
+                indices. A meas_idx == 0 will retrieve the value of the immediate
+                measurement.
 
         Returns:
             float: Current value of the requested measurement. If no value as
@@ -520,8 +580,13 @@ class Tektronix_DPO4xxx(VisaResource):
         data = []
         for idx in meas_idx:
 
-            query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
-            response = self._resource.query(query_cmd)
+            if idx == 0:
+                # immediate meausurement that is not displayed on the screen
+                query_cmd = "MEASU:IMM:VAL?"
+            else:
+                # normal measurement that is displayed on the screen
+                query_cmd = f"MEASU:MEAS{int(idx)}:VAL?"
+            response = self.query_resource(query_cmd)
 
             try:
                 data.append(float(response))
@@ -531,6 +596,51 @@ class Tektronix_DPO4xxx(VisaResource):
         if len(data) == 1:
             return data[0]
         return tuple(data)
+
+    def configure_measurement(
+        self,
+        measurement: Union[str, MeasurementTypes],
+        measurement_number: int,
+        channel1: int,
+        channel2: Union[int, None] = None,
+    ) -> None:
+        """
+        configure_measurement(measurement, measurement_number, channel1, channel2)
+
+        Args:
+            measurement (Union[str, MeasurementTypes]): Measurement type either as
+                selected from the MeasurementTypes or str with matching name
+            measurement_number (int): index for the measurement to be added. An index
+                of 0 will configure an immediate measurement
+            channel1 (int): the primary channel on which to apply the measurement
+            channel2 (Union[int, None], optional): the secondary channel for the
+                measurement where necessary such as for delay or phase. Defaults to
+                None.
+
+        """
+
+        if isinstance(measurement, str):
+            measurement = MeasurementTypes[measurement]
+
+        measurement: Measurement = measurement.value
+
+        if measurement.dual_waveform and channel2 is None:
+            raise ValueError(f"channel2 is required for {measurement}")
+
+        measurement_str = (
+            f"MEAS{measurement_number}" if measurement_number > 0 else "IMM"
+        )
+
+        # add the measurement
+        self.write_resource(f"MEASU:{measurement_str}:TYP {measurement.command}")
+
+        # set the channels
+        self.write_resource(f"MEASU:{measurement_str}:SOU1 CH{channel1}")
+        if measurement.dual_waveform:
+            self.write_resource(f"MEASU:{measurement_str}:SOU2 CH{channel2}")
+
+        # enable the measurement
+        self.write_resource(f"MEASU:{measurement_str}:STATE ON")
 
     def get_image(
         self, image_title: Union[str, Path], timeout_seconds: float = 2.0
@@ -681,3 +791,28 @@ class Tektronix_DPO4xxx(VisaResource):
 
         response = self._resource.query("HOR:SCA?")
         return float(response)
+
+    def set_annotation(self, text: str, x_pos: int = None, y_pos: int = None):
+        """
+        set_annotation(text, x_pos, y_pos)
+
+        Place an annotation (message) on the screen at the position specified
+
+        Args:
+            text (str): text to place on screen
+            x_pos (int, optional): x postion from top left corner. Defaults to previous.
+            y_pos (int, optional): y position from top left corner. Defaults to previous.
+        """
+        message = f'MESSAGE:SHOW "{text}";'
+        if not (x_pos is None or y_pos is None):
+            message += f"BOX {x_pos}, {y_pos};"
+        message += "STATE 1"
+        self.write_resource(message)
+
+    def clear_annotation(self):
+        """
+        clear_annotation()
+
+        Clear the current annotation
+        """
+        self.write_resource("MESSAGE:CLEAR; STATE 0")
