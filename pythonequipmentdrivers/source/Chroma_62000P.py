@@ -12,6 +12,18 @@ class Chroma_62000P(VisaResource):
     object for accessing basic functionallity of the Chroma_62000P DC supply
     """
 
+    def set_access_remote(self, mode: bool = True) -> None:
+        """
+        set_access_remote(mode)
+
+        mode: str, interface method either 'remote' or 'local'
+
+        set access to the device inferface to 'remote' or 'local'
+        """
+
+        self.write_resource(
+            f"""'CONFigure:REMote {'ON' if mode else 'OFF'}'""")
+
     def set_state(self, state: bool) -> None:
         """
         set_state(state)
