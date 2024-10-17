@@ -315,7 +315,8 @@ class Chroma_63600(VisaResource):
         else:
             self.write_resource(f"CURR:DYN:T{level} {on_time}")
 
-    def get_dynamic_current_time(self, level: int) -> Union[float, Tuple[float]]:
+    def get_dynamic_current_time(self,
+                                 level: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current_time(level)
 

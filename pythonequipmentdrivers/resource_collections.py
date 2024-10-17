@@ -3,6 +3,7 @@ from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, Iterator, Tuple, Union
+from enum import Enum
 
 from pyvisa import VisaIOError
 
@@ -358,6 +359,20 @@ def get_callable_methods(instance) -> Tuple:
     return tuple(cmds)
 
 
+def convert_to_enum(instance, value):
+    """
+    Attempt to convert a string value to an Enum value if a matching Enum exists in the instance.
+    """
+    for attr_name in dir(instance):
+        attr = getattr(instance, attr_name)
+        if isinstance(attr, type) and issubclass(attr, Enum):
+            try:
+                return attr[value.upper()]
+            except KeyError:
+                pass
+    return value
+
+
 def initiaize_device(instance, sequence) -> None:
     """
     initiaize_device(instance, sequence)
@@ -385,9 +400,16 @@ def initiaize_device(instance, sequence) -> None:
         if method_name in valid_cmds:
             try:
                 func = getattr(instance, method_name)
-                func(**method_kwargs)
+                # Convert string values to Enum values where possible
+                converted_kwargs = {
+                    key: convert_to_enum(instance, value) if isinstance(value, str) else value
+                    for key, value in method_kwargs.items()
+                }
+                func(**converted_kwargs)
 
             except TypeError as error:  # invalid kwargs
+                print(error_msg_template.format(method_name, error))
+            except ValueError as error:  # invalid Enum value
                 print(error_msg_template.format(method_name, error))
         else:
             print(error_msg_template.format(method_name, '"unknown method"'))
