@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from time import time
-from typing import Literal
+from typing import Literal, Dict
 
 from ..core import VisaResource
 
@@ -94,7 +94,7 @@ class Koolance_EXC900(VisaResource):
         self._last_read_data_time = None  # trigger a refresh on the next read
         self.write_resource_raw(data)
 
-    def read_settings(self) -> dict[str, float]:
+    def read_settings(self) -> Dict[str, float]:
         """
         read_settings()
 
@@ -102,11 +102,10 @@ class Koolance_EXC900(VisaResource):
         in a "key: value" format
 
         Returns:
-            dict[str, float]: dict of parameter names and their values
+            Dict[str, float]: dict of parameter names and their values
         """
-
         data = self._read_data()
-        out_dict: dict[str, float] = {}
+        out_dict: Dict[str, float] = {}
 
         for name, reg in self.DATA_REGISTER_MAP.items():
             value = data[reg.offset : reg.offset + reg.n_bytes]

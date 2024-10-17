@@ -1,0 +1,2 @@
+include pythonequipmentdrivers/*
+recursive-include pythonequipmentdrivers *.py
