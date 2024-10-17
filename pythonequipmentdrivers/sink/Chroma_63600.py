@@ -29,9 +29,6 @@ class Chroma_63600(VisaResource):
         TIM = "TIM"
         SWD = "SWD"
 
-        def __str__(self):
-            return self.value
-
     class Errors(Enum):
         OTP = 0
         OVP = 1
@@ -318,7 +315,8 @@ class Chroma_63600(VisaResource):
         else:
             self.write_resource(f"CURR:DYN:T{level} {on_time}")
 
-    def get_dynamic_current_time(self, level: int) -> Union[float, Tuple[float]]:
+    def get_dynamic_current_time(self,
+                                 level: int) -> Union[float, Tuple[float]]:
         """
         get_dynamic_current_time(level)
 
@@ -455,7 +453,7 @@ class Chroma_63600(VisaResource):
             raise ValueError(f"Invalid range: {range_setting}")
 
         self.set_channel(channel)
-        self.write_resource(f"MODE {str(mode)}{range_setting}")
+        self.write_resource(f"MODE {mode.value}{range_setting}")
 
     def get_mode(self, channel: int) -> Tuple[ValidModes, str]:
         """
