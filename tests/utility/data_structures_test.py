@@ -4,8 +4,16 @@ from pythonequipmentdrivers.utility import AttrDict
 
 
 class TestAttrDict(unittest.TestCase):
-    def test_creation(self):
+    def test_kwarg_creation(self):
         d = AttrDict(a=1, b=2)
+        self.assertDictEqual(d, {"a": 1, "b": 2})
+
+    def test_mapping_creation(self):
+        d = AttrDict({"a": 1, "b": 2})
+        self.assertDictEqual(d, {"a": 1, "b": 2})
+
+    def test_iterable_creation(self):
+        d = AttrDict([("a", 1), ("b", 2)])
         self.assertDictEqual(d, {"a": 1, "b": 2})
 
     def test_getitem(self):
