@@ -25,6 +25,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/AnnaGiasson/PythonEquipmentDrivers"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 
