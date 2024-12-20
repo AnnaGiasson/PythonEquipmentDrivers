@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pythonequipmentdrivers"
-version = "2.6.1"
+version = "2.7.0"
 authors = [
   { name="Anna Giasson", email="AnnaGraceGiasson@GMail.com" },
 ]
@@ -25,6 +25,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/AnnaGiasson/PythonEquipmentDrivers"
 
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]
+
 
