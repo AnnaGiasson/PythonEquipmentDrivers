@@ -1,6 +1,6 @@
 from typing import Tuple, Union
 
-from ._yokogawa_760203 import (MeasurementTypes, Yokogawa_760203)
+from ._yokogawa_760203 import MeasurementTypes, Yokogawa_760203
 
 
 class Yokogawa_WT1806E(Yokogawa_760203):  # 6 channel
