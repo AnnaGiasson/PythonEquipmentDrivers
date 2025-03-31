@@ -1,4 +1,4 @@
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class HP_6632A(VisaResource):

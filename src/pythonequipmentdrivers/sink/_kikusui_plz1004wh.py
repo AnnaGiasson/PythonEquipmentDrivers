@@ -1,6 +1,6 @@
 from typing import Union
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Kikusui_PLZ1004WH(VisaResource):  # 1 kW

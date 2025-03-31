@@ -1,4 +1,4 @@
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Elgar_5250A(VisaResource):

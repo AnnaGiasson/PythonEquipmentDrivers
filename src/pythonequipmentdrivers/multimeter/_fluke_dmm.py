@@ -1,6 +1,6 @@
 from typing import Set
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Fluke_DMM(VisaResource):

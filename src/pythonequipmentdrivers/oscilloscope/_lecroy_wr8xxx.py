@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Lecroy_WR8xxx(VisaResource):

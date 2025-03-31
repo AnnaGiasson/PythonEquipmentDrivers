@@ -3,7 +3,7 @@ from typing import Any, List, Union
 
 import pyvisa
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class HP_34401A(VisaResource):

@@ -1,4 +1,4 @@
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class CaliforniaInstruments_CSW5550(VisaResource):

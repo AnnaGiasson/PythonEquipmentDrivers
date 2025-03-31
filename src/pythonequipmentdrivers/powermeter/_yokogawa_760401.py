@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Yokogawa_760401(VisaResource):  # single phase

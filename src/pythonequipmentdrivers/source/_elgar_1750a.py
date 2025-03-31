@@ -1,7 +1,7 @@
 from time import sleep
 from typing import Any, Dict
 
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Elgar_1750A(VisaResource):

@@ -1,4 +1,4 @@
-from .. import VisaResource
+from ..core import VisaResource
 
 
 class Agilent_33250A(VisaResource):
