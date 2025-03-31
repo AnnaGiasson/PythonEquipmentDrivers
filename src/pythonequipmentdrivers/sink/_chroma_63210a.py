@@ -1,4 +1,4 @@
-from .chroma_63206a import Chroma_63206A
+from ._chroma_63206a import Chroma_63206A
 
 
 # Acts as an alias for the 10kW Version of the Chroma_63206A

@@ -1,4 +1,4 @@
-from .hp_34401a import HP_34401A
+from ._hp_34401a import HP_34401A
 
 
 class Fluke_8845A(HP_34401A):
