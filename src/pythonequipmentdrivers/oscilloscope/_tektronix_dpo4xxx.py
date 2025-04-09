@@ -835,7 +835,7 @@ class Tektronix_DPO4xxx(VisaResource):
         self.query_resource("*OPC?")
         self.timeout = prev_timeout
 
-    def save_setup_file(self, setup_path: Union[str, Path]):
+    def save_setup_file(self, setup_path: Union[str, Path]) -> None:
         """
         Save a scope setup to a file
 
@@ -846,7 +846,7 @@ class Tektronix_DPO4xxx(VisaResource):
             setup_string = self.query_resource("SET?")
             f.write(setup_string)
 
-    def store_setup(self, setup_index: int):
+    def store_setup(self, setup_index: int) -> None:
         """
         Store the current setup to one of the setup memory locations
 
