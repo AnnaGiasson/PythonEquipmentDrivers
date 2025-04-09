@@ -815,3 +815,62 @@ class Tektronix_DPO4xxx(VisaResource):
         Clear the current annotation
         """
         self.write_resource("MESSAGE:CLEAR; STATE 0")
+
+    def load_setup_file(
+        self, setup_path: Union[str, Path], timeout_seconds: float = 5
+    ) -> None:
+        """
+        Load a scope setup from a file and wait for the scope to complete the
+        reconfiguration
+
+        Args:
+            setup_path (Union[str, Path]): path the the text file containing the setup
+            timeout_seconds (float, optional): Maximum time to wait for setup to
+            complete. Defaults to 5s.
+        """
+        prev_timeout = self.timeout
+        self.timeout = timeout_seconds * 1000
+        with open(Path(setup_path), "r") as f:
+            self.write_resource(f.read())
+        self.query_resource("*OPC?")
+        self.timeout = prev_timeout
+
+    def save_setup_file(self, setup_path: Union[str, Path]):
+        """
+        Save a scope setup to a file
+
+        Args:
+            setup_path (Union[str, Path]): path to the setup file
+        """
+        with open(Path(setup_path), "w") as f:
+            setup_string = self.query_resource("SET?")
+            f.write(setup_string)
+
+    def store_setup(self, setup_index: int):
+        """
+        Store the current setup to one of the setup memory locations
+
+        Args:
+            setup_index (int): setup memory location (1 to 10)
+        """
+        if setup_index not in range(1, 10 + 1):
+            ValueError(f"{setup_index=} is not valid")
+        self.write_resource(f"*SAV {setup_index}")
+
+    def recall_setup(self, setup_index: int, timeout_seconds: float = 5) -> None:
+        """
+        Load a scope setup from a file and wait for the scope to complete the
+        reconfiguration
+
+        Args:
+            setup_index (int): setup memory location (1 to 10)
+            timeout_seconds (float, optional): Maximum time to wait for setup to
+            complete. Defaults to 5s.
+        """
+        if setup_index not in range(1, 10 + 1):
+            ValueError(f"{setup_index=} is not valid")
+        prev_timeout = self.timeout
+        self.timeout = timeout_seconds * 1000
+        self.write_resource(f"*RCL {setup_index}")
+        self.query_resource("*OPC?")
+        self.timeout = prev_timeout
