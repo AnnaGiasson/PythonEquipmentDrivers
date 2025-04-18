@@ -9,6 +9,7 @@ from ._elgar_5250a import Elgar_5250A
 from ._hp_6632a import HP_6632A
 from ._intepro_psi9000 import Intepro_PSI9000
 from ._keithley_2231a import Keithley_2231A
+from ._keysight_n6700 import Keysight_N6700
 from ._ppsc_3150afx import PPSC_3150AFX
 from ._sorensen_sga import Sorensen_SGA
 
@@ -43,16 +44,17 @@ class VoltageSource(Protocol):
 
 
 __all__ = (
+    "Agilent_6030A",
     "BKPrecision_9132B",
     "CaliforniaInstruments_CSW5550",
     "Chroma_62000P",
-    "Keithley_2231A",
     "Elgar_1750A",
     "Elgar_5250A",
-    "Intepro_PSI9000",
-    "PPSC_3150AFX",
     "HP_6632A",
-    "Agilent_6030A",
+    "Intepro_PSI9000",
+    "Keithley_2231A",
+    "Keysight_N6700",
+    "PPSC_3150AFX",
     "Sorensen_SGA",
     "VoltageSource",
 )
