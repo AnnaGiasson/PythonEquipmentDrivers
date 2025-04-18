@@ -1,50 +1,50 @@
 {
     "source_v_in": {
-                    "object": "Chroma_62000P",
-                    "definition": "pythonequipmentdrivers.source",
-                    "address": "USB0::0x1698::0x0837::002000000655::INSTR",
-                    "init": [
-                             ["set_state", {"state": 0}],
-                             ["set_voltage", {"voltage": 0}],
-                             ["set_current", {"current": 8}]
-                             ]
-                    },
+        "object": "Chroma_62000P",
+        "definition": "pythonequipmentdrivers.source",
+        "address": "USB0::0x1698::0x0837::002000000655::INSTR",
+        "init": [
+            ["set_state", {"state": false}],
+            ["set_voltage", {"voltage": 0}],
+            ["set_current", {"current": 8}]
+        ]
+    },
     "multimeter_v_out": {
-                         "object": "HP_34401A",
-                         "definition": "pythonequipmentdrivers.multimeter",
-                         "address": "GPIB0::16::INSTR",
-                         "init": [["set_mode", {"mode": "VDC"}]]
-                         },
+        "object": "HP_34401A",
+        "definition": "pythonequipmentdrivers.multimeter",
+        "address": "GPIB0::16::INSTR",
+        "init": [["set_mode", {"mode": "VDC"}]]
+    },
     "multimeter_i_mon": {
-                         "object": "HP_34401A",
-                         "definition": "pythonequipmentdrivers.multimeter",
-                         "address": "GPIB0::4::INSTR",
-                         "init": [["set_mode", {"mode": "VDC"}]]
-                         },
+        "object": "HP_34401A",
+        "definition": "pythonequipmentdrivers.multimeter",
+        "address": "GPIB0::4::INSTR",
+        "init": [["set_mode", {"mode": "VDC"}]]
+    },
     "sink": {
-             "object": "Chroma_63206A",
-             "definition": "pythonequipmentdrivers.sink",
-             "address": "GPIB0::7::INSTR",
-             "init": [
-                      ["set_state", {"state": 0}],
-                      ["set_short_state", {"state": 0}],
-                      ["set_mode", {"mode": "CC", "range_setting": 1}],
-                      ["set_current", {"current": 1}]
-                      ]
-             },
+        "object": "Chroma_63206A",
+        "definition": "pythonequipmentdrivers.sink",
+        "address": "GPIB0::7::INSTR",
+        "init": [
+            ["set_state", {"state": false}],
+            ["set_short_state", {"state": false}],
+            ["set_mode", {"mode": "CC", "range_setting": 1}],
+            ["set_current", {"current": 1}]
+        ]
+    },
     "oscilloscope": {
-                     "object": "Tektronix_DPO4xxx",
-                     "definition": "pythonequipmentdrivers.oscilloscope",
-                     "address": "TCPIP0::172.20.41.125::inst0::INSTR"
-                     },
+        "object": "Tektronix_DPO4xxx",
+        "definition": "pythonequipmentdrivers.oscilloscope",
+        "address": "TCPIP0::172.20.41.125::inst0::INSTR"
+    },
     "source_ac": {
-                  "object": "Elgar_5250A",
-                  "definition": "pythonequipmentdrivers.source",
-                  "address": "GPIB0::13::INSTR"
-                  },
+        "object": "Elgar_5250A",
+        "definition": "pythonequipmentdrivers.source",
+        "address": "GPIB0::13::INSTR"
+    },
     "powermeter": {
-                  "object": "Yokogawa_760203",
-                  "definition": "pythonequipmentdrivers.powermeter",
-                  "address": "USB0::0x0B21::0x0025::4332534D303830303156::INSTR"
-                  }
+        "object": "Yokogawa_760203",
+        "definition": "pythonequipmentdrivers.powermeter",
+        "address": "USB0::0x0B21::0x0025::4332534D303830303156::INSTR"
+    }
 }
