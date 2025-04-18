@@ -8,7 +8,7 @@ The driver classes included within are writen to handle the lower-level commands
 
 See the [Installation Guide](installation.md) for guidance on installing this module.
 
-Afterward check out the [getting started page](getting_started.md) for code examples to help construct your first tests.
+Afterward check out the [getting started page](getting_started.md) for code examples to help construct your first tests or the [guide for intermediate](intermediate_test_tips.md) programmers on how to improve your tests
 
 ## Module Structure
 
