@@ -2,7 +2,7 @@ import struct
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -98,7 +98,7 @@ class Tektronix_DPO4xxx(VisaResource):
 
     def get_channel_data(
         self, *channels: int, **kwargs
-    ) -> Union[Tuple[np.ndarray], np.ndarray]:
+    ) -> Union[tuple[np.ndarray], np.ndarray]:
         """
         get_channel_data(*channels, start_percent=0, stop_percent=100,
                          return_time=True, dtype=np.float32)
@@ -829,7 +829,7 @@ class Tektronix_DPO4xxx(VisaResource):
             complete. Defaults to 5s.
         """
         prev_timeout = self.timeout
-        self.timeout = timeout_seconds * 1000
+        self.timeout = timeout_seconds
         with open(Path(setup_path), "r") as f:
             self.write_resource(f.read())
         self.query_resource("*OPC?")
@@ -870,7 +870,7 @@ class Tektronix_DPO4xxx(VisaResource):
         if setup_index not in range(1, 10 + 1):
             ValueError(f"{setup_index=} is not valid")
         prev_timeout = self.timeout
-        self.timeout = timeout_seconds * 1000
+        self.timeout = timeout_seconds
         self.write_resource(f"*RCL {setup_index}")
         self.query_resource("*OPC?")
         self.timeout = prev_timeout
