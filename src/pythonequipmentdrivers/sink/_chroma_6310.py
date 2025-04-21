@@ -3,47 +3,41 @@ from dataclasses import dataclass
 
 from ..core import VisaResource
 
-
 @dataclass(frozen=True, slots=True)
+class _Limits:
+    min: float
+    max: float
+
+    def get(self) -> tuple[float]:
+        return (self.min, self.max)
+
+@dataclass(frozen=True)
 class _Module_Base_Config:
-    T_MIN: float = 0.000025
-    T_MAX: float = 50.0
-    I_MIN: float = 0.0
-    I_LMAX: float = 6.0
-    I_HMAX: float = 60.0
-    V_MIN: float = 0.0
-    V_LMAX: float = 16.0
-    V_HMAX: float = 80.0
-    R_HMIN: float = 1.25
-    R_HMAX: float = 5000.0
-    R_LMIN: float = 0.025
-    R_LMAX: float = 100.0
-    P_LMAX: float = 30.0
-    P_HMAX: float = 300.0
-    ISR_HMIN: float = 0.01
-    ISR_HMAX: float = 2.5
-    ISR_LMIN: float = 0.001
-    ISR_LMAX: float = 0.25
-    Rd_LMIN: float = 1.0
-    Rd_LMAX: float = 1000.0
-    Rd_HMIN: float = 10.0
-    Rd_HMAX: float = 10000.0
+    T: _Limits = _Limits(0.000025, 50.0)
+    I_L: _Limits = _Limits(0.0, 6.0)
+    I_H: _Limits = _Limits(0.0, 60.0)
+    R_L: _Limits = _Limits(0.025, 100.0)
+    R_H: _Limits = _Limits(1.25, 5000.0)
+    P_L: _Limits = _Limits(0.0, 30.0)
+    P_H: _Limits = _Limits(0.0, 300.0)
+    V_L: _Limits = _Limits(0.0, 16.0)
+    V_H: _Limits = _Limits(0.0, 80.0)
+    ISR_L: _Limits = _Limits(0.001, 0.25)
+    ISR_H: _Limits = _Limits(0.01, 2.5)
+    Rd_L: _Limits = _Limits(1.0, 1000.0)
+    Rd_H: _Limits = _Limits(10.0, 10000.0)
 
 _SUPPORTED_CONFIGS = {
     "BASE": _Module_Base_Config(),
     "63106A": _Module_Base_Config(
-        I_HMAX = 120.0,
-        I_LMAX = 12.0,
-        R_HMAX = 2500.0,
-        R_HMIN = 0.625,
-        R_LMAX = 50.0,
-        R_LMIN = 0.0125,
-        P_HMAX = 600.0,
-        P_LMAX = 60.0,
-        ISR_HMIN = 0.02,
-        ISR_HMAX = 5.0,
-        ISR_LMIN = 0.002,
-        ISR_LMAX = 0.5,
+        I_L = _Limits(0.0, 12.0),
+        I_H = _Limits(0.0, 120.0),
+        R_L = _Limits(0.0125, 50),
+        R_H = _Limits(0.625, 2500.0),
+        P_L = _Limits(0.0, 60.0),
+        P_H = _Limits(0.0, 600.0),
+        I_SR_L = _Limits(0.002, 0.5),
+        I_SR_H = _Limits(0.02, 5.0),
     ),
 }
 
@@ -82,49 +76,82 @@ class Chroma_6310(VisaResource):
         )
 
     def _current_check(self, current: float) -> float:
-        return self._limit(current, x_min=self._Module.I_MIN, x_max=self._Module.I_HMAX)
+        return self._limit(
+            current,
+            x_min=self._Module.I_L.min,
+            x_max=self._Module.I_H.max
+        )
 
     def _slew_check(self, slew: float, current: float) -> float:
-        if current <= self._Module.I_LMAX:
-            return self._limit(slew, x_min=self._Module.ISR_LMIN, x_max=self._Module.ISR_LMAX)
-        elif current > self._Module.I_LMAX:
-            return self._limit(slew, x_min=self._Module.ISR_HMIN, x_max=self._Module.ISR_HMAX)
-        raise ValueError('Invalid current level')
 
+        if not (self._Module.I_L.min <= current <= self._Module.I_H.max):
+            raise ValueError('Invalid current level')
+            
+        if current <= self._Module.I_LMAX:
+            return self._limit(slew, *self._Module.ISR_L.get())
+        else:
+            return self._limit(slew, *self._Module.ISR_H.get())
+                           
     def set_state(self, state: bool) -> None:
+        """
+        set_state(state)
+
+        Enables/disables the input for the load
+
+        Args:
+            state (bool): Load state (True == enabled, False == disabled)
+        """
         self.write_resource(f'load:state {"on" if state else "off"}')
 
     def get_state(self) -> bool:
+        """
+        get_state()
+
+        Returns the current state of the input to the load
+
+        Returns:
+            bool: Load state (True == enabled, False == disabled)
+        """
         response = self.query_resource('load:state?')
         return response == '1'
 
     def on(self) -> None:
+        """
+        on()
+
+        Enables the Load's output; equivalent to set_state(True).
+        """
         self.set_state(True)
 
     def off(self) -> None:
+        """
+        off()
+
+        Disables the input for the load. Equivalent to set_state(False)
+        """
         self.set_state(False)
 
     def toggle(self) -> None:
+        """
+        toggle()
+
+        Reverses the current state of the Load.
+        """
         self.set_state(not self.get_state())
 
-    def set_current_range(self, cc_range: CCRange) -> None:
-        self.write_resource(f'mode {cc_range.value}')
-
-    def get_current_range(self) -> CCRange:
-        cc_range = self.query_resource('mode?')
-
-        try:
-            return self.CCRange(cc_range)
-        except KeyError:
-            raise ValueError('Unknown CC Range')
-
-    def auto_range(self, current: float) -> None:
-        if current <= self._Module.I_LMAX:
-            self.set_current_range(self.CCRange.LOW)
-        else:
-            self.set_current_range(self.CCRange.HIGH)
-
     def set_current(self, current: float, level: int = 0) -> None:
+        """
+        set_current(current, level=0)
+
+        Changes the current setpoint of the load for the specified level in
+        constant current mode.
+
+        Args:
+            current (float): Desired current setpoint in Amps DC.
+            level (int, optional): level to change setpoint of valid options
+                are 0,1,2; If level = 0 both levels will be set to the
+                value specified. Defaults to 0.
+        """
         current = self._current_check(current)
 
         if int(level) == 0:
@@ -134,16 +161,96 @@ class Chroma_6310(VisaResource):
             self.write_resource(f'current:static:l{level} {current}')
 
     def get_current(self, level: int) -> float:
+        """
+        get_current(level)
 
+        Retrives the current setpoint of the load for the specified level used
+        in constant current mode. if level == 0 then both load levels will be
+        returned.
+
+        Args:
+            level (int): level to retrive setpoint of valid options
+                are 0,1,2.
+
+        Returns:
+            float: Retrivies the current setpoint in Amps DC.
+        """
         if level not in (1, 2):
             raise ValueError('Invalid load level (should be 1 or 2)')
 
         response = self.query_resource(f'current:static:l{level}?')
         return float(response)
 
+    def set_current_range(self, cc_range: CCRange) -> None:
+        """
+        set_current_range(cc_range)
+
+        Changes the current range of the load
+
+        Args:
+            cc_range (CCRange): Enum denoting the desired current range
+        """
+        self.write_resource(f'mode {cc_range.value}')
+
+    def get_current_range(self) -> CCRange:
+        """
+        get_current_range()
+
+        Queries the current range of the load
+
+        Returns:
+            CCRange: Enum denoting the currently used current range
+        """
+        cc_range = self.query_resource('mode?')
+
+        try:
+            return self.CCRange(cc_range)
+        except KeyError:
+            raise ValueError('Unknown CC Range')
+
+    def auto_range(self, current: float) -> None:
+        """
+        auto_range(current)
+
+        Configures the load to be in the correct range for the specified current
+
+        Args:
+            current (float): reference current in Amps
+        """
+        if not (self._Module.I_L.min <= current <= self._Module.I_H.max):
+            raise ValueError('Invalid current level')
+
+        if current <= self._Module.I_L.max:
+            self.set_current_range(self.CCRange.LOW)
+        else:
+            self.set_current_range(self.CCRange.HIGH)
+
     def set_current_slew_rate(self, slew_rate: float, edge: CCEdges) -> None:
-        self.write_resource(f'current:static:{edge.value} {slew_rate}')
+        """
+        set_current_slew(slew_rate, edge)
+
+        Changes the slew-rate setting of the load (for the specified edge
+        polarity) in constant current mode.
+
+        Args:
+            slew_rate (float): desired slew-rate setting in A/s
+            edge (CCEdges): Enum which determines the edge to set the slew-rate of.
+        """
+        slew_rate_a_p_us = slew_rate*1e-6  # convert Amp/s to Amp/us
+        self.write_resource(f'current:static:{edge.value} {slew_rate_a_p_us}')
 
     def get_current_slew_rate(self, edge: CCEdges) -> float:
+        """
+        get_current_slew_rate(edge_polarity)
+
+        Retrives the slew-rate setting of the load (for the specified edge
+        polarity) in constant current mode.
+
+        Args:
+            edge (CCEdges): Enum which determines the edge to get the slew-rate of.
+
+        Returns:
+            float: slew-rate setting in A/s.
+        """
         response = self.query_resource(f'current:static:{edge.value}?')
-        return float(response)
+        return float(response)*1e6  # convert Amp/us to Amp/s
