@@ -6,20 +6,20 @@ from ..core import VisaResource
 
 @dataclass(frozen=True, slots=True)
 class _Module_Base_Config:
-    T_MAX: float = 50.0
     T_MIN: float = 0.000025
-    I_HMAX: float = 60.0
-    I_LMAX: float = 6.0
+    T_MAX: float = 50.0
     I_MIN: float = 0.0
-    V_HMAX: float = 80.0
+    I_LMAX: float = 6.0
+    I_HMAX: float = 60.0
     V_MIN: float = 0.0
     V_LMAX: float = 16.0
-    R_HMAX: float = 5000.0
+    V_HMAX: float = 80.0
     R_HMIN: float = 1.25
-    R_LMAX: float = 100.0
+    R_HMAX: float = 5000.0
     R_LMIN: float = 0.025
-    P_HMAX: float = 300.0
+    R_LMAX: float = 100.0
     P_LMAX: float = 30.0
+    P_HMAX: float = 300.0
     ISR_HMIN: float = 0.01
     ISR_HMAX: float = 2.5
     ISR_LMIN: float = 0.001
@@ -29,27 +29,23 @@ class _Module_Base_Config:
     Rd_HMIN: float = 10.0
     Rd_HMAX: float = 10000.0
 
-
-@dataclass(frozen=True, slots=True)
-class _Module_63106_Config:
-    T_MAX: float = 50.0
-    T_MIN: float = 0.000025
-    I_HMAX: float = 120.0
-    I_LMAX: float = 12.0
-    I_MIN: float = 0.0
-    V_HMAX: float = 80.0
-    V_MIN: float = 0.0
-    V_LMAX: float = 16.0
-    R_HMAX: float = 2500.0
-    R_HMIN: float = 0.625
-    R_LMAX: float = 50.0
-    R_LMIN: float = 0.0125
-    P_HMAX: float = 600.0
-    P_LMAX: float = 60.0
-    ISR_HMIN: float = 0.02
-    ISR_HMAX: float = 5.0
-    ISR_LMIN: float = 0.002
-    ISR_LMAX: float = 0.5
+_SUPPORTED_CONFIGS = {
+    "BASE": _Module_Base_Config(),
+    "63106A": _Module_Base_Config(
+        I_HMAX = 120.0,
+        I_LMAX = 12.0,
+        R_HMAX = 2500.0,
+        R_HMIN = 0.625,
+        R_LMAX = 50.0,
+        R_LMIN = 0.0125,
+        P_HMAX = 600.0,
+        P_LMAX = 60.0,
+        ISR_HMIN = 0.02,
+        ISR_HMAX = 5.0,
+        ISR_LMIN = 0.002,
+        ISR_LMAX = 0.5,
+    ),
+}
 
 
 class Chroma_6310(VisaResource):
@@ -73,10 +69,11 @@ class Chroma_6310(VisaResource):
 
         # determine hardware config
         channel_identity = self.query_resource("channel:id?").split(",")
-        if channel_identity[1] == '63106A':
-            self._Module = _Module_63106_Config()
+        module_name = channel_identity[1]
+        if module_name not in _SUPPORTED_CONFIGS:
+            self._Module = _SUPPORTED_CONFIGS["BASE"]
         else:
-            self._Module = _Module_Base_Config()
+            self._Module[module_name]
 
     @staticmethod
     def _limit(x: float, x_min: float, x_max: float) -> float:
