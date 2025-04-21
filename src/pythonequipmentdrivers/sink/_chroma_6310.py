@@ -1,7 +1,8 @@
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 
 from ..core import VisaResource
+
 
 @dataclass(frozen=True, slots=True)
 class _Limits:
@@ -10,6 +11,7 @@ class _Limits:
 
     def get(self) -> tuple[float]:
         return (self.min, self.max)
+
 
 @dataclass(frozen=True)
 class _Module_Base_Config:
@@ -22,22 +24,23 @@ class _Module_Base_Config:
     P_H: _Limits = _Limits(0.0, 300.0)
     V_L: _Limits = _Limits(0.0, 16.0)
     V_H: _Limits = _Limits(0.0, 80.0)
-    ISR_L: _Limits = _Limits(0.001, 0.25)
-    ISR_H: _Limits = _Limits(0.01, 2.5)
+    I_SR_L: _Limits = _Limits(0.001, 0.25)
+    I_SR_H: _Limits = _Limits(0.01, 2.5)
     Rd_L: _Limits = _Limits(1.0, 1000.0)
     Rd_H: _Limits = _Limits(10.0, 10000.0)
+
 
 _SUPPORTED_CONFIGS = {
     "BASE": _Module_Base_Config(),
     "63106A": _Module_Base_Config(
-        I_L = _Limits(0.0, 12.0),
-        I_H = _Limits(0.0, 120.0),
-        R_L = _Limits(0.0125, 50),
-        R_H = _Limits(0.625, 2500.0),
-        P_L = _Limits(0.0, 60.0),
-        P_H = _Limits(0.0, 600.0),
-        I_SR_L = _Limits(0.002, 0.5),
-        I_SR_H = _Limits(0.02, 5.0),
+        I_L=_Limits(0.0, 12.0),
+        I_H=_Limits(0.0, 120.0),
+        R_L=_Limits(0.0125, 50),
+        R_H=_Limits(0.625, 2500.0),
+        P_L=_Limits(0.0, 60.0),
+        P_H=_Limits(0.0, 600.0),
+        I_SR_L=_Limits(0.002, 0.5),
+        I_SR_H=_Limits(0.02, 5.0),
     ),
 }
 
@@ -58,8 +61,10 @@ class Chroma_6310(VisaResource):
         # Check connection is valid
         manuf, *desc = self.idn.lower().split(",")
 
-        if manuf != 'chroma' or desc[0][:3] != '631':
-            raise ValueError(f'Instrument at {address} is not a Chroma 6310 based Programmable load.')
+        if manuf != "chroma" or desc[0][:3] != "631":
+            raise ValueError(
+                f"Instrument at {address} is not a Chroma 6310 based Programmable load."
+            )
 
         # determine hardware config
         channel_identity = self.query_resource("channel:id?").split(",")
@@ -71,27 +76,20 @@ class Chroma_6310(VisaResource):
 
     @staticmethod
     def _limit(x: float, x_min: float, x_max: float) -> float:
-        return min(
-            (max((x, x_min)), x_max)
-        )
+        return min((max((x, x_min)), x_max))
 
     def _current_check(self, current: float) -> float:
         return self._limit(
-            current,
-            x_min=self._Module.I_L.min,
-            x_max=self._Module.I_H.max
+            current, x_min=self._Module.I_L.min, x_max=self._Module.I_H.max
         )
 
-    def _slew_check(self, slew: float, current: float) -> float:
+    def _slew_check(self, slew: float, cc_range: CCRange) -> float:
 
-        if not (self._Module.I_L.min <= current <= self._Module.I_H.max):
-            raise ValueError('Invalid current level')
-            
-        if current <= self._Module.I_LMAX:
-            return self._limit(slew, *self._Module.ISR_L.get())
+        if cc_range == self.CCRange.LOW:
+            return self._limit(slew, *self._Module.I_SR_L.get())
         else:
-            return self._limit(slew, *self._Module.ISR_H.get())
-                           
+            return self._limit(slew, *self._Module.I_SR_H.get())
+
     def set_state(self, state: bool) -> None:
         """
         set_state(state)
@@ -112,8 +110,8 @@ class Chroma_6310(VisaResource):
         Returns:
             bool: Load state (True == enabled, False == disabled)
         """
-        response = self.query_resource('load:state?')
-        return response == '1'
+        response = self.query_resource("load:state?")
+        return response == "1"
 
     def on(self) -> None:
         """
@@ -155,10 +153,10 @@ class Chroma_6310(VisaResource):
         current = self._current_check(current)
 
         if int(level) == 0:
-            self.write_resource(f'current:static:l1 {current}')
-            self.write_resource(f'current:static:l2 {current}')
+            self.write_resource(f"current:static:l1 {current}")
+            self.write_resource(f"current:static:l2 {current}")
         else:
-            self.write_resource(f'current:static:l{level} {current}')
+            self.write_resource(f"current:static:l{level} {current}")
 
     def get_current(self, level: int) -> float:
         """
@@ -176,9 +174,9 @@ class Chroma_6310(VisaResource):
             float: Retrivies the current setpoint in Amps DC.
         """
         if level not in (1, 2):
-            raise ValueError('Invalid load level (should be 1 or 2)')
+            raise ValueError("Invalid load level (should be 1 or 2)")
 
-        response = self.query_resource(f'current:static:l{level}?')
+        response = self.query_resource(f"current:static:l{level}?")
         return float(response)
 
     def set_current_range(self, cc_range: CCRange) -> None:
@@ -190,7 +188,7 @@ class Chroma_6310(VisaResource):
         Args:
             cc_range (CCRange): Enum denoting the desired current range
         """
-        self.write_resource(f'mode {cc_range.value}')
+        self.write_resource(f"mode {cc_range.value}")
 
     def get_current_range(self) -> CCRange:
         """
@@ -201,12 +199,12 @@ class Chroma_6310(VisaResource):
         Returns:
             CCRange: Enum denoting the currently used current range
         """
-        cc_range = self.query_resource('mode?')
+        cc_range = self.query_resource("mode?")
 
         try:
             return self.CCRange(cc_range)
         except KeyError:
-            raise ValueError('Unknown CC Range')
+            raise ValueError("Unknown CC Range")
 
     def auto_range(self, current: float) -> None:
         """
@@ -218,7 +216,7 @@ class Chroma_6310(VisaResource):
             current (float): reference current in Amps
         """
         if not (self._Module.I_L.min <= current <= self._Module.I_H.max):
-            raise ValueError('Invalid current level')
+            raise ValueError("Invalid current level")
 
         if current <= self._Module.I_L.max:
             self.set_current_range(self.CCRange.LOW)
@@ -236,8 +234,13 @@ class Chroma_6310(VisaResource):
             slew_rate (float): desired slew-rate setting in A/s
             edge (CCEdges): Enum which determines the edge to set the slew-rate of.
         """
-        slew_rate_a_p_us = slew_rate*1e-6  # convert Amp/s to Amp/us
-        self.write_resource(f'current:static:{edge.value} {slew_rate_a_p_us}')
+
+        slew_rate_a_p_us = (
+            self._slew_check(slew=slew_rate_a_p_us, cc_range=self.get_current_range())
+            * 1e-6
+        )  # convert Amp/s to Amp/us
+
+        self.write_resource(f"current:static:{edge.value} {slew_rate_a_p_us}")
 
     def get_current_slew_rate(self, edge: CCEdges) -> float:
         """
@@ -252,5 +255,5 @@ class Chroma_6310(VisaResource):
         Returns:
             float: slew-rate setting in A/s.
         """
-        response = self.query_resource(f'current:static:{edge.value}?')
-        return float(response)*1e6  # convert Amp/us to Amp/s
+        response = self.query_resource(f"current:static:{edge.value}?")
+        return float(response) * 1e6  # convert Amp/us to Amp/s
