@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Any, List, Union
+from typing import Any
 
 import pyvisa
 
@@ -156,8 +156,9 @@ class HP_34401A(VisaResource):
     def set_trigger(
         self,
         trigger: str,
-        delay: Union[str, float] = None,
-        count: Union[str, int] = None,
+        slope: str,
+        delay: str | float = None,
+        count: str | int = None,
     ) -> None:
         """
         set_trigger(trigger)
@@ -173,6 +174,8 @@ class HP_34401A(VisaResource):
         trigger: str, type of trigger to be done
             valid modes are: 'BUS', 'IMMEDIATE', 'EXTERNAL'.
         """
+        if slope is not None:
+            self.set_trigger_slope(slope)
 
         if delay is not None:
             self.set_trigger_delay(delay)
@@ -182,12 +185,22 @@ class HP_34401A(VisaResource):
 
         self.set_trigger_source(trigger)
 
-    def set_trigger_delay(self, delay: Union[str, float], **kwargs) -> None:
+    def set_trigger_slope(self, slope: str, **kwargs) -> None:
+        """
+        set_trigger_slope(slope)
+
+        Args:
+            slope (str): slope POS or NEG
+        """
+
+        self.write_resource(f"TRIG:SLOPe {slope}", **kwargs)
+
+    def set_trigger_delay(self, delay: str | float, **kwargs) -> None:
         """
         set_trigger_delay(delay)
 
         Args:
-            delay (Union[str, float]): delay in seconds or "MIN" or "MAX"
+            delay (str | float): delay in seconds or "MIN" or "MAX"
         """
 
         valid_delay = {"MIN", "MINIMUM", "MAX", "MAXIMUM"}
@@ -545,9 +558,7 @@ class HP_34401A(VisaResource):
                 print(cmd_str)
             self.write_resource(cmd_str, **kwargs)
 
-    def resp_format(
-        self, response: str, resp_type: type = int
-    ) -> Union[Any, List[Any]]:
+    def resp_format(self, response: str, resp_type: type = int) -> Any | list[Any]:
         """
         resp_format(response(str data), type(int/float/etc))
 

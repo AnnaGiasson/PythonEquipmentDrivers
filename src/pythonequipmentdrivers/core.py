@@ -209,27 +209,27 @@ class VisaResource:
             pass
 
     @property
-    def timeout(self) -> int:
+    def timeout(self) -> float:
         """
         timeout
 
         Returns:
-            int: Timeout (in milliseconds) for I/O operations with the
-                connected resource.
+            float: Timeout (in seconds) for I/O operations with the
+                connected resource. Resolves to the nearest millisecond
         """
 
-        return self._resource.timeout
+        return (self._resource.timeout) / 1000  # convert from ms
 
     @timeout.setter
-    def timeout(self, timeout: int) -> None:
+    def timeout(self, timeout: float) -> None:
         """
         timeout
 
         Args:
-            timeout (int): timeout (in milliseconds) for I/O operations with
-                the connected resource.
+            timeout (float): timeout (in seconds) for I/O operations with
+                the connected resource. Resolves to the nearest millisecond
         """
-        self._resource.timeout = int(timeout)  # ms
+        self._resource.timeout = int(timeout * 1000)  # convert to ms
 
     def __del__(self) -> None:
         if hasattr(self, "_resource"):
