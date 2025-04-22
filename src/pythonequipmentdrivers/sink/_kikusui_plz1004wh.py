@@ -464,7 +464,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
                     continue
                 step_idx = first_step_idx + offset
                 # store the current of the step
-                curr = self.query_resource(f"prog:fsp:edit? {step_idx}")
+                curr = self.query_resource(f"prog:fsp:edit? {step_idx}").split(",")[0]
                 # write the step with a trigger
                 self.write_resource(f"prog:fsp:edit {step_idx},{curr},1")
 
@@ -483,6 +483,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         initial_idle_time: float = 10e-3,
         idle_current: float = 0.0,
         current_range: str = "HIGH",
+        keep_load_on: bool = False,
     ) -> None:
         """
         Configure the load to produce a single pulse sequence consisting of an initial
@@ -507,6 +508,8 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
                 to manual for the maximum current that each range is capable of.
                 Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+            keep_load_on (bool, optional): Keep the load at the specified idle_current
+                after the sequence completes. Defaults to False.
         """
         END_IDLE_TIME = 1e-3
         seq_len = initial_idle_time + pulse_width + END_IDLE_TIME
@@ -514,18 +517,18 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             ValueError(f"{trig_delay=} not valid for {seq_len=}")
         steps = list(
             itertools.chain(
-                itertools.repeat(
-                    SequenceStep(idle_current), round(initial_idle_time / step_size)
-                ),
-                itertools.repeat(
-                    SequenceStep(pulse_current), round(pulse_width / step_size)
-                ),
-                itertools.repeat(
-                    SequenceStep(idle_current), round(END_IDLE_TIME / step_size)
-                ),
+
+                (SequenceStep(idle_current) for _ in range(round(initial_idle_time / step_size))),
+
+                (SequenceStep(pulse_current) for _ in  range(round(pulse_width / step_size))),
+
+                (SequenceStep(idle_current) for _ in range(round(END_IDLE_TIME / step_size))),
             )
         )
         # +1 since trigger occurs at the beginning of a step
         trigger_idx = round((initial_idle_time + trig_delay) / step_size + 1)
         steps[trigger_idx].trigger = True
         self.configure_sequence(steps, current_range, step_size)
+        if keep_load_on:
+            self.write_resource(f"prog:linp {1 if idle_current else 0}")
+            self.write_resource(f"prog:lval {idle_current}")
