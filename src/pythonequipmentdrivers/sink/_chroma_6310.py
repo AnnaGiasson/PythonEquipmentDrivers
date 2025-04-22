@@ -24,8 +24,8 @@ class _Module_Base_Config:
     P_H: _Limits = _Limits(0.0, 300.0)
     V_L: _Limits = _Limits(0.0, 16.0)
     V_H: _Limits = _Limits(0.0, 80.0)
-    I_SR_L: _Limits = _Limits(0.001, 0.25)
-    I_SR_H: _Limits = _Limits(0.01, 2.5)
+    I_SR_L: _Limits = _Limits(0.001, 0.25)  # A/us
+    I_SR_H: _Limits = _Limits(0.01, 2.5)  # A/us
     Rd_L: _Limits = _Limits(1.0, 1000.0)
     Rd_H: _Limits = _Limits(10.0, 10000.0)
 
@@ -35,12 +35,22 @@ _SUPPORTED_CONFIGS = {
     "63106A": _Module_Base_Config(
         I_L=_Limits(0.0, 12.0),
         I_H=_Limits(0.0, 120.0),
-        R_L=_Limits(0.0125, 50),
-        R_H=_Limits(0.625, 2500.0),
+        R_L=_Limits(12.5e-3, 50),
+        R_H=_Limits(0.625, 2.5e3),
         P_L=_Limits(0.0, 60.0),
         P_H=_Limits(0.0, 600.0),
         I_SR_L=_Limits(0.002, 0.5),
         I_SR_H=_Limits(0.02, 5.0),
+    ),
+    "63112A": _Module_Base_Config(
+        I_L=_Limits(0.0, 24.0),
+        I_H=_Limits(0.0, 240.0),
+        P_L=_Limits(0.0, 120.0),
+        P_H=_Limits(0.0, 1200.0),
+        R_L=_Limits(6.25e-3, 25),
+        R_H=_Limits(0.3125, 1.25e34),
+        I_SR_L=_Limits(0.004, 1.0),
+        I_SR_H=_Limits(0.04, 10.0),
     ),
 }
 
@@ -72,7 +82,7 @@ class Chroma_6310(VisaResource):
         if module_name not in _SUPPORTED_CONFIGS:
             self._Module = _SUPPORTED_CONFIGS["BASE"]
         else:
-            self._Module[module_name]
+            self._Module = _SUPPORTED_CONFIGS[module_name]
 
     @staticmethod
     def _limit(x: float, x_min: float, x_max: float) -> float:

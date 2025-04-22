@@ -141,11 +141,11 @@ class Keysight_N6700(VisaResource):
         returns: float
         """
         self._check_valid_channel(channel)
-        channel = self._channel_config[channel]
+        module = self._channel_config[channel]
 
-        if voltage > channel.v_max:
+        if voltage > module.v_max:
             raise ValueError(
-                f"Tried to set voltage out of supply range ({channel.v_max} V)"
+                f"Tried to set voltage out of supply range ({module.v_max} V)"
             )
 
         self.write_resource(f"volt {voltage},(@{channel})")
@@ -179,11 +179,11 @@ class Keysight_N6700(VisaResource):
         returns: float
         """
         self._check_valid_channel(channel)
-        channel = self._channel_config[channel]
+        module = self._channel_config[channel]
 
-        if current > channel.i_max:
+        if current > module.i_max:
             raise ValueError(
-                f"Tried to set current out of supply range ({channel.i_max} V)"
+                f"Tried to set current out of supply range ({module.i_max} V)"
             )
 
         self.write_resource(f"curr {current},(@{channel})")
@@ -252,10 +252,10 @@ class Keysight_N6700(VisaResource):
         """
 
         self._check_valid_channel(channel)
-        channel = self._channel_config[channel]
+        module = self._channel_config[channel]
 
         # check if module supports this feature
-        if not re.match(r"N67[68]\wA", channel.name):
+        if not re.match(r"N67[68]\wA", module.name):
             raise ValueError(
                 "Power measurements only supported on N676xA and N678xA modules"
             )
