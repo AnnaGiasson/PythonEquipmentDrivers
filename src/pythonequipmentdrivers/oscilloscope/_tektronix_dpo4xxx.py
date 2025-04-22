@@ -642,7 +642,7 @@ class Tektronix_DPO4xxx(VisaResource):
         self.write_resource(f"MEASU:{measurement_str}:STATE ON")
 
     def get_image(
-        self, image_title: Union[str, Path], timeout_seconds: float = 2.0
+        self, image_title: Union[str, Path], timeout: float = 2.0
     ) -> None:
         """
         get_image(image_title, **kwargs)
@@ -656,7 +656,7 @@ class Tektronix_DPO4xxx(VisaResource):
             image_title (Union[str, Path]): path name of image, file extension
                 will be added automatically
         Kwargs:
-            buffering_delay (float): delay before reading back image data in
+            timeout (float): delay before reading back image data in
                 seconds. Depending on the oscilloscope settings, conversion of
                 the data to an image may take longer than the timeout of the
                 resource connection; this delay gives the scope more time to
@@ -671,9 +671,9 @@ class Tektronix_DPO4xxx(VisaResource):
         else:
             raise ValueError("image_title must be a str or path-like object")
 
-        prev_timeout = self._resource.timeout
+        prev_timeout = self.timeout
 
-        self._resource.timeout = timeout_seconds * 1000
+        self.timeout = timeout
 
         # initiate transfer
         self._resource.write("SAVE:IMAG:FILEF PNG")  # set filetype
@@ -685,7 +685,7 @@ class Tektronix_DPO4xxx(VisaResource):
         with open(file_path, "wb") as file:
             file.write(raw_data)
 
-        self._resource.timeout = prev_timeout
+        self.timeout = prev_timeout
 
     def set_record_length(self, length: int) -> None:
         """
@@ -817,7 +817,7 @@ class Tektronix_DPO4xxx(VisaResource):
         self.write_resource("MESSAGE:CLEAR; STATE 0")
 
     def load_setup_file(
-        self, setup_path: Union[str, Path], timeout_seconds: float = 5
+        self, setup_path: Union[str, Path], timeout: float = 5
     ) -> None:
         """
         Load a scope setup from a file and wait for the scope to complete the
@@ -825,11 +825,12 @@ class Tektronix_DPO4xxx(VisaResource):
 
         Args:
             setup_path (Union[str, Path]): path the the text file containing the setup
-            timeout_seconds (float, optional): Maximum time to wait for setup to
+            timeout (float, optional): Maximum time to wait for setup to
             complete. Defaults to 5s.
         """
         prev_timeout = self.timeout
-        self.timeout = timeout_seconds
+        self.timeout = timeout
+
         with open(Path(setup_path), "r") as f:
             self.write_resource(f.read())
         self.query_resource("*OPC?")
@@ -857,20 +858,21 @@ class Tektronix_DPO4xxx(VisaResource):
             ValueError(f"{setup_index=} is not valid")
         self.write_resource(f"*SAV {setup_index}")
 
-    def recall_setup(self, setup_index: int, timeout_seconds: float = 5) -> None:
+    def recall_setup(self, setup_index: int, timeout: float = 5) -> None:
         """
         Load a scope setup from a file and wait for the scope to complete the
         reconfiguration
 
         Args:
             setup_index (int): setup memory location (1 to 10)
-            timeout_seconds (float, optional): Maximum time to wait for setup to
+            timeout (float, optional): Maximum time to wait for setup to
             complete. Defaults to 5s.
         """
         if setup_index not in range(1, 10 + 1):
             ValueError(f"{setup_index=} is not valid")
         prev_timeout = self.timeout
-        self.timeout = timeout_seconds
+        self.timeout = timeout
+
         self.write_resource(f"*RCL {setup_index}")
         self.query_resource("*OPC?")
         self.timeout = prev_timeout
