@@ -131,7 +131,7 @@ class VisaResource:
                 f"Could not connect to resource at: {address}", error
             )
 
-        self.timeout = int(1000 * kwargs.get("timeout", 1.0))  # ms
+        self.timeout = kwargs.get("timeout", 1.0)  # s
 
     def clear_status(self, **kwargs) -> None:
         """
