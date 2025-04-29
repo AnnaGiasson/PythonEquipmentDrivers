@@ -1,6 +1,14 @@
 from typing import Union
+from dataclasses import dataclass
+import itertools
 
 from ..core import VisaResource
+
+
+@dataclass
+class SequenceStep:
+    current: float
+    trigger: bool = False
 
 
 class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
@@ -16,6 +24,8 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
     # need to update:
     #     logic
     #     documenation
+
+    SequenceStep = SequenceStep
 
     def set_state(self, state: bool) -> None:
         """
@@ -376,3 +386,149 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         response = self.query_resource("MEAS:POW?")
         return float(response)
+
+    def configure_sequence(
+        self,
+        steps: list["Kikusui_PLZ1004WH.SequenceStep"],
+        current_range: str = "HIGH",
+        step_size: float = 1e-3,
+        initialize: bool = True,
+    ) -> None:
+        """
+        Configure the load fast sequence consisting of a series of steps. Each step
+        includes a current value and whether or not a trigger pulse should be emitted.
+
+        Args:
+            steps (list[Kikusui_PLZ1004WH.SequenceStep]): A list of SequenceSteps
+                describing the sequence to be executed. Each step has a load setting and
+                the option to emit a trigger pulse. A maximum of 1024 steps can be used
+                but note that transmitting a large number of steps takes significant
+                time.
+            current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
+                to manual for the maximum current that each range is capable of.
+                Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+            step_size (float, optional): Size (duration) of each step. Valid range is
+                100us to 100ms. Defaults to 1ms.
+            initialize (bool, optional): Send the initialization commands to set up the
+                load in addition to sending the sequence steps. Setting to false can
+                save some time if no settings need to be changed. Defaults to True.
+        """
+        MIN_STEP_SIZE = 100e-6
+        MAX_STEP_SIZE = 100e-3
+        VALID_RANGES = {"LOW", "MEDIUM", "MED", "HIGH"}
+        MAX_SEQ_LENGTH = 1024
+
+        sequence_len = len(steps)
+
+        # validate the inputs
+        if sequence_len > MAX_SEQ_LENGTH:
+            raise ValueError(f"sequence length is {sequence_len} > {MAX_SEQ_LENGTH=}")
+        if not current_range.upper() in VALID_RANGES:
+            raise ValueError(f"{current_range=} is not in {VALID_RANGES=}")
+        if step_size > MAX_STEP_SIZE or step_size < MIN_STEP_SIZE:
+            raise ValueError(f"step_size must be <{MAX_STEP_SIZE} and >{MIN_STEP_SIZE}")
+
+        if initialize:
+            # fast sequence requires 11, select it for editing
+            self.write_resource("prog:name 11")
+            # set sequence to fast CC mode
+            self.write_resource("prog:mode fcc")
+            # run the sequence just once
+            self.write_resource("prog:loop 1")
+            # set the step length
+            self.write_resource(f"prog:fsp:time {step_size}")
+            # set the current range for the sequence
+            self.write_resource(f"prog:cran {current_range}")
+            # set the sequence length
+            self.write_resource(f"prog:fsp:end {sequence_len}")
+
+        # Write the sequence of currents in chunks of 8 using prog:fsp:edit:wave
+        # to reduce number of transactions. Write individual steps only when
+        # a trigger pulse is needed
+        for steps_chunk, first_step_idx in zip(
+            itertools.batched(steps, 8),
+            itertools.count(start=1, step=8),
+        ):
+            currents = [step.current for step in steps_chunk]
+            # pad the chunk of currents up to 8 with 0s
+            currents += (8 - len(currents)) * [0]
+            # write the chunk of currents
+            self.write_resource(
+                f"prog:fsp:edit:wave {first_step_idx},"
+                + ",".join(str(c) for c in currents)
+            )
+
+            # set the steps that have triggers
+            for offset, step in enumerate(steps_chunk):
+                if not step.trigger:
+                    continue
+                step_idx = first_step_idx + offset
+                # store the current of the step
+                curr = self.query_resource(f"prog:fsp:edit? {step_idx}").split(",")[0]
+                # write the step with a trigger
+                self.write_resource(f"prog:fsp:edit {step_idx},{curr},1")
+
+    def run_sequence(self) -> None:
+        """
+        Run the current sequence.
+        """
+        self.write_resource("prog:stat run")
+
+    def configure_pulse_seqeunce(
+        self,
+        pulse_current: float,
+        pulse_width: float,
+        trig_delay: float,
+        step_size: float = 1e-3,
+        initial_idle_time: float = 10e-3,
+        idle_current: float = 0.0,
+        current_range: str = "HIGH",
+        keep_load_on: bool = False,
+    ) -> None:
+        """
+        Configure the load to produce a single pulse sequence consisting of an initial
+        low current period for the load to "warm up" followed by a high current period
+        at the specified current and a ending low current period fixed at 1ms. A trigger
+        pulse is emmited during the pulse with the defined delay.
+
+        Args:
+            pulse_current (float): Current to set during the pulse
+            pulse_width (float): width of the pulse in seconds
+            trig_delay (float): delay from the beginning of the pulse to when the
+                trigger pulse is emmited in seconds
+            step_size (float, optional): Size of the steps which the sequence will be
+                broken up into. A smaller step results in more resolution of the
+                    timings. Defaults to 1e-3.
+            initial_idle_time (float, optional): Time to set the load to the initial
+                value before starting the pulse. This is needed since the load cannot
+                immediately produce a high load at the beginning of a sequence. 10ms was
+                found to be effective. Defaults to 10e-3.
+            idle_current (float, optional): Current to set during idle times. 0A
+                typically works fine for this purpose. Defaults to 0.0.
+            current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
+                to manual for the maximum current that each range is capable of.
+                Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
+            keep_load_on (bool, optional): Keep the load at the specified idle_current
+                after the sequence completes. Defaults to False.
+        """
+        END_IDLE_TIME = 1e-3
+        seq_len = initial_idle_time + pulse_width + END_IDLE_TIME
+        if trig_delay + initial_idle_time > seq_len:
+            ValueError(f"{trig_delay=} not valid for {seq_len=}")
+        steps = list(
+            itertools.chain(
+
+                (SequenceStep(idle_current) for _ in range(round(initial_idle_time / step_size))),
+
+                (SequenceStep(pulse_current) for _ in  range(round(pulse_width / step_size))),
+
+                (SequenceStep(idle_current) for _ in range(round(END_IDLE_TIME / step_size))),
+            )
+        )
+        # +1 since trigger occurs at the beginning of a step
+        trigger_idx = round((initial_idle_time + trig_delay) / step_size + 1)
+        steps[trigger_idx].trigger = True
+        self.configure_sequence(steps, current_range, step_size)
+        if keep_load_on:
+            self.write_resource(f"prog:linp {1 if idle_current else 0}")
+            self.write_resource(f"prog:lval {idle_current}")
