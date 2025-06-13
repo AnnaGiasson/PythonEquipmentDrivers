@@ -26,7 +26,8 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
     @staticmethod
     def _query_configure_sequence_effect(steps: list, cmd: str):
         idx = int(cmd.split()[-1])
-        return steps[idx - 1].current
+        selected_step = steps[idx - 1]
+        return f"{selected_step.current},{int(selected_step.trigger)}"
 
     def test_configure_sequence(self):
 
@@ -91,9 +92,9 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
 
         steps = list(
             itertools.chain(
-                itertools.repeat(self.inst.SequenceStep(0), 10),
-                itertools.repeat(self.inst.SequenceStep(10), 10),
-                itertools.repeat(self.inst.SequenceStep(0), 1),
+                (self.inst.SequenceStep(0) for _ in range(10)),
+                (self.inst.SequenceStep(10) for _ in range(10)),
+                (self.inst.SequenceStep(0) for _ in range(1)),
             )
         )
         steps[13].trigger = True
