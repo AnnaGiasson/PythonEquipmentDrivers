@@ -853,6 +853,7 @@ class Tektronix_DPO4xxx(VisaResource):
         if setup_index not in range(1, 10 + 1):
             ValueError(f"{setup_index=} is not valid")
         self.write_resource(f"*SAV {setup_index}")
+        self.query_resource("*OPC?")
 
     def recall_setup(self, setup_index: int, timeout: float = 5) -> None:
         """
