@@ -641,9 +641,7 @@ class Tektronix_DPO4xxx(VisaResource):
         # enable the measurement
         self.write_resource(f"MEASU:{measurement_str}:STATE ON")
 
-    def get_image(
-        self, image_title: Union[str, Path], timeout: float = 2.0
-    ) -> None:
+    def get_image(self, image_title: Union[str, Path], timeout: float = 2.0) -> None:
         """
         get_image(image_title, **kwargs)
 
@@ -816,9 +814,7 @@ class Tektronix_DPO4xxx(VisaResource):
         """
         self.write_resource("MESSAGE:CLEAR; STATE 0")
 
-    def load_setup_file(
-        self, setup_path: Union[str, Path], timeout: float = 5
-    ) -> None:
+    def load_setup_file(self, setup_path: Union[str, Path], timeout: float = 5) -> None:
         """
         Load a scope setup from a file and wait for the scope to complete the
         reconfiguration
