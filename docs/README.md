@@ -79,5 +79,5 @@ flowchart TD;
 ## Contributing
 Would you like to contribue to the module? Whether its adding support for more instruments, creating utilities for testing, fixing bugs, or adding to the documentation your contributions are welcome.
 
-Please visit the [how to contribute](.\how_to_contribute.md) doc to learn more.
+Please visit the [how to contribute](how_to_contribute.md) doc to learn more.
 
