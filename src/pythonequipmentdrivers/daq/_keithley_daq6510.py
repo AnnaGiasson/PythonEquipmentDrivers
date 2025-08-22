@@ -3,19 +3,6 @@ from enum import Enum
 from itertools import batched
 from ..core import VisaResource
 
-class Measurement_Type(Enum):
-    VOLTAGE_DC = "VOLTage[:DC]"
-    RESISTANCE = "RESistance"
-    TEMPERATURE = "TEMPerature"
-    VOLTAGE_AC = "VOLTage:AC"
-    CONTINUITY = "CONTinuity"
-    CURRENT_DC = "CURRent[:DC]"
-    DIODE = "DIODe"
-    FREQUENCY = "FREQuency[:VOLTage]"
-    CURRENT_AC = "CURRent:AC"
-    CAPACITANCE = "CAPacitance"
-    PERIOD = "PERiod[:VOLTage]"
-
 
 class Keithley_DAQ6510(VisaResource):
 
@@ -30,6 +17,9 @@ class Keithley_DAQ6510(VisaResource):
             )
 
         self.write_resource('*LANG SCPI')
+
+        # Open all relays, start in a safe known state
+        self.write_resource('ROUT:OPEN:ALL')
 
     def clear_registers(self) -> None:
         self.reset()
@@ -64,16 +54,33 @@ class Keithley_DAQ6510(VisaResource):
     # def set_measurement_type(self, channel: int, type: Measurement_Type) -> None:
     #     self.write_resource(f'SENSe:FUNCtion "{type.value}", (@{channel})')
 
-    def select_function(self, function: str, *channels:int) -> None:  # TODO: update function arg to use Enum
-        '''
-        :param function: { VOLTage[:DC] | VOLTage:AC | CURRent[:DC] | CURRent:AC
-                            | RESistance | FRESistance | TEMPerature | FREQuency
-                            | PERiod | CONTinuity }
-        :type function: string
-        :param channel: simple channel 101 or range of channels (@101:120)
-        :type channel: string
-        '''
-        self.write_resource(f'FUNC "{function}", (@{",".join(map(str, channels))})')
+    class Measurement_Type(Enum):
+        VOLTAGE_DC = "VOLT:DC"
+        RESISTANCE = "RES"
+        TEMPERATURE = "TEMP"
+        VOLTAGE_AC = "VOLT:AC"
+        CONTINUITY = "CONT"
+        CURRENT_DC = "CURR:DC"
+        DIODE = "DIOD"
+        FREQUENCY = "FREQ:VOLT"
+        CURRENT_AC = "CURR:AC"
+        CAPACITANCE = "CAP"
+        PERIOD = "PER:VOLT"
+        NONE = "NONE"
+
+    def set_function(self, function: Measurement_Type, *channels:int) -> None:
+
+        function_str = function.value
+
+        self.write_resource(f'FUNC "{function_str}", (@{",".join(map(str, channels))})')
+
+    def get_function(self, *channels:int) -> tuple[Measurement_Type]:
+
+        response = self.query_resource(f'Sense:Function? (@{",".join(map(str, channels))})')
+
+        return tuple(
+            self.Measurement_Type(channel_func) for channel_func in response.split(';')
+        )
 
     def set_scan_channels(self, *channels: int) -> None:
         '''

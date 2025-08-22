@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pythonequipmentdrivers"
-version = "2.8.0"
+version = "2.11.0"
 authors = [
   { name="Anna Giasson", email="AnnaGraceGiasson@GMail.com" },
 ]
