@@ -88,17 +88,48 @@ class Keithley_DAQ6510(VisaResource):
         '''
         self.write_resource(f'ROUT:SCAN (@{",".join(map(str, channels))})')
 
-    def run_scan(self) -> None:
+    def get_scan_channels(self) -> tuple[int]:
+        response = self.query_resource('ROUT:SCAN?')
+        str_channels = response[2:-1]  # strip off formatting characters
+
+        if len(str_channels) == 0:  # no channels
+            return tuple()
+
+        if ":" not in str_channels:  # non contiguous channels
+            return tuple(map(int, str_channels.split(',')))
+
+        channel_list: list[int] = []
+        for grouping in str_channels.split(','):
+            if ':' not in grouping:
+               channel_list.extend(map(int, grouping))
+               continue
+
+            start_channel, end_channel = map(int, grouping.split(':'))
+            channel_list.extend(range(start_channel, end_channel+1, 1))
+
+        return tuple(channel_list)
+
+    def run_scan(self, count:int|None = None) -> None:
+
+        if count is not None:
+            self.set_scan_count(count)
+
         self.write_resource('INIT')
 
     def set_scan_count(self, count:int) -> None:
         self.write_resource(f'Route:scan:count:scan {count}')
 
+    def get_scan_count(self) -> int:
+        response = self.query_resource(f'Route:scan:count:scan?')
+        return int(response)
+
     def fetch_scan_data(self,
-        n_samples: int,
-        n_channels: int,
         return_sample_time: bool = False
-    ) -> dict[int, list[float|list[float]]]:
+    ) -> dict[int, float|tuple[float,float]|list[float|tuple[float,float]]]:
+
+        n_channels = len(self.get_scan_channels())
+        n_samples = self.get_scan_count()
+
         START_INDEX = 1 # min value of 1
         BUFFER_NAME = "defbuffer1"
         read_type = 'chan,rel,read' if return_sample_time else 'chan,read'
@@ -114,6 +145,10 @@ class Keithley_DAQ6510(VisaResource):
 
             chan = int(meas[0])
             datum = tuple(map(float, meas[1:])) if return_sample_time else float(meas[1])
+
+            if n_samples == 1:
+                data[chan] = datum
+                continue
 
             if chan not in data.keys():
                 data[chan] = []
@@ -137,4 +172,3 @@ class Keithley_DAQ6510(VisaResource):
 
     # TODO: Add method for adjusting range
     # TODO: Add method for adjusting aperture time
-    # TODO: Add method for configuring relay settings
