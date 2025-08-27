@@ -68,7 +68,64 @@ class Keithley_DAQ6510(VisaResource):
         PERIOD = "PER:VOLT"
         NONE = "NONE"
 
-    def set_function(self, function: Measurement_Type, *channels:int) -> None:
+    class Range_Value:
+        class VOLTAGE_DC(Enum):
+            AUTO = ":AUTO ON"
+            _100mV = " 100e-3"
+            _1V = " 1"
+            _10V = " 10"
+            _100V = " 100"
+            _1000V = " 1000"
+
+        class RESISTANCE(Enum):
+            AUTO = ":AUTO ON"
+            _1ohm = " 1"
+            _10ohm = " 10"
+            _100ohm = " 100"
+            _1kohm = " 1e3"
+            _10kohm = " 10e3"
+            _100kohm = " 100e3"
+            _1Mohm = " 1e6"
+            _10Mohm = " 10e6"
+            _100Mohm = " 100e6"
+
+        class VOLTAGE_AC(Enum):
+            AUTO = ":AUTO ON"
+            _100mV = " 100e-3"
+            _1V = " 1"
+            _10V = " 10"
+            _100V = " 100"
+            _750V = " 750"
+
+        class CURRENT_DC(Enum):
+            AUTO = ":AUTO ON"
+            _10uA = " 10e-6"
+            _100uA = " 100e-6"
+            _1mA = " 1e-3"
+            _10mA = " 10e-3"
+            _100mA = " 100e-3"
+            _1A = " 1"
+            _3A = " 3"
+
+        class CURRENT_AC(Enum):
+            AUTO = ":AUTO ON"
+            _100uA = " 100e-6"
+            _1mA = " 1e-3"
+            _10mA = " 10e-3"
+            _100mA = " 100e-3"
+            _1A = " 1"
+            _3A = " 3"
+
+        class CAPACITANCE(Enum):
+            AUTO = ":AUTO ON"
+            _1nF = " 1e-9"
+            _10nF = " 10e-9"
+            _100nF = " 100e-9"
+            _1uF = " 1e-6"
+            _10uF = " 10e-6"
+            _100uF = " 100e-6"
+
+    def set_function(self, function: Measurement_Type, *channels: int) -> None:
 
         function_str = function.value
 
@@ -170,5 +227,20 @@ class Keithley_DAQ6510(VisaResource):
             'step_count': step_count,
         }
 
-    # TODO: Add method for adjusting range
-    # TODO: Add method for adjusting aperture time
+    def set_range(self, rng: Range_Value) -> None:
+        function_str = (getattr(self.Measurement_Type, str(rng.__class__.__name__)).value).split(":")
+        
+        self.write_resource(f"{function_str[0]}:RANG{rng.value}")
+
+    def set_aperture_time(self, function: Measurement_Type, aperature_time: float | None = None, *channels: int) -> None:
+        function_str = function.value.split(":")
+        # TODO: If support is ever added for Dititize Voltage/Current then default support needs to be added, AUTO is arguemnt for default
+        if aperature_time is None: # If user doesn't pass a time value set to proper default value.
+            if function_str[0] == "FREQ" or function_str[0] == "PER":   # 200ms for Frequency and Period
+                time = 200e-3
+            else:   # 16.67ms for everything else
+                time = 16.67e-3
+        else:
+            time = aperature_time
+            
+        self.write_resource(f"{function_str[0]}:APER {time}, (@{",".join(map(str, channels))})")
