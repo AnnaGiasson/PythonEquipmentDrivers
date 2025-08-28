@@ -131,3 +131,4 @@ dmypy.json
 
 # Vscode settings
 .vscode/
+daq_test.py
