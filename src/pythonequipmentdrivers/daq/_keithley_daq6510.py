@@ -140,12 +140,18 @@ class Keithley_DAQ6510(VisaResource):
         )
 
     def set_scan_channels(self, *channels: int) -> None:
-        '''
-        :param channel: simple channel 101 or range of channels (@101:120)
-        '''
         self.write_resource(f'ROUT:SCAN (@{",".join(map(str, channels))})')
 
     def get_scan_channels(self) -> tuple[int]:
+        """
+        get_scan_channels()
+
+        Returns the channel numbers configured for the current scan
+
+        Returns:
+            tuple[int]: channel numbers
+        """
+
         response = self.query_resource('ROUT:SCAN?')
         str_channels = response[2:-1]  # strip off formatting characters
 
@@ -157,10 +163,11 @@ class Keithley_DAQ6510(VisaResource):
 
         channel_list: list[int] = []
         for grouping in str_channels.split(','):
-            if ':' not in grouping:
-               channel_list.extend(map(int, grouping))
+            if ':' not in grouping:  # single channel
+               channel_list.append(int(grouping))
                continue
 
+            # range of contiguous channels
             start_channel, end_channel = map(int, grouping.split(':'))
             channel_list.extend(range(start_channel, end_channel+1, 1))
 
