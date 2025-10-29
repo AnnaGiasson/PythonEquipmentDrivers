@@ -10,6 +10,7 @@ from ._hp_6632a import HP_6632A
 from ._intepro_psi9000 import Intepro_PSI9000
 from ._keithley_2231a import Keithley_2231A
 from ._keysight_n6700 import Keysight_N6700
+from._keysight_rp7900 import Keysight_RP7900
 from ._ppsc_3150afx import PPSC_3150AFX
 from ._sorensen_sga import Sorensen_SGA
 
@@ -53,6 +54,7 @@ __all__ = (
     "HP_6632A",
     "Intepro_PSI9000",
     "Keithley_2231A",
+    "Keysight_RP7900",
     "Keysight_N6700",
     "PPSC_3150AFX",
     "Sorensen_SGA",

@@ -8,7 +8,7 @@ Created on Wed Feb 10 11:53:18 2021
 from ..core import VisaResource
 
 
-class Thermotron2800(VisaResource):
+class Thermotron_2800(VisaResource):
     def __init__(self, address: str, **kwargs):
         super().__init__(address, **kwargs)
         self.write_resource("LKS 1") # lock keyboard - should happen automatically, but we'll assert anyway... =)
