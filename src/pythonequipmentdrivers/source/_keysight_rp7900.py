@@ -2,16 +2,17 @@ from ..core import VisaResource
 
 
 class Keysight_RP7900(VisaResource):
+
     def __init__(self, address: str, **kwargs) -> None:
         super().__init__(address, **kwargs)
 
         # check valid connection
-        is_7935a = ('keysight' in self.idn.lower()) and ('rp79' in self.idn.lower())
+        is_7935a = ("keysight" in self.idn.lower()) and ("rp79" in self.idn.lower())
         if not is_7935a:
             raise ValueError(
                 f"Instrument at {address} is not a Keysight 7935A Power Supply"
             )
-            
+
     def set_state(self, state: bool) -> None:
         """
         set_state(state)
@@ -65,7 +66,7 @@ class Keysight_RP7900(VisaResource):
         """
 
         self.set_state(self.get_state() ^ True)
-        
+
     def set_priority_to_voltage(self) -> None:
         """
         set_priority_to_voltage()
@@ -99,7 +100,7 @@ class Keysight_RP7900(VisaResource):
 
         response = self.query_resource("SOUR:VOLT:LEV?")
         return float(response)
-    
+
     def set_priority_to_current(self) -> None:
         """
         set_priority_to_current()
@@ -133,7 +134,7 @@ class Keysight_RP7900(VisaResource):
 
         response = self.query_resource("SOUR:CURR:LEV?")
         return float(response)
-    
+
     def set_current_limit(self, current: float) -> None:
         """
         set_current_limit(current)
@@ -145,7 +146,7 @@ class Keysight_RP7900(VisaResource):
         """
 
         self.write_resource(f"SOUR:CURR:LIM {current}")
-        
+
     def get_current_limit(self) -> float:
         """
         get_current_limit()
@@ -157,7 +158,7 @@ class Keysight_RP7900(VisaResource):
 
         resp = self.query_resource("SOUR:CURR:LIM?")
         return float(resp)
-    
+
     def set_voltage_limit(self, voltage: float) -> None:
         """
         set_voltage_limit(voltage)

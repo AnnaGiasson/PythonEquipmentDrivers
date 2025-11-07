@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from ..core import VisaResource
 
 
@@ -6,7 +7,8 @@ from ..core import VisaResource
 class _Channel:
     v_max: float
     i_max: float
-    
+
+
 _SUPPORTED_CHANNELS = {
     1: _Channel(v_max=6.0, i_max=5.0),
     2: _Channel(v_max=30.0, i_max=1.0),
@@ -25,11 +27,11 @@ class Keysight_EDU36311A(VisaResource):
             raise ValueError(
                 f"Instrument at {address} is not a Keysight EDU36311A DC power supply."
             )
-            
+
     def _check_valid_channel(self, channel: int) -> None:
         if channel not in _SUPPORTED_CHANNELS:
             raise ValueError(f'Unknown Channel Number "{channel}"')
-            
+
     def set_state(self, state: bool, channel: int) -> None:
         """
         set_state(state, channel)
@@ -40,7 +42,7 @@ class Keysight_EDU36311A(VisaResource):
             state (bool): Supply state (True == enabled, False == disabled)
             channel (int): Index of the channel to control.
         """
-        
+
         self._check_valid_channel(channel)
         self.write_resource(f"output {'on' if state else 'off'}, (@{channel})")
 
@@ -71,7 +73,7 @@ class Keysight_EDU36311A(VisaResource):
         Args:
             channel (int): Index of the channel to control.
         """
-        
+
         self._check_valid_channel(channel)
         self.set_state(state=True, channel=channel)
 
@@ -85,7 +87,7 @@ class Keysight_EDU36311A(VisaResource):
         Args:
             channel (int): Index of the channel to control.
         """
-        
+
         self._check_valid_channel(channel)
         self.set_state(state=False, channel=channel)
 
@@ -114,12 +116,11 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
-        if voltage > _SUPPORTED_CHANNELS[channel].v_max:
-            raise ValueError(
-                f"Tried to set voltage out of supply range ({_SUPPORTED_CHANNELS[channel].v_max} V)"
-            )
+        v_limit = _SUPPORTED_CHANNELS[channel].v_max
+        if voltage > v_limit:
+            raise ValueError(f"Tried to set voltage out of supply range ({v_limit} V)")
 
         self.write_resource(f"volt {voltage},(@{channel})")
 
@@ -134,7 +135,7 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
         response = self.query_resource(f"volt? (@{channel})")
         return float(response)
@@ -151,12 +152,11 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
-        if current > _SUPPORTED_CHANNELS[channel].i_max:
-            raise ValueError(
-                f"Tried to set current out of supply range ({_SUPPORTED_CHANNELS[channel].i_max} A)"
-            )
+        i_limit = _SUPPORTED_CHANNELS[channel].i_max
+        if current > i_limit:
+            raise ValueError(f"Tried to set current out of supply range ({i_limit} A)")
 
         self.write_resource(f"curr {current},(@{channel})")
 
@@ -171,7 +171,7 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
         response = self.query_resource(f"curr? (@{channel})")
         return float(response)
@@ -188,7 +188,7 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
         response = self.query_resource(f"meas:volt? (@{channel})")
         return float(response)
@@ -205,7 +205,7 @@ class Keysight_EDU36311A(VisaResource):
 
         returns: float
         """
-        
+
         self._check_valid_channel(channel)
         response = self.query_resource(f"meas:curr? (@{channel})")
         return float(response)

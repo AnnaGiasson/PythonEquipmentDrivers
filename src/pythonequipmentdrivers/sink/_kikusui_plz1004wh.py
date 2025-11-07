@@ -1,6 +1,6 @@
-from typing import Union
-from dataclasses import dataclass
 import itertools
+from dataclasses import dataclass
+from typing import Union
 
 from ..core import VisaResource
 
@@ -517,12 +517,18 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
             ValueError(f"{trig_delay=} not valid for {seq_len=}")
         steps = list(
             itertools.chain(
-
-                (SequenceStep(idle_current) for _ in range(round(initial_idle_time / step_size))),
-
-                (SequenceStep(pulse_current) for _ in  range(round(pulse_width / step_size))),
-
-                (SequenceStep(idle_current) for _ in range(round(END_IDLE_TIME / step_size))),
+                (
+                    SequenceStep(idle_current)
+                    for _ in range(round(initial_idle_time / step_size))
+                ),
+                (
+                    SequenceStep(pulse_current)
+                    for _ in range(round(pulse_width / step_size))
+                ),
+                (
+                    SequenceStep(idle_current)
+                    for _ in range(round(END_IDLE_TIME / step_size))
+                ),
             )
         )
         # +1 since trigger occurs at the beginning of a step
