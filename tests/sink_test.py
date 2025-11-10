@@ -1,8 +1,7 @@
-import unittest
-from unittest.mock import MagicMock, patch, call
 import functools
 import itertools
-
+import unittest
+from unittest.mock import MagicMock, call, patch
 
 import pythonequipmentdrivers as ped
 
