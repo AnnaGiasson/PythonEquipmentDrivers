@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from time import sleep
+import numpy as np
 
 from ..core import VisaResource
 
@@ -51,8 +52,8 @@ class Tektronix_MSO5xB(VisaResource):
         :param position: Sets the horizontal location for the trigger point, 50 is in middle of screen
         :param timescale: Seconds/division on oscilloscope
         """
-        self.write_resource("horizontal:scale {}".format(timescale))
-        self.write_resource("horizontal:position {}".format(position))
+        self.write_resource(f"horizontal:scale {timescale}")
+        self.write_resource(f"horizontal:position {position}")
 
     def configure_sample_rate(
         self,
@@ -68,10 +69,10 @@ class Tektronix_MSO5xB(VisaResource):
         :param configure: Sets whether the sample rate changes either the record length or timescale, input can either
             be HORIZONTALSCALE or RECORDLENGTH
         """
-        self.write_resource("horizontal:mode {}".format(mode))
-        self.write_resource("horizontal:mode:manual:configure {}".format(configure))
-        self.write_resource("horizontal:mode:samplerate {}".format(sample_rate))
-        self.write_resource("horizontal:mode:recordlength {}".format(record_length))
+        self.write_resource(f"horizontal:mode {mode}")
+        self.write_resource(f"horizontal:mode:manual:configure {configure}")
+        self.write_resource(f"horizontal:mode:samplerate {sample_rate}")
+        self.write_resource(f"horizontal:mode:recordlength {record_length}")
 
     def configure_channel(
         self,
@@ -79,7 +80,7 @@ class Tektronix_MSO5xB(VisaResource):
         scale: float,
         coupling: str,
         position: float,
-        bandwidth="FULL",
+        bandwidth: str = "FULL",
         enabled: bool = True,
         label_name: str = None,
     ) -> None:
@@ -93,21 +94,13 @@ class Tektronix_MSO5xB(VisaResource):
         :param enabled: Turn the channel on or off
         :param label_name: Sets a label for the channel if a string is passed, if not then the label is set to blank
         """
-        if enabled is True:
-            channel_state = "ON"
-        else:
-            channel_state = "OFF"
-        self.write_resource("ch{}:scale {}".format(channel, scale))
-        self.write_resource("ch{}:coupling {}".format(channel, coupling))
-        self.write_resource("ch{}:position {}".format(channel, position))
-        self.write_resource("ch{}:bandwidth {}".format(channel, bandwidth))
-        self.write_resource(
-            "display:global:ch{}:state {}".format(channel, channel_state)
-        )
-        if label_name is not None:
-            self.write_resource('ch{}:label:name "{}"'.format(channel, label_name))
-        else:
-            self.write_resource('ch{}:label:name ""'.format(channel))
+        self.write_resource(f"ch{channel}:scale {scale}")
+        self.write_resource(f"ch{channel}:coupling {coupling}")
+        self.write_resource(f"ch{channel}:position {position}")
+        self.write_resource(f"ch{channel}:bandwidth {bandwidth}")
+        self.write_resource(f"display:global:ch{channel}:state {'ON' if enabled else 'OFF'}")
+        self.write_resource(f'ch{channel}:label:name "{label_name if label_name else ""}"')
+
 
     def configure_digital_channel(
         self, channel: int, digital_channel: int, threshold: float, enabled: bool = True
@@ -118,10 +111,7 @@ class Tektronix_MSO5xB(VisaResource):
         :param threshold: Voltage trigger threshold for digital channel
         :param enabled: Turn the digital channel on or off
         """
-        if enabled is True:
-            channel_state = "ON"
-        else:
-            channel_state = "OFF"
+        channel_state = "ON" if enabled else "OFF"
         self.write_resource(
             "display:waveview1:ch{}_d{}:state {}".format(
                 channel, digital_channel, channel_state
@@ -141,10 +131,10 @@ class Tektronix_MSO5xB(VisaResource):
         :param mode: Trigger in Auto or Normal mode
         """
         self.write_resource("trigger:a:type edge")
-        self.write_resource("trigger:a:edge:source ch{}".format(source))
-        self.write_resource("trigger:a:edge:slope {}".format(slope))
-        self.write_resource("trigger:a:level:ch{} {}".format(source, level))
-        self.write_resource("trigger:a:mode {}".format(mode))
+        self.write_resource(f"trigger:a:edge:source ch{source}")
+        self.write_resource(f"trigger:a:edge:slope {slope}")
+        self.write_resource(f"trigger:a:level:ch{source} {level}")
+        self.write_resource(f"trigger:a:mode {mode}")
 
     def configure_timeout_trigger(
         self,
@@ -163,12 +153,11 @@ class Tektronix_MSO5xB(VisaResource):
         :param mode: Trigger in Auto or Normal mode
         """
         self.write_resource("trigger:a:type timeout")
-        self.write_resource("trigger:a:timeout:source ch{}".format(source))
-        self.write_resource("trigger:a:timeout:polarity {}".format(polarity))
-        self.write_resource("trigger:a:timeout:time {}".format(time_limit))
-        self.write_resource("trigger:a:level:ch{} {}".format(source, level))
-        self.write_resource("trigger:a:mode {}".format(mode))
-
+        self.write_resource(f"trigger:a:timeout:source ch{source}")
+        self.write_resource(f"trigger:a:timeout:polarity {polarity}")
+        self.write_resource(f"trigger:a:timeout:time {time_limit}")
+        self.write_resource(f"trigger:a:level:ch{source} {level}")
+        self.write_resource(f"trigger:a:mode {mode}")
     class TriggerMode(Enum):
         AUTO = "auto"
         NORM = "norm"
@@ -203,10 +192,7 @@ class Tektronix_MSO5xB(VisaResource):
         """
         :param continuous: Acquisition mode, True for continuous, False for single
         """
-        if continuous is True:
-            self.write_resource("acquire:stopafter runstop")
-        else:
-            self.write_resource("acquire:stopafter sequence")
+        self.write_resource(f"acquire:stopafter {'runstop' if continuous else 'sequence'}")
 
     def start_stop_acquisition(self, acquire: bool) -> None:
         """
@@ -214,10 +200,7 @@ class Tektronix_MSO5xB(VisaResource):
             sequence, a new single sequence acquisition will be started. If the last acquisition was continuous, a new
             continuous acquisition will be started.
         """
-        if acquire is True:
-            self.write_resource("acquire:state run")
-        else:
-            self.write_resource("acquire:state stop")
+        self.write_resource(f"acquire:state {'run' if acquire else 'stop'}")
 
     class Measurement(Enum):
         MEAN = "mean"
@@ -317,138 +300,6 @@ class Tektronix_MSO5xB(VisaResource):
 
     def remove_all_measurements(self) -> None:
         self.write_resource("measurement:DeleteAll")
-
-    def measure_mean(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of mean
-        """
-        self.write_resource("measurement:addmeas mean")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_maximum(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of maximum
-        """
-        self.write_resource("measurement:addmeas maximum")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:maximum?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_minimum(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of maximum
-        """
-        self.write_resource("measurement:addmeas minimum")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:minimum?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_falltime(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of falltime
-        """
-        self.write_resource("measurement:addmeas falltime")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_risetime(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of risetime
-        """
-        self.write_resource("measurement:addmeas risetime")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_rising_slew_rate(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of rising slew rate
-        """
-        self.write_resource("measurement:addmeas riseslewrate")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_falling_slew_rate(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of falling slew rate
-        """
-        self.write_resource("measurement:addmeas fallslewrate")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_frequency(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of frequency
-        """
-        self.write_resource("measurement:addmeas frequency")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_positive_duty(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of positive duty cycle
-        """
-        self.write_resource("measurement:addmeas pduty")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_period(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of period
-        """
-        self.write_resource("measurement:addmeas period")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
-
-    def measure_positive_width(self, channel: int) -> float:
-        """
-        :param channel: Channel that measurement will be taken from
-        :return: The mean measurement of positive pulse width
-        """
-        self.write_resource("measurement:addmeas pwidth")
-        self.write_resource("measurement:meas1:source CH{}".format(channel))
-        sleep(1)
-        result = self.query_resource("measurement:meas1:results:allacqs:mean?")
-        self.write_resource('measurement:delete "meas1"')
-        return float(result)
 
     def measure_digital_period(self, channel: int, digital_channel: int) -> float:
         """
@@ -592,26 +443,20 @@ class Tektronix_MSO5xB(VisaResource):
         :param bit_threshold: The threshold where the data bits change states, input as a floating number that refers to
         the voltage level.
         """
-        self.write_resource(
-            "bus:B{}:parallel:bit{}source {}".format(number, bit_number, bit_source)
-        )
-        self.write_resource(
-            "bus:B{}:parallel:bit{}source:threshold {}".format(
-                number, bit_number, bit_threshold
-            )
-        )
+        self.write_resource(f"bus:B{number}:parallel:bit{bit_number}source {bit_source}")
+        self.write_resource(f"bus:B{number}:parallel:bit{bit_number}source:threshold {bit_threshold}")
 
     def delete_bus(self, number: int) -> None:
         """
         :param number: Bus Channel Number
         """
-        self.write_resource('bus:delete "B{}"'.format(number))
+        self.write_resource(f'bus:delete "B{number}"')
 
     def add_bustable(self, number: int) -> None:
         """
         :param number: Bus Table Number
         """
-        self.write_resource('bustable:addnew "Table{}"'.format(number))
+        self.write_resource(f'bustable:addnew "Table{number}"')
 
     def save_bustable(self, location: str, name: str) -> None:
         """
@@ -619,7 +464,7 @@ class Tektronix_MSO5xB(VisaResource):
         :param name: Name of the .csv file
         """
         self.write_resource('save:eventtable:bus "C:/Temp.csv"')
-        filename = "{}/{}.csv".format(location, name)
+        filename = f"{location}/{name}.csv"
         self.query_resource("*OPC?")
         self.write_resource('filesystem:readfile "C:/Temp.csv"')
         imgdata = self.read_resource_raw(1024 * 1024)
@@ -631,7 +476,7 @@ class Tektronix_MSO5xB(VisaResource):
         """
         :param number: Bus Table Number
         """
-        self.write_resource('bustable:delete "Table{}"'.format(number))
+        self.write_resource(f'bustable:delete "Table{number}"')
 
     def configure_waveform_cursor(
         self,
@@ -646,23 +491,15 @@ class Tektronix_MSO5xB(VisaResource):
         :param asource: Channel source of the A part of the cursor, 1-6 which selects the scope channel
         :param bsource: Channel source of the B part of the cursor, 1-6 which selects the scope channel
         """
-        if enabled is True:
-            state = "on"
-        else:
-            state = "off"
-        if linked is True:
-            mode = "track"
-        else:
-            mode = "independent"
+        state = "on" if enabled else "off"
+        mode = "track" if linked else "independent"
+
         self.write_resource("display:select:view waveview1")
-        self.write_resource("display:waveview1:cursor:cursor1:state {}".format(state))
-        self.write_resource("display:waveview1:cursor:cursor1:mode {}".format(mode))
-        self.write_resource(
-            "display:waveview1:cursor:cursor1:asource CH{}".format(asource)
-        )
-        self.write_resource(
-            "display:waveview1:cursor:cursor1:bsource CH{}".format(bsource)
-        )
+        self.write_resource(f"display:waveview1:cursor:cursor1:splitmode {'same' if asource == bsource else 'split'}")
+        self.write_resource(f"display:waveview1:cursor:cursor1:state {state}")
+        self.write_resource(f"display:waveview1:cursor:cursor1:mode {mode}")
+        self.write_resource(f"display:waveview1:cursor:cursor1:asource CH{asource}")
+        self.write_resource(f"display:waveview1:cursor:cursor1:bsource CH{bsource}")
 
     def set_waveform_cursor_position(
         self, aposition: float = 0.0, bposition: float = 0.0
@@ -671,61 +508,89 @@ class Tektronix_MSO5xB(VisaResource):
         :param aposition: Time axis position of the A part of the cursor, example 1.0e-6 = 1.0us on the time axis
         :param bposition: Time axis position of the B part of the cursor, example 1.0e-6 = 1.0us on the time axis
         """
-        self.write_resource(
-            "display:waveview1:cursor:cursor1:waveform:aposition {}".format(aposition)
-        )
-        self.write_resource(
-            "display:waveview1:cursor:cursor1:waveform:bposition {}".format(bposition)
-        )
+        self.write_resource(f"display:waveview1:cursor:cursor1:waveform:aposition {aposition}")
+        self.write_resource(f"display:waveview1:cursor:cursor1:waveform:bposition {bposition}")
 
-    def get_waveform_cursor_vertical_positions(self) -> tuple[str, str]:
+    def get_waveform_cursor_vertical_positions(self) -> tuple[float, float]:
         """
         :return: Returns the vertical positions (Voltage) of the A and B parts of the cursor, A position is first number
         B position is second number
         """
-        aposition = self.query_resource(
-            "display:waveview1:cursor:cursor1:hbars:aposition?"
-        )
-        bposition = self.query_resource(
-            "display:waveview1:cursor:cursor1:hbars:bposition?"
-        )
-        return aposition[0:-1], bposition[0:-1]
+        aposition = self.query_resource("display:waveview1:cursor:cursor1:hbars:aposition?")
+        bposition = self.query_resource("display:waveview1:cursor:cursor1:hbars:bposition?")
+        return float(aposition), float(bposition)
 
-    def save_waveform(
-        self,
-        source_type: str,
-        source: int,
-        location: str,
-        name: str,
-        gating_type: str = "none",
-        resample_rate: int = 0,
-    ):
+    def get_record_length(self) -> int:
         """
-        :param source_type: Determines the source type of the waveform being saved to a CSV file, valid inputs are: CH,
-            MATH, REF
-        :param source: Number of the source being saved, ex. inputting 1 can be CH1, MATH1 or REF1
-        :param location: Location CSV file will be saved on the user's PC
-        :param name: Name of the CSV file
-        :param gating_type: Specifies what parts of the waveform to save, valid inputs are:
-            none - saves the full waveform data,
-            cursors - save the waveform data located between the vertical cursors,
-            screen - save the waveform data on the screen,
-            resample - save the waveform data at a sample interval
-        :param resample_rate: Sample rate that the waveform will be saved at if doing a resample, if at a rate of 2 then
-            only every other data point is used, 3 would be every 3rd point etc.
+        get_record_length()
+
+        retrives the current length of the waveform buffer.
+
+        Returns:
+            int: len of the waveform buffer
         """
-        self.write_resource("save:waveform:gating {}".format(gating_type))
-        if gating_type == "resample":
-            self.write_resource(
-                "save:waveform:gating:resamplerate {}".format(resample_rate)
-            )
-        self.write_resource(
-            'save:waveform {}{}, "C:/Temp.csv"'.format(source_type, source)
-        )
-        filename = "{}/{}.csv".format(location, name)
-        self.query_resource("*OPC?")
-        self.write_resource('filesystem:readfile "C:/Temp.csv"')
-        imgdata = self.read_resource_raw(1024 * 1024)
-        with open(filename, "wb") as file:
-            file.write(imgdata)
-        self.write_resource('filesystem:delete "C:/Temp.csv"')
+
+        return int(self.query_resource("HOR:RECO?"))
+
+    def get_channel_data(self, *channels: int, start: int = 1, end: int = None, return_time: bool = True) -> np.ndarray|list[np.ndarray]:
+        """
+        get_channel_data(*channels, start=1, end=None, return_time=True)
+
+        Args:
+            *channels (int): channel numbers to retrive data from
+            start (int, optional): Start data point of the waveform data. Index of the captured waveform buffer.
+                Defaults to 1 (first point).
+            end (int, optional): End data point of the waveform data. Index of the captured waveform buffer.
+                Defaults to None (last point).
+            return_time (bool, optional): Whether to return the time vector. Defaults to True.
+
+        Returns:
+            np.ndarray|list[np.ndarray]: If return_time is True, the first element is the time vector, followed by the
+                channel data in the order of the input channels. If return_time is False, only the channel data is returned.
+                If only one vector is requested, a single np.ndarray is returned instead of a list.
+        """
+
+        def single_transfer(channel: int) -> np.ndarray:
+            # Setup scope for transfer
+            self.write_resource(f'DATa:SOUrce CH{channel}')
+            self.write_resource(f'DATa:START {start}')  # in outer function scope for reuse for multiple channels
+            self.write_resource(f'DATa:STOP {end}')     # in outer function scope for reuse for multiple channels
+            self.write_resource("WFMOutpre:ENCdg BINARY")
+            self.write_resource("WFMOutpre:BYT_Nr 1")
+            N_points = int(self.query_resource('WFMOutpre:NR_P?'))
+
+            # query data to rescale adc value back to the actual waveform later
+            y_scale = float(self.query_resource('WFMOutpre:Ymult?'))
+            y_off = float(self.query_resource('WFMOutpre:YZero?'))
+
+            # read/parse data
+            self.write_resource("CURVE?")
+            raw_data = self.read_resource_raw()
+
+            len_header = int(raw_data[1:2])  # start char, then N bytes in header
+            data_start_index = 2 + len_header # skip over N-bytes in header as its just the waveform length (see N_point above)
+            data = np.frombuffer(raw_data[data_start_index:-1], dtype=np.byte, count=N_points)
+
+            # rescale data
+            return y_scale*data + y_off
+
+
+        # query horizontal extent and scaling info
+        N_points = self.get_record_length()
+        end = N_points if end is None else end
+
+        if end > N_points:
+            raise ValueError(f"End point {end} exceeds number of points available {N_points}")
+
+        n_off = int(self.query_resource('WFMOutpre:PT_Off?'))
+        dx = float(self.query_resource('WFMOutpre:XINcr?'))
+        t_off = n_off * dx
+
+        # query data and return
+        vectors = []
+        if return_time:
+            vectors.append(np.arange(start, end+1)*dx - t_off)
+
+        vectors.extend((single_transfer(channel) for channel in channels))
+
+        return vectors if len(vectors) > 1 else vectors[0]
