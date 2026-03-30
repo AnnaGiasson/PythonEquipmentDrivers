@@ -400,10 +400,10 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
         Args:
             steps (list[Kikusui_PLZ1004WH.SequenceStep | float]): A list of SequenceSteps
-                or floats describing the sequence to be executed. Each step has a load 
+                or floats describing the sequence to be executed. Each step has a load
                 setting and the option to emit a trigger pulse. A maximum of 1024 steps
-                can be used but note that transmitting a large number of steps takes 
-                significant time. If floats are supplied then there is assumed to be 
+                can be used but note that transmitting a large number of steps takes
+                significant time. If floats are supplied then there is assumed to be
                 no trigger pulse.
             current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
                 to manual for the maximum current that each range is capable of.
@@ -521,21 +521,25 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         steps = list(
             itertools.chain(
                 (
-                    SequenceStep(idle_current)
-                    for _ in range(round(initial_idle_time / step_size))
+                    itertools.repeat(
+                        SequenceStep(idle_current), round(initial_idle_time / step_size)
+                    )
                 ),
                 (
-                    SequenceStep(pulse_current)
-                    for _ in range(round(pulse_width / step_size))
+                    itertools.repeat(
+                        SequenceStep(pulse_current), round(pulse_width / step_size)
+                    )
                 ),
                 (
-                    SequenceStep(idle_current)
-                    for _ in range(round(END_IDLE_TIME / step_size))
+                    itertools.repeat(
+                        SequenceStep(idle_current), round(END_IDLE_TIME / step_size)
+                    )
                 ),
             )
         )
+        # replace regular step with a step that emits a trigger pulse
         trigger_idx = round((initial_idle_time + trig_delay) / step_size)
-        steps[trigger_idx].trigger = True
+        steps[trigger_idx] = SequenceStep(steps[trigger_idx].current, trigger=True)
         self.configure_sequence(steps, current_range, step_size)
         if keep_load_on:
             self.write_resource(f"prog:linp {1 if idle_current else 0}")
