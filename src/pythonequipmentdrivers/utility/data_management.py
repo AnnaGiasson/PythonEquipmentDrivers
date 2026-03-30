@@ -5,6 +5,8 @@ from itertools import zip_longest
 from pathlib import Path
 from time import asctime, strftime
 from typing import Any, Dict, Iterable, List, Optional
+import shutil
+import importlib
 
 __all__ = ("log_to_csv", "dump_data", "dump_array_data", "create_test_log", "Logger")
 
@@ -216,7 +218,7 @@ def dump_array_data(
         print(*rows, sep=",", end="\n", file=f)
 
 
-def create_test_log(base_dir, images=False, raw_data=False, **test_info):
+def create_test_log(base_dir, images=False, raw_data=False, script=False, **test_info):
     """
     create_test_log(base_dir, images=False, raw_data=False, **test_info)
 
@@ -243,6 +245,10 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
     to hold the configuration settings or any notes for a test or experiment
     that is to be run. In addition to any keyword arguements passed an addition
     key-value pair, ('run_time': TIMESTAMP) will be added to the json.
+
+    Additionally if boolean arguement "script" is set then the top level python script
+    will be copied into the test directory. This is helpful to create backups of
+    scripts run for future reference.
 
     Example:
 
@@ -273,6 +279,8 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
             called "images". Defaults to False.
         raw_data (bool, optional): Whether or not to create a sub-directory
             called "raw_data". Defaults to False.
+        script (bool, optional): Whether or not to copy the top level python script to
+            the root directory. Defaults to False.
     Kwargs:
         test_info: configuration information for a test or experiment. Can
             include an alternate name for the directory structure with the key
@@ -295,6 +303,10 @@ def create_test_log(base_dir, images=False, raw_data=False, **test_info):
         (test_dir / "images").mkdir()
     if raw_data:
         (test_dir / "raw_data").mkdir()
+    if script:
+        __main__ = importlib.import_module("__main__")
+        top_level_script = Path(__main__.__file__)
+        shutil.copy(top_level_script, test_dir / top_level_script.name)
 
     # dump config dictionary to file if kwargs were passed
     if test_info:
