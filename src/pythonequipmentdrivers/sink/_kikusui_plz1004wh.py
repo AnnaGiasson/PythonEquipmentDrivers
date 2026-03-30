@@ -389,7 +389,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
     def configure_sequence(
         self,
-        steps: list["Kikusui_PLZ1004WH.SequenceStep"],
+        steps: list["Kikusui_PLZ1004WH.SequenceStep" | float],
         current_range: str = "HIGH",
         step_size: float = 1e-3,
         initialize: bool = True,
@@ -399,11 +399,12 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         includes a current value and whether or not a trigger pulse should be emitted.
 
         Args:
-            steps (list[Kikusui_PLZ1004WH.SequenceStep]): A list of SequenceSteps
-                describing the sequence to be executed. Each step has a load setting and
-                the option to emit a trigger pulse. A maximum of 1024 steps can be used
-                but note that transmitting a large number of steps takes significant
-                time.
+            steps (list[Kikusui_PLZ1004WH.SequenceStep | float]): A list of SequenceSteps
+                or floats describing the sequence to be executed. Each step has a load 
+                setting and the option to emit a trigger pulse. A maximum of 1024 steps
+                can be used but note that transmitting a large number of steps takes 
+                significant time. If floats are supplied then there is assumed to be 
+                no trigger pulse.
             current_range (str, optional): Range setting to use (LOW, MED, HIGH). Refer
                 to manual for the maximum current that each range is capable of.
                 Typically LOW = 1.32A, MED = 13.2A, and HIGH = 132A. Defaults to "HIGH".
@@ -419,6 +420,8 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         MAX_SEQ_LENGTH = 1024
 
         sequence_len = len(steps)
+        if not isinstance(steps[0], SequenceStep):
+            steps = [SequenceStep(current) for current in steps]
 
         # validate the inputs
         if sequence_len > MAX_SEQ_LENGTH:
@@ -531,8 +534,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
                 ),
             )
         )
-        # +1 since trigger occurs at the beginning of a step
-        trigger_idx = round((initial_idle_time + trig_delay) / step_size + 1)
+        trigger_idx = round((initial_idle_time + trig_delay) / step_size)
         steps[trigger_idx].trigger = True
         self.configure_sequence(steps, current_range, step_size)
         if keep_load_on:
