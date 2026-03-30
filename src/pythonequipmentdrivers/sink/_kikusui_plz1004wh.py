@@ -389,7 +389,7 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
 
     def configure_sequence(
         self,
-        steps: list["Kikusui_PLZ1004WH.SequenceStep" | float],
+        steps: list[SequenceStep | float],
         current_range: str = "HIGH",
         step_size: float = 1e-3,
         initialize: bool = True,

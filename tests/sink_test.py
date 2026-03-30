@@ -96,6 +96,6 @@ class Test_Kikusui_PLZ1004WH(unittest.TestCase):
                 (self.inst.SequenceStep(0) for _ in range(1)),
             )
         )
-        steps[13].trigger = True
+        steps[12].trigger = True
 
         configure_seq_mock.assert_called_once_with(steps, "HIGH", 1e-3)
