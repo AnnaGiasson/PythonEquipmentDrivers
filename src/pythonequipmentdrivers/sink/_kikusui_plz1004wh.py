@@ -541,6 +541,5 @@ class Kikusui_PLZ1004WH(VisaResource):  # 1 kW
         trigger_idx = round((initial_idle_time + trig_delay) / step_size)
         steps[trigger_idx] = SequenceStep(steps[trigger_idx].current, trigger=True)
         self.configure_sequence(steps, current_range, step_size)
-        if keep_load_on:
-            self.write_resource(f"prog:linp {1 if idle_current else 0}")
-            self.write_resource(f"prog:lval {idle_current}")
+        self.write_resource(f"prog:linp {1 if idle_current and keep_load_on else 0}")
+        self.write_resource(f"prog:lval {idle_current}")
