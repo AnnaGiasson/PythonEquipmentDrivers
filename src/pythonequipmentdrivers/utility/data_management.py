@@ -122,7 +122,10 @@ def dump_data(file_path: Path, data: Iterable[Iterable[Any]]) -> None:
 
     with open(file_path_ext, "w", newline="" if dict_based_data else None) as f:
         if dict_based_data:
-            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            field_names = {}
+            for row in data:
+                field_names.update(row)
+            writer = csv.DictWriter(f, fieldnames=field_names.keys())
             writer.writeheader()
             writer.writerows(data)
         else:
