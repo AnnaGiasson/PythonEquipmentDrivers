@@ -7,10 +7,8 @@ from typing import Any, Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 
-from pythonequipmentdrivers.errors import (
-    ResourceConnectionError,
-    UnsupportedResourceError,
-)
+from pythonequipmentdrivers.errors import (ResourceConnectionError,
+                                           UnsupportedResourceError)
 
 __all__ = ["ResourceCollection", "connect_resources", "initiaize_device"]
 
@@ -401,7 +399,7 @@ def initiaize_device(instance, sequence) -> None:
             print(error_msg_template.format(method_name, '"unknown method"'))
 
 
-class ResourceCollectionMixin:
+class _ResourceCollectionMixin:
     """
     Contains common methods to act on the collection of resources contained in
     _resources. Though this is used as a base class, it behaves more like a mixin i.e.
@@ -412,23 +410,33 @@ class ResourceCollectionMixin:
     _resources: dict[str, Any]
 
     def reset(self) -> None:
+        """
+        reset()
+
+        Attempt to reset each resource in the collection.
+        """
         for resource in self:
             try:
                 resource.reset()
-            except AttributeError:
+            except (VisaIOError, AttributeError):
                 pass
 
     def set_local(self) -> None:
+        """
+        set_local()
+
+        Attempt to reset each resource in the collection.
+        """
         for resource in self:
             try:
                 resource.set_local()
-            except AttributeError:
+            except (VisaIOError, AttributeError):
                 pass
 
     def __iter__(self):
         return iter(self._resources.values())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
             + f"{','.join(f'{k}={self._resources[k]}' for k in self._resources)}"
@@ -436,27 +444,75 @@ class ResourceCollectionMixin:
         )
 
 
-class Dmms(ResourceCollectionMixin):
+class _Dmms(_ResourceCollectionMixin):
     def __init__(self, resource_collection: "ResourceCollectionBase"):
 
         self._parent = resource_collection
 
-    def fetch_data(self):
-        data = {}
-        for name, dmm in self._resources.items():
-            data[name] = dmm.fetch_data()
-        return data
+    def fetch_data(
+        self, mapper: Dict[str, str] = None, only_mapped: bool = False
+    ) -> Dict[str, float]:
+        """
+        fetch_data([mapper])
 
-    def init(self):
-        for dmm in self:
-            dmm.init()
+        Fetch measurements from all DMMs and pack them into a dict. The keys
+        will be the DMM name by default. Optionally, a mapper can be specified
+        to rename the dictonary keys.
+        Args:
+            mapper (dict, optional): rename keys of the collected data. Key
+                should be the DMM name and the value should be the desired new
+                name.
+            only_mapped (bool, optional): If true only measurments of DMMs
+                found in mapper will be returned.
 
-    def trigger(self):
-        for dmm in self:
-            dmm.trigger()
+        Returns:
+            dict: dict of the fetched measurements
+        """
+
+        mapper = {} if mapper is None else mapper
+        measurements = {}
+        for name, resource in self._resources.items():
+
+            if (name not in mapper) and only_mapped:
+                continue
+
+            new_name = mapper.get(name, name)
+
+            try:
+                measurements[new_name] = resource.fetch_data()
+            except AttributeError as exc:
+                raise AttributeError(
+                    "All multimeter instances must have a " '"fetch_data" method'
+                ) from exc
+
+        return measurements
+
+    def init(self) -> None:
+        """
+        init()
+
+        Initialize (arm) the trigger of dmms where applicable.
+        """
+        for resource in self:
+            try:
+                resource.init()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def trigger(self) -> None:
+        """
+        trigger()
+
+        Perform a basic sequential triggering of all devices.
+        """
+        for resource in self:
+            try:
+                resource.trigger()
+            except (VisaIOError, AttributeError):
+                pass
 
     @property
-    def _resources(self):
+    def _resources(self) -> dict[str, Any]:
         re_pattern = re.compile("_*dmm_*", flags=re.IGNORECASE)
         return {
             re.sub(re_pattern, "", k): v
@@ -465,7 +521,7 @@ class Dmms(ResourceCollectionMixin):
         }
 
 
-class ResourceCollectionBase(ResourceCollectionMixin):
+class ResourceCollectionBase(_ResourceCollectionMixin):
     """
     ResourceCollectionBase(json)
 
@@ -513,7 +569,7 @@ class ResourceCollectionBase(ResourceCollectionMixin):
 
     """
 
-    dmms: Dmms
+    dmms: _Dmms
 
     def __init__(self, json: dict = None) -> None:
         # get any class attrs added to __dir__
@@ -536,7 +592,7 @@ class ResourceCollectionBase(ResourceCollectionMixin):
                 print(f"failed to instantiate {name}")
 
         # create the
-        self.dmms = Dmms(self)
+        self.dmms = _Dmms(self)
         self.user_init()
 
     def user_init(self):
@@ -549,13 +605,13 @@ class ResourceCollectionBase(ResourceCollectionMixin):
         pass
 
     @property
-    def _resources(self):
+    def _resources(self) -> dict[str, Any]:
         d = {}
         for name, inst in vars(self).items():
             if (
                 not callable(getattr(self, name))
                 and not name.startswith("_")
-                and not isinstance(inst, Dmms)
+                and not isinstance(inst, _Dmms)
             ):
                 d[name] = inst
         return d
