@@ -1,13 +1,16 @@
 import json
+import re
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Iterator, Tuple, Union
+from typing import Any, Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 
-from pythonequipmentdrivers.errors import (ResourceConnectionError,
-                                           UnsupportedResourceError)
+from pythonequipmentdrivers.errors import (
+    ResourceConnectionError,
+    UnsupportedResourceError,
+)
 
 __all__ = ["ResourceCollection", "connect_resources", "initiaize_device"]
 
@@ -396,3 +399,163 @@ def initiaize_device(instance, sequence) -> None:
                 print(error_msg_template.format(method_name, error))
         else:
             print(error_msg_template.format(method_name, '"unknown method"'))
+
+
+class ResourceCollectionMixin:
+    """
+    Contains common methods to act on the collection of resources contained in
+    _resources. Though this is used as a base class, it behaves more like a mixin i.e.
+    adding functionality to classes that don't necessarily have the same interfaces.
+
+    """
+
+    _resources: dict[str, Any]
+
+    def reset(self) -> None:
+        for resource in self:
+            try:
+                resource.reset()
+            except AttributeError:
+                pass
+
+    def set_local(self) -> None:
+        for resource in self:
+            try:
+                resource.set_local()
+            except AttributeError:
+                pass
+
+    def __iter__(self):
+        return iter(self._resources.values())
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            + f"{','.join(f'{k}={self._resources[k]}' for k in self._resources)}"
+            + ")"
+        )
+
+
+class Dmms(ResourceCollectionMixin):
+    def __init__(self, resource_collection: "ResourceCollectionBase"):
+
+        self._parent = resource_collection
+
+    def fetch_data(self):
+        data = {}
+        for name, dmm in self._resources.items():
+            data[name] = dmm.fetch_data()
+        return data
+
+    def init(self):
+        for dmm in self:
+            dmm.init()
+
+    def trigger(self):
+        for dmm in self:
+            dmm.trigger()
+
+    @property
+    def _resources(self):
+        re_pattern = re.compile("_*dmm_*", flags=re.IGNORECASE)
+        return {
+            re.sub(re_pattern, "", k): v
+            for k, v in self._parent._resources.items()
+            if re.findall(re_pattern, k)
+        }
+
+
+class ResourceCollectionBase(ResourceCollectionMixin):
+    """
+    ResourceCollectionBase(json)
+
+    A static typed version of the object created by connect_resources() with similar
+    helper functions for acting on groups of devices.
+
+    This class shouldn't be instantiated directly and is intended to be subclassed such
+    that the user can add their specific equipment either as class variables or instance
+    variables via ResourceCollectionBase.user_init().
+
+    Usage options:
+
+    Class Variables:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        device1 = Resource1(x,y,z)
+        device2 = Resource2(x,y,z)
+
+    env = MyResourceCollection()
+
+    Type Hints with a json file:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        device1: Resource1
+        device2: Resource2
+
+    env = MyResourceCollection(
+        {
+            "device1":{"address":"12345"},
+            "device2":{"address":"67890"},
+        }
+    )
+
+    Instance Variables:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        def user_init(self):
+            self.device1 = Resource1(x,y,z)
+            self.device2 = Resource2(x,y,z)
+
+    env = MyResourceCollection()
+
+    """
+
+    dmms: Dmms
+
+    def __init__(self, json: dict = None) -> None:
+        # get any class attrs added to __dir__
+        for name, inst in vars(self.__class__).items():
+            if not callable(getattr(self, name)) and not name.startswith("_"):
+                setattr(self, name, inst)
+
+        # try to instantiate any annotations
+        for name, cls in self.__annotations__.items():
+            if name == "dmms":
+                continue
+            try:
+                if not hasattr(self, name):
+                    inst = cls(json[name]["address"])
+                    setattr(self, name, inst)
+                    print(f"instantiated {name}")
+                else:
+                    print(f"did not instantiate {name}")
+            except:
+                print(f"failed to instantiate {name}")
+
+        # create the
+        self.dmms = Dmms(self)
+        self.user_init()
+
+    def user_init(self):
+        """
+        user_init()
+
+        This is a hook that can be overriden to the user to instantiate their equipment
+        as instance variables.
+        """
+        pass
+
+    @property
+    def _resources(self):
+        d = {}
+        for name, inst in vars(self).items():
+            if (
+                not callable(getattr(self, name))
+                and not name.startswith("_")
+                and not isinstance(inst, Dmms)
+            ):
+                d[name] = inst
+        return d
