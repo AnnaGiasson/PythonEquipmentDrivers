@@ -1,8 +1,9 @@
 import json
+import re
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, Iterator, Tuple, Union
+from typing import Any, Dict, Iterator, Tuple, Union
 
 from pyvisa import VisaIOError
 
@@ -396,3 +397,221 @@ def initiaize_device(instance, sequence) -> None:
                 print(error_msg_template.format(method_name, error))
         else:
             print(error_msg_template.format(method_name, '"unknown method"'))
+
+
+class _ResourceCollectionMixin:
+    """
+    Contains common methods to act on the collection of resources contained in
+    _resources. Though this is used as a base class, it behaves more like a mixin i.e.
+    adding functionality to classes that don't necessarily have the same interfaces.
+
+    """
+
+    _resources: dict[str, Any]
+
+    def reset(self) -> None:
+        """
+        reset()
+
+        Attempt to reset each resource in the collection.
+        """
+        for resource in self:
+            try:
+                resource.reset()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def set_local(self) -> None:
+        """
+        set_local()
+
+        Attempt to reset each resource in the collection.
+        """
+        for resource in self:
+            try:
+                resource.set_local()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def __iter__(self):
+        return iter(self._resources.values())
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            + f"{','.join(f'{k}={self._resources[k]}' for k in self._resources)}"
+            + ")"
+        )
+
+
+class _Dmms(_ResourceCollectionMixin):
+    def __init__(self, resource_collection: "ResourceCollectionBase"):
+
+        self._parent = resource_collection
+
+    def fetch_data(
+        self, mapper: Dict[str, str] = None, only_mapped: bool = False
+    ) -> Dict[str, float]:
+        """
+        fetch_data([mapper])
+
+        Fetch measurements from all DMMs and pack them into a dict. The keys
+        will be the DMM name by default. Optionally, a mapper can be specified
+        to rename the dictonary keys.
+        Args:
+            mapper (dict, optional): rename keys of the collected data. Key
+                should be the DMM name and the value should be the desired new
+                name.
+            only_mapped (bool, optional): If true only measurments of DMMs
+                found in mapper will be returned.
+
+        Returns:
+            dict: dict of the fetched measurements
+        """
+
+        mapper = {} if mapper is None else mapper
+        measurements = {}
+        for name, resource in self._resources.items():
+
+            if (name not in mapper) and only_mapped:
+                continue
+
+            new_name = mapper.get(name, name)
+
+            try:
+                measurements[new_name] = resource.fetch_data()
+            except AttributeError as exc:
+                raise AttributeError(
+                    "All multimeter instances must have a " '"fetch_data" method'
+                ) from exc
+
+        return measurements
+
+    def init(self) -> None:
+        """
+        init()
+
+        Initialize (arm) the trigger of dmms where applicable.
+        """
+        for resource in self:
+            try:
+                resource.init()
+            except (VisaIOError, AttributeError):
+                pass
+
+    def trigger(self) -> None:
+        """
+        trigger()
+
+        Perform a basic sequential triggering of all devices.
+        """
+        for resource in self:
+            try:
+                resource.trigger()
+            except (VisaIOError, AttributeError):
+                pass
+
+    @property
+    def _resources(self) -> dict[str, Any]:
+        re_pattern = re.compile("_*dmm_*", flags=re.IGNORECASE)
+        return {
+            re.sub(re_pattern, "", k): v
+            for k, v in self._parent._resources.items()
+            if re.findall(re_pattern, k)
+        }
+
+
+class ResourceCollectionBase(_ResourceCollectionMixin):
+    """
+    ResourceCollectionBase(json)
+
+    A static typed version of the object created by connect_resources() with similar
+    helper functions for acting on groups of devices.
+
+    This class shouldn't be instantiated directly and is intended to be subclassed such
+    that the user can add their specific equipment either as class variables or instance
+    variables via ResourceCollectionBase.user_init().
+
+    Usage options:
+
+    Class Variables:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        device1 = Resource1(x,y,z)
+        device2 = Resource2(x,y,z)
+
+    env = MyResourceCollection()
+
+    Type Hints with a json file:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        device1: Resource1
+        device2: Resource2
+
+    env = MyResourceCollection(
+        {
+            "device1":{"address":"12345"},
+            "device2":{"address":"67890"},
+        }
+    )
+
+    Instance Variables:
+
+    class MyResourceCollection(ResourceCollectionBase):
+
+        def user_init(self):
+            self.device1 = Resource1(x,y,z)
+            self.device2 = Resource2(x,y,z)
+
+    env = MyResourceCollection()
+
+    """
+
+    dmms: _Dmms
+
+    def __init__(self, json: dict = None) -> None:
+        # get any class attrs added to __dir__
+        for name, inst in vars(self.__class__).items():
+            if not callable(getattr(self, name)) and not name.startswith("_"):
+                setattr(self, name, inst)
+
+        # try to instantiate any annotations
+        for name, cls in self.__annotations__.items():
+            if name == "dmms":
+                continue
+            try:
+                if not hasattr(self, name):
+                    inst = cls(json[name]["address"])
+                    setattr(self, name, inst)
+                    print(f"instantiated {name}")
+                else:
+                    print(f"did not instantiate {name}")
+            except:
+                print(f"failed to instantiate {name}")
+
+        # create the
+        self.dmms = _Dmms(self)
+        self.user_init()
+
+    def user_init(self):
+        """
+        user_init()
+
+        This is a hook that can be overriden to the user to instantiate their equipment
+        as instance variables.
+        """
+        pass
+
+    @property
+    def _resources(self) -> dict[str, Any]:
+        d = {}
+        for name, inst in vars(self).items():
+            if (
+                not callable(getattr(self, name))
+                and not name.startswith("_")
+                and not isinstance(inst, _Dmms)
+            ):
+                d[name] = inst
+        return d
