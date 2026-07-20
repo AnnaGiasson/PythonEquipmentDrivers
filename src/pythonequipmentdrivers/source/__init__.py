@@ -25,6 +25,9 @@ class VoltageSource(Protocol):
 
     def set_voltage(self, voltage: float) -> None:
         """sets output level of the voltage source"""
+        
+    def set_current(self, current: float) -> None:
+        """sets current limit of the voltage source"""
 
     def get_voltage(self) -> float:
         """returns the output level of the voltage source"""
